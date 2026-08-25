@@ -12,7 +12,7 @@
 #include <cstring>
 #include <string>
 
-// TODO #22: Add a Cleaner Asio TCP Client for EcoTool
+// TODO #22: Add a Cleaner Asio TCP Client for ForgeTool
 class TcpClient
 {
 public:

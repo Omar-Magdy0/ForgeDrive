@@ -2,52 +2,52 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "EcoDrive: MCU Release",
+            "label": "ForgeDriveMC: MCU Release",
             "type": "shell",
-            "command": "cd EcoDrive/build  && cmake .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM_NAME=stm32f4 && make -j4",
+            "command": "cd ForgeDriveMC/build  && cmake .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM_NAME=stm32f4 && make -j4",
             "group": "build",
             "problemMatcher": ["$gcc"] 
         },
         {
-            "label": "EcoDrive: MCU Debug",
+            "label": "ForgeDriveMC: MCU Debug",
             "type": "shell",
-            "command": "cd EcoDrive/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=stm32f4 && make -j4",
+            "command": "cd ForgeDriveMC/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=stm32f4 && make -j4",
             "group": "build",
             "problemMatcher": ["$gcc"] 
         },
         {   
-            "label": "EcoDrive: Clean",
+            "label": "ForgeDriveMC: Clean",
             "type": "shell", 
-            "command": "cd EcoDrive/build  && rm -rf *",
+            "command": "cd ForgeDriveMC/build  && rm -rf *",
             "group": "build",
             "problemMatcher": ["$gcc"] 
         },
         {
-            "label": "EcoDrive: Host Debug",
+            "label": "ForgeDriveMC: Host Debug",
             "type": "shell",
-            "command": "cd EcoDrive/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=host && make -j4",
+            "command": "cd ForgeDriveMC/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=host && make -j4",
             "group": "build",
             "problemMatcher": ["$gcc"] 
         },
-       // EcoTool
+       // ForgeTool
         {
-            "label": "EcoTool: Debug",
+            "label": "ForgeTool: Debug",
             "type": "shell",
-            "command": "cd EcoTool/build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
-        },
-        {
-            "label": "EcoTool: Release",
-            "type": "shell",
-            "command": "cd EcoTool/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4",
+            "command": "cd ForgeTool/build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4",
             "group": "build",
             "problemMatcher": ["$gcc"] 
         },
         {
-            "label": "EcoTool: Clean",
+            "label": "ForgeTool: Release",
             "type": "shell",
-            "command": "cd EcoTool/build && rm -rf *",
+            "command": "cd ForgeTool/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4",
+            "group": "build",
+            "problemMatcher": ["$gcc"] 
+        },
+        {
+            "label": "ForgeTool: Clean",
+            "type": "shell",
+            "command": "cd ForgeTool/build && rm -rf *",
             "problemMatcher": ["$gcc"] 
         },
         {

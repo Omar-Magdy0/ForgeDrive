@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch EcoDrive",
+            "name": "(gdb) Launch ForgeDriveMC",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/EcoDrive/build/bin/EcoDrive",
+            "program": "${workspaceRoot}/ForgeDriveMC/build/bin/ForgeDriveMC",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -53,10 +53,10 @@
             ]
         },
         {
-            "name": "(gdb) Launch EcoTool",
+            "name": "(gdb) Launch ForgeTool",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/EcoTool/build/EcoTool",
+            "program": "${workspaceRoot}/ForgeTool/build/ForgeTool",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
@@ -104,7 +104,7 @@
         {
             "name": "BMP launch",
             "cwd": "${workspaceRoot}",
-            "executable": "${workspaceRoot}/EcoDrive/build/bin/EcoDrive.elf",
+            "executable": "${workspaceRoot}/ForgeDriveMC/build/bin/ForgeDriveMC.elf",
             "armToolchainPath": "/usr/bin",
             "gdbPath": "/opt/gcc-arm-none-eabi-10.3/bin/arm-none-eabi-gdb",
             "BMPGDBSerialPort": "/dev/ttyBmpGdb",

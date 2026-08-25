@@ -1,7 +1,7 @@
 # 🛠️ Platform & Eldriver Documentation [STM32F4]
 
 ## 📌 Introduction
-This document provides the technical specifications and software architecture for the **STM32F407** platform used in the **EcoDrive** system. It focuses on power optimization (Eco-mode) and peripheral driver interfacing.
+This document provides the technical specifications and software architecture for the **STM32F407** platform used in the **ForgeDriveMC** system. It focuses on power optimization (Eco-mode) and peripheral driver interfacing.
 
 ---
 
@@ -15,7 +15,7 @@ The firmware is structured in a layered approach to ensure modularity between th
 - **Platform/Hardware:** STM32F407 (Cortex-M4) Microcontroller.
 
 > **Architecture Diagram:**
-> ![System Architecture]("\\wsl.localhost\Ubuntu\home\carol_nasser\EcoDrive\docs\EcoDrive.drawio.png")
+> ![System Architecture]("\\wsl.localhost\Ubuntu\home\carol_nasser\ForgeDriveMC\docs\ForgeDriveMC.drawio.png")
 
 ---
 

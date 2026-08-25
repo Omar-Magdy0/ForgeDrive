@@ -6,11 +6,11 @@
 #include "stm32f4xx_ll_gpio.h"
 #include "stm32f401xc.h"
 
-#include "eld_conf.h"
-#include "el_mc3p.h"
+#include "fd_driver_conf.h"
+#include "fd_mc3p.h"
 
 
-#ifdef EL_MC3P_ENABLED
+#ifdef FD_MC3P_ENABLED
 
 #define SATURATE(v , min , max)(( v > max)?max: ((v < min)?0:v))
 #define Q15_HALF        16384   // 0.5 × 32768
@@ -38,19 +38,19 @@
 #define OC3M_ACTIVE     (0b101 << TIM_CCMR2_OC3M_Pos)
 #define OC3M_INACTIVE   (0b100 << TIM_CCMR2_OC3M_Pos)
 
-#ifndef EL_MC3P_CS
-#define EL_MC3P_CS EL_MC3P_CS_NONE
+#ifndef FD_MC3P_CS
+#define FD_MC3P_CS FD_MC3P_CS_NONE
 #endif
 
-#if EL_MC3P_CS == EL_MC3P_CS_TRIPLE_SHUNT
+#if FD_MC3P_CS == FD_MC3P_CS_TRIPLE_SHUNT
 #pragma message "CURRENT SENSOR : TRIPLE SHUNT"
-#elif EL_MC3P_CS == EL_MC3P_CS_DOUBLE_SHUNT
+#elif FD_MC3P_CS == FD_MC3P_CS_DOUBLE_SHUNT
 #pragma message "CURRENT SENSOR : DOUBLE SHUNT"
-#elif EL_MC3P_CS == EL_MC3P_CS_SINGLE_SHUNT
+#elif FD_MC3P_CS == FD_MC3P_CS_SINGLE_SHUNT
 #pragma message "CURRENT SENSOR : SINGLE SHUNT"
-#elif EL_MC3P_CS == EL_MC3P_CS_NONE
+#elif FD_MC3P_CS == FD_MC3P_CS_NONE
 #pragma message "CURRENT SENSOR : NONE"
-#elif EL_MC3P_CS == EL_MC3P_CS_INLINE
+#elif FD_MC3P_CS == FD_MC3P_CS_INLINE
 #pragma message "CURRENT SENSOR : INLINE"
 #endif
 
@@ -62,8 +62,8 @@
 #define VREFIN_CAL_ADDR (uint16_t *)0x1FFF7A2A
 #define VREFIN_CAL_VOLTAGE 3.3f
 
-#ifdef EL_MC3P_EXTERNAL_VREF
-const float externalRefVoltage_V = EL_MC3P_VREFEXT_VOLTAGE;
+#ifdef FD_MC3P_EXTERNAL_VREF
+const float externalRefVoltage_V = FD_MC3P_VREFEXT_VOLTAGE;
 #else
 const float externalRefVoltage_V = 0;
 #endif
@@ -71,16 +71,16 @@ const float externalRefVoltage_V = 0;
 
 //======================================================
 //DMA static definitions for ADC
-uint16_t mc3p_bg_data[2][EL_MC3P_BG_CHANNELS];
-float mc3p_bg_data_V[EL_MC3P_BG_CHANNELS];
+uint16_t mc3p_bg_data[2][FD_MC3P_BG_CHANNELS];
+float mc3p_bg_data_V[FD_MC3P_BG_CHANNELS];
 static volatile uint8_t mc3p_bg_active_buffer = 0; // 0 or 1
 volatile uint8_t isReady = 0;
 
 
-void mc3p_adc_svm_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector);
-void mc3p_adc_trap_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector);
-void mc3p_adc_mode(el_mc3p_handle_t *h, el_mc3p_sector_t sector);
-void mc3p_offset_calibration(el_mc3p_handle_t *h);
+void mc3p_adc_svm_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void mc3p_adc_trap_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void mc3p_adc_mode(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void mc3p_offset_calibration(fd_mc3p_handle_t *h);
 
 uint16_t adc1_Sample_Single_Channel_Temporary(uint32_t channel)
 {
@@ -107,17 +107,17 @@ uint16_t adc1_Sample_Single_Channel_Temporary(uint32_t channel)
     return result;
 }
 
-float mc3p_adc_read_single(el_mc3p_handle_t *h, uint32_t channel)
+float mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel)
 {
   uint16_t readVal = adc1_Sample_Single_Channel_Temporary(channel);
-  return ((float)(readVal)/( 1<< EL_MC3P_ADCRES)) * h->adc_ref_V;
+  return ((float)(readVal)/( 1<< FD_MC3P_ADCRES)) * h->adc_ref_V;
 }
 
-void mc3p_adc_calibrate(el_mc3p_handle_t *h)
+void mc3p_adc_calibrate(fd_mc3p_handle_t *h)
 {
     //Enable VREFINT and internalTEMP sensor
     ADC->CCR |= ADC_CCR_TSVREFE_Msk;
-    #ifndef EL_MC3P_VREFEXT
+    #ifndef FD_MC3P_VREFEXT
 
     // Wait for internal references to stabilize (IMPORTANT!)
     volatile uint32_t wait = 10000;
@@ -138,20 +138,20 @@ void mc3p_adc_calibrate(el_mc3p_handle_t *h)
     }
     uint32_t inRef_div_adcRef = sum / num_samples;
 
-    h->internal_ref_V = (*VREFIN_CAL_ADDR / (float)((1<<EL_MC3P_ADCRES) - 1) ) * VREFIN_CAL_VOLTAGE;
+    h->internal_ref_V = (*VREFIN_CAL_ADDR / (float)((1<<FD_MC3P_ADCRES) - 1) ) * VREFIN_CAL_VOLTAGE;
 
     // Calculate actual ADC reference voltage (your supply voltage)
-    (h->adc_ref_V) = h->internal_ref_V * ((1<<EL_MC3P_ADCRES) - 1) / (float)inRef_div_adcRef;
+    (h->adc_ref_V) = h->internal_ref_V * ((1<<FD_MC3P_ADCRES) - 1) / (float)inRef_div_adcRef;
     #else 
 
     adc_ref_V = externalRefVoltage_V;
     #endif
 
-    (h->adc_to_uV) = (float)(h->adc_ref_V * 1000000 ) / (float)((1<<EL_MC3P_ADCRES) - 1);
+    (h->adc_to_uV) = (float)(h->adc_ref_V * 1000000 ) / (float)((1<<FD_MC3P_ADCRES) - 1);
 }
 
 
-void mc3p_adc_init(el_mc3p_handle_t *h)
+void mc3p_adc_init(fd_mc3p_handle_t *h)
 {
         __HAL_RCC_ADC1_CLK_ENABLE();
     LL_ADC_CommonInitTypeDef adc1CommonInitStruct = {
@@ -205,13 +205,13 @@ void mc3p_adc_init(el_mc3p_handle_t *h)
     };                                                      
 
     // Set sampling times for all PWM Scan channels (injected group)
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_VSBUS_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_VSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_VSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_VSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_CSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_CSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
-    LL_ADC_SetChannelSamplingTime(ADC1, EL_MC3P_CSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_VSBUS_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_VSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_VSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_VSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_28CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_CSU_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_CSV_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
+    LL_ADC_SetChannelSamplingTime(ADC1, FD_MC3P_CSW_ADC_CHANNEL, LL_ADC_SAMPLINGTIME_15CYCLES);
 
     LL_ADC_INJ_Init(ADC1, &adc1InjInitStruct);
     //ADC CONFIGURATIONS AND LINKAGE TO TIM1 TRGO
@@ -262,20 +262,20 @@ void mc3p_adc_init(el_mc3p_handle_t *h)
 
 void mc3p_gpio_init()
 {     
-    MC3P_PWM_GpioInit(EL_MC3P_UH_PORT, EL_MC3P_UH_PIN, EL_MC3P_HIN_ACTIVE);
-    MC3P_PWM_GpioInit(EL_MC3P_VH_PORT, EL_MC3P_VH_PIN, EL_MC3P_HIN_ACTIVE);
-    MC3P_PWM_GpioInit(EL_MC3P_WH_PORT, EL_MC3P_WH_PIN, EL_MC3P_HIN_ACTIVE);
-    MC3P_PWM_GpioInit(EL_MC3P_UL_PORT, EL_MC3P_UL_PIN, EL_MC3P_LIN_ACTIVE);
-    MC3P_PWM_GpioInit(EL_MC3P_VL_PORT, EL_MC3P_VL_PIN, EL_MC3P_LIN_ACTIVE);
-    MC3P_PWM_GpioInit(EL_MC3P_WL_PORT, EL_MC3P_WL_PIN, EL_MC3P_LIN_ACTIVE);
+    MC3P_PWM_GpioInit(FD_MC3P_UH_PORT, FD_MC3P_UH_PIN, FD_MC3P_HIN_ACTIVE);
+    MC3P_PWM_GpioInit(FD_MC3P_VH_PORT, FD_MC3P_VH_PIN, FD_MC3P_HIN_ACTIVE);
+    MC3P_PWM_GpioInit(FD_MC3P_WH_PORT, FD_MC3P_WH_PIN, FD_MC3P_HIN_ACTIVE);
+    MC3P_PWM_GpioInit(FD_MC3P_UL_PORT, FD_MC3P_UL_PIN, FD_MC3P_LIN_ACTIVE);
+    MC3P_PWM_GpioInit(FD_MC3P_VL_PORT, FD_MC3P_VL_PIN, FD_MC3P_LIN_ACTIVE);
+    MC3P_PWM_GpioInit(FD_MC3P_WL_PORT, FD_MC3P_WL_PIN, FD_MC3P_LIN_ACTIVE);
     //Initialize adc pins
-    MC3P_ADC_GpioInit(EL_MC3P_VSBUS_PORT, EL_MC3P_VSBUS_PIN);
-    MC3P_ADC_GpioInit(EL_MC3P_VSU_PORT, EL_MC3P_VSU_PIN);
-    MC3P_ADC_GpioInit(EL_MC3P_VSV_PORT, EL_MC3P_VSV_PIN);
-    MC3P_ADC_GpioInit(EL_MC3P_VSW_PORT, EL_MC3P_VSW_PIN);
+    MC3P_ADC_GpioInit(FD_MC3P_VSBUS_PORT, FD_MC3P_VSBUS_PIN);
+    MC3P_ADC_GpioInit(FD_MC3P_VSU_PORT, FD_MC3P_VSU_PIN);
+    MC3P_ADC_GpioInit(FD_MC3P_VSV_PORT, FD_MC3P_VSV_PIN);
+    MC3P_ADC_GpioInit(FD_MC3P_VSW_PORT, FD_MC3P_VSW_PIN);
     
     // Optional: External VREF if used
-    #ifdef EL_MC3P_EXTERNAL_VREF
+    #ifdef FD_MC3P_EXTERNAL_VREF
 
     #endif
 }
@@ -312,7 +312,7 @@ void mc3p_dma_init()
     LL_DMA_SetMemoryAddress(MC3P_DMA_INSTANCE, MC3P_DMA_BACKGROUND_STREAM, (uint32_t)mc3p_bg_data[0]);
     
     // Set data length (total samples across both buffers)
-    LL_DMA_SetDataLength(MC3P_DMA_INSTANCE, MC3P_DMA_BACKGROUND_STREAM, EL_MC3P_BG_CHANNELS);
+    LL_DMA_SetDataLength(MC3P_DMA_INSTANCE, MC3P_DMA_BACKGROUND_STREAM, FD_MC3P_BG_CHANNELS);
 
     // Enable DMA transfer complete and half transfer interrupts
     LL_DMA_EnableIT_TC(MC3P_DMA_INSTANCE, MC3P_DMA_BACKGROUND_STREAM);
@@ -340,7 +340,7 @@ void mc3p_interrupt_init(){
 }
 
 
-static void mc3p_tim1_init(el_mc3p_handle_t *h){
+static void mc3p_tim1_init(fd_mc3p_handle_t *h){
     //ENABLE Peripheral CLOCK
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
     //===================================================== 
@@ -379,10 +379,10 @@ static void mc3p_tim1_init(el_mc3p_handle_t *h){
         .OCState = LL_TIM_OCSTATE_ENABLE,
         .OCNState = LL_TIM_OCSTATE_DISABLE,
         .CompareValue = 0,
-        .OCPolarity = EL_MC3P_HIN_ACTIVE ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
-        .OCNPolarity = EL_MC3P_LIN_ACTIVE ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
-        .OCIdleState = EL_MC3P_HIN_ACTIVE ? LL_TIM_OCIDLESTATE_LOW: LL_TIM_OCIDLESTATE_HIGH,
-        .OCNIdleState = EL_MC3P_LIN_ACTIVE ? LL_TIM_OCIDLESTATE_LOW : LL_TIM_OCIDLESTATE_HIGH
+        .OCPolarity = FD_MC3P_HIN_ACTIVE ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
+        .OCNPolarity = FD_MC3P_LIN_ACTIVE ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
+        .OCIdleState = FD_MC3P_HIN_ACTIVE ? LL_TIM_OCIDLESTATE_LOW: LL_TIM_OCIDLESTATE_HIGH,
+        .OCNIdleState = FD_MC3P_LIN_ACTIVE ? LL_TIM_OCIDLESTATE_LOW : LL_TIM_OCIDLESTATE_HIGH
     };
     LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH1, &ch1ch2ch3_tim1_OCInit);
     LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH2, &ch1ch2ch3_tim1_OCInit);
@@ -401,26 +401,26 @@ static void mc3p_tim1_init(el_mc3p_handle_t *h){
 }
 
 
-void el_mc3p_init(el_mc3p_handle_t *h)
+void fd_mc3p_init(fd_mc3p_handle_t *h)
 {
     mc3p_gpio_init();
     mc3p_tim1_init(h);
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
     h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
     //compute deadtme compensation
-    #ifdef EL_MC3P_DTC_ACTIVE
+    #ifdef FD_MC3P_DTC_ACTIVE
     h->dtc_comp_q15 = (uint16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
     #endif
     mc3p_adc_init(h);
     mc3p_dma_init();
-    h->sector_last = EL_MC3P_SECTOR_FLOAT;
-    h->mode        = EL_MC3P_MODE_NONE;
+    h->sector_last = FD_MC3P_SECTOR_FLOAT;
+    h->mode        = FD_MC3P_MODE_NONE;
     mc3p_irq_bind(h);
     mc3p_interrupt_init();
     if(h->offset_calibration)mc3p_offset_calibration(h);
-    el_mc3p_write_float(h);
+    fd_mc3p_write_float(h);
 }
-void el_mc3p_reconfigure_pwm(el_mc3p_handle_t *h)
+void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h)
 {
     LL_TIM_SetAutoReload(TIM1, __LL_TIM_CALC_ARR(HAL_RCC_GetPCLK2Freq(), 1, h->config.pwm_Hz));
     LL_TIM_OC_SetDeadTime(TIM1, (uint8_t)(__LL_TIM_CALC_DEADTIME(HAL_RCC_GetPCLK2Freq(), LL_TIM_GetClockDivision(TIM1), h->config.deadtime_nS)));
@@ -429,14 +429,14 @@ void el_mc3p_reconfigure_pwm(el_mc3p_handle_t *h)
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
     h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
     //compute deadtme compensation
-    #ifdef EL_MC3P_DTC_ACTIVE
+    #ifdef FD_MC3P_DTC_ACTIVE
     h->dtc_comp_q15 = (uint16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
     #endif
 }
 //======================================================
 // Phase Ouptut functions
 //======================================================
-void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_u, el_mc3p_phase_state_t state_v, el_mc3p_phase_state_t state_w)
+void fd_mc3p_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
 {
     uint32_t ccer_shadow = TIM1->CCER;
     uint32_t ccmr1_shadow = TIM1->CCMR1;
@@ -448,30 +448,30 @@ void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_
     //Operations to be done here
     switch(state_u)
     {
-        case(EL_MC3P_PHASE_FLOAT)  :   {ccmr1_shadow |= OC1M_INACTIVE; ccer_shadow  &= ~(CC1E_MASK); break;}
-        case(EL_MC3P_PHASE_L_ON)   :   {ccmr1_shadow |= OC1M_INACTIVE; break;}
-        case(EL_MC3P_PHASE_H_ON)   :   {ccmr1_shadow |= OC1M_ACTIVE;   break;}
-        case(EL_MC3P_PHASE_COMP)   :   {ccmr1_shadow |= OC1M_PWM;      break;}
-        case(EL_MC3P_PHASE_L_PWM)  :   {ccmr1_shadow |= OC1M_PWM   ; ccer_shadow &=  ~(CC1E_MASK); break;}
-        case(EL_MC3P_PHASE_H_PWM)  :   {ccmr1_shadow |= OC1M_PWM   ; ccer_shadow &=  ~(CC1NE_MASK); break;}
+        case(FD_MC3P_PHASE_FLOAT)  :   {ccmr1_shadow |= OC1M_INACTIVE; ccer_shadow  &= ~(CC1E_MASK); break;}
+        case(FD_MC3P_PHASE_L_ON)   :   {ccmr1_shadow |= OC1M_INACTIVE; break;}
+        case(FD_MC3P_PHASE_H_ON)   :   {ccmr1_shadow |= OC1M_ACTIVE;   break;}
+        case(FD_MC3P_PHASE_COMP)   :   {ccmr1_shadow |= OC1M_PWM;      break;}
+        case(FD_MC3P_PHASE_L_PWM)  :   {ccmr1_shadow |= OC1M_PWM   ; ccer_shadow &=  ~(CC1E_MASK); break;}
+        case(FD_MC3P_PHASE_H_PWM)  :   {ccmr1_shadow |= OC1M_PWM   ; ccer_shadow &=  ~(CC1NE_MASK); break;}
     }
     switch(state_v)
     {        
-        case(EL_MC3P_PHASE_FLOAT)  :   {ccmr1_shadow |= OC2M_INACTIVE; ccer_shadow  &= ~(CC2E_MASK); break;}
-        case(EL_MC3P_PHASE_L_ON)   :   {ccmr1_shadow |= OC2M_INACTIVE; break;}
-        case(EL_MC3P_PHASE_H_ON)   :   {ccmr1_shadow |= OC2M_ACTIVE;   break;}
-        case(EL_MC3P_PHASE_COMP)   :   {ccmr1_shadow |= OC2M_PWM;      break;}
-        case(EL_MC3P_PHASE_L_PWM)  :   {ccmr1_shadow |= OC2M_PWM   ; ccer_shadow &=  ~(CC2E_MASK); break;}
-        case(EL_MC3P_PHASE_H_PWM)  :   {ccmr1_shadow |= OC2M_PWM   ; ccer_shadow &=  ~(CC2NE_MASK); break;}
+        case(FD_MC3P_PHASE_FLOAT)  :   {ccmr1_shadow |= OC2M_INACTIVE; ccer_shadow  &= ~(CC2E_MASK); break;}
+        case(FD_MC3P_PHASE_L_ON)   :   {ccmr1_shadow |= OC2M_INACTIVE; break;}
+        case(FD_MC3P_PHASE_H_ON)   :   {ccmr1_shadow |= OC2M_ACTIVE;   break;}
+        case(FD_MC3P_PHASE_COMP)   :   {ccmr1_shadow |= OC2M_PWM;      break;}
+        case(FD_MC3P_PHASE_L_PWM)  :   {ccmr1_shadow |= OC2M_PWM   ; ccer_shadow &=  ~(CC2E_MASK); break;}
+        case(FD_MC3P_PHASE_H_PWM)  :   {ccmr1_shadow |= OC2M_PWM   ; ccer_shadow &=  ~(CC2NE_MASK); break;}
     }
     switch(state_w)
     {
-        case(EL_MC3P_PHASE_FLOAT)  :   {ccmr2_shadow |= OC3M_INACTIVE; ccer_shadow  &= ~(CC3E_MASK); break;}
-        case(EL_MC3P_PHASE_L_ON)   :   {ccmr2_shadow |= OC3M_INACTIVE; break;}
-        case(EL_MC3P_PHASE_H_ON)   :   {ccmr2_shadow |= OC3M_ACTIVE;   break;}
-        case(EL_MC3P_PHASE_COMP)   :   {ccmr2_shadow |= OC3M_PWM;      break;}
-        case(EL_MC3P_PHASE_L_PWM)  :   {ccmr2_shadow |= OC3M_PWM   ; ccer_shadow &=  ~(CC3E_MASK); break;}
-        case(EL_MC3P_PHASE_H_PWM)  :   {ccmr2_shadow |= OC3M_PWM   ; ccer_shadow &=  ~(CC3NE_MASK); break;}
+        case(FD_MC3P_PHASE_FLOAT)  :   {ccmr2_shadow |= OC3M_INACTIVE; ccer_shadow  &= ~(CC3E_MASK); break;}
+        case(FD_MC3P_PHASE_L_ON)   :   {ccmr2_shadow |= OC3M_INACTIVE; break;}
+        case(FD_MC3P_PHASE_H_ON)   :   {ccmr2_shadow |= OC3M_ACTIVE;   break;}
+        case(FD_MC3P_PHASE_COMP)   :   {ccmr2_shadow |= OC3M_PWM;      break;}
+        case(FD_MC3P_PHASE_L_PWM)  :   {ccmr2_shadow |= OC3M_PWM   ; ccer_shadow &=  ~(CC3E_MASK); break;}
+        case(FD_MC3P_PHASE_H_PWM)  :   {ccmr2_shadow |= OC3M_PWM   ; ccer_shadow &=  ~(CC3NE_MASK); break;}
     }
 
     TIM1->CCER = ccer_shadow;
@@ -480,7 +480,7 @@ void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_
     TIM1->EGR |= TIM_EGR_COMG;
 }
 
-void el_mc3p_write_phase_duty(el_mc3p_handle_t *h, int16_t dutyu_q15, int16_t dutyv_q15, int16_t dutyw_q15)
+void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t dutyu_q15, int16_t dutyv_q15, int16_t dutyw_q15)
 {
     uint32_t compare_u = ((uint32_t)SATURATE(dutyu_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
     uint32_t compare_v = ((uint32_t)SATURATE(dutyv_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
@@ -490,39 +490,39 @@ void el_mc3p_write_phase_duty(el_mc3p_handle_t *h, int16_t dutyu_q15, int16_t du
     TIM1->CCR3 = compare_w;
 }
 
-void el_mc3p_write_float(el_mc3p_handle_t *h)
+void fd_mc3p_write_float(fd_mc3p_handle_t *h)
 {    
-    el_mc3p_write_phase_state(h, EL_MC3P_PHASE_FLOAT, EL_MC3P_PHASE_FLOAT, EL_MC3P_PHASE_FLOAT);
-    el_mc3p_write_phase_duty(h, 0, 0, 0);
-    h->sector_last = EL_MC3P_SECTOR_FLOAT;
+    fd_mc3p_write_phase_state(h, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_FLOAT);
+    fd_mc3p_write_phase_duty(h, 0, 0, 0);
+    h->sector_last = FD_MC3P_SECTOR_FLOAT;
 }
 
 
 
 typedef struct {
-    el_mc3p_phase_state_t phase_state[3]; // A,B,C: COMP, L_ON, FLOAT
+    fd_mc3p_phase_state_t phase_state[3]; // A,B,C: COMP, L_ON, FLOAT
 } mc3p_trap_sector_map_t;
 
 
 static const mc3p_trap_sector_map_t trap_table[6] = {
-    [EL_MC3P_SECTOR_TRAP1 - 1] = { {EL_MC3P_PHASE_COMP, EL_MC3P_PHASE_L_ON, EL_MC3P_PHASE_FLOAT}},
-    [EL_MC3P_SECTOR_TRAP2 - 1] = { {EL_MC3P_PHASE_COMP, EL_MC3P_PHASE_FLOAT, EL_MC3P_PHASE_L_ON}},
-    [EL_MC3P_SECTOR_TRAP3 - 1] = { {EL_MC3P_PHASE_FLOAT, EL_MC3P_PHASE_COMP, EL_MC3P_PHASE_L_ON}},
-    [EL_MC3P_SECTOR_TRAP4 - 1] = { {EL_MC3P_PHASE_L_ON, EL_MC3P_PHASE_COMP, EL_MC3P_PHASE_FLOAT}},
-    [EL_MC3P_SECTOR_TRAP5 - 1] = { {EL_MC3P_PHASE_L_ON, EL_MC3P_PHASE_FLOAT, EL_MC3P_PHASE_COMP}},
-    [EL_MC3P_SECTOR_TRAP6 - 1] = { {EL_MC3P_PHASE_FLOAT, EL_MC3P_PHASE_L_ON, EL_MC3P_PHASE_COMP}},
+    [FD_MC3P_SECTOR_TRAP1 - 1] = { {FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_FLOAT}},
+    [FD_MC3P_SECTOR_TRAP2 - 1] = { {FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_L_ON}},
+    [FD_MC3P_SECTOR_TRAP3 - 1] = { {FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_L_ON}},
+    [FD_MC3P_SECTOR_TRAP4 - 1] = { {FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_FLOAT}},
+    [FD_MC3P_SECTOR_TRAP5 - 1] = { {FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_COMP}},
+    [FD_MC3P_SECTOR_TRAP6 - 1] = { {FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_COMP}},
 };
 
-void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t duty_q15)
+void fd_mc3p_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15)
 {
     if(!IS_TRAP_SECTOR(h->sector_last))
     {
         mc3p_adc_mode(h, sector);
-        h->mode        = EL_MC3P_MODE_TRAP;
+        h->mode        = FD_MC3P_MODE_TRAP;
     }
  
 
-    if(sector < EL_MC3P_SECTOR_TRAP1 || sector > EL_MC3P_SECTOR_TRAP6)
+    if(sector < FD_MC3P_SECTOR_TRAP1 || sector > FD_MC3P_SECTOR_TRAP6)
         return;
 
     const mc3p_trap_sector_map_t *map = &trap_table[sector - 1];
@@ -530,11 +530,11 @@ void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t d
     // Only update phase state & ADC if sector changed
     if(h->sector_last != sector)
     {
-        el_mc3p_write_phase_state(h, map->phase_state[0], map->phase_state[1], map->phase_state[2]);
+        fd_mc3p_write_phase_state(h, map->phase_state[0], map->phase_state[1], map->phase_state[2]);
         mc3p_adc_trap_update(h, sector);
         h->sector_last = sector;
     }
-    #ifdef EL_MC3P_DTC_ACTIVE
+    #ifdef FD_MC3P_DTC_ACTIVE
     h->dutyu_q15 = __SSAT((int32_t)duty_q15 + ((h->dtc_state & (1<<3))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
     h->dutyv_q15 = h->dutyu_q15;
     h->dutyw_q15 = h->dutyu_q15;
@@ -543,16 +543,16 @@ void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t d
     h->dutyv_q15 = h->dutyu_q15;
     h->dutyw_q15 = h->dutyu_q15;
     #endif
-    el_mc3p_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
+    fd_mc3p_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
 }
 
-void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15) 
+void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15) 
 {
     int32_t vmax, vmin, voff;
     if(!IS_SVM_SECTOR(h->sector_last))
     {
-        el_mc3p_write_phase_state(h, EL_MC3P_PHASE_COMP, EL_MC3P_PHASE_COMP, EL_MC3P_PHASE_COMP);
-        h->mode        = EL_MC3P_MODE_SVM;
+        fd_mc3p_write_phase_state(h, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP);
+        h->mode        = FD_MC3P_MODE_SVM;
     }
     int32_t dutyu_q15, dutyv_q15, dutyw_q15;
     /* αβ → phase (normalized Q15) */
@@ -570,16 +570,16 @@ void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
 
     // 3-bit code
     uint8_t code = (b2 << 2) | (b1 << 1) | b0;
-    el_mc3p_sector_t sector;
+    fd_mc3p_sector_t sector;
     switch(code)
     {
-        case 0b001: sector = EL_MC3P_SECTOR_SVM1; break;
-        case 0b011: sector = EL_MC3P_SECTOR_SVM2; break;
-        case 0b010: sector = EL_MC3P_SECTOR_SVM3; break;
-        case 0b110: sector = EL_MC3P_SECTOR_SVM4; break;
-        case 0b100: sector = EL_MC3P_SECTOR_SVM5; break;
-        case 0b101: sector = EL_MC3P_SECTOR_SVM6; break;
-        default: sector = EL_MC3P_SECTOR_FLOAT; break; // should not happen
+        case 0b001: sector = FD_MC3P_SECTOR_SVM1; break;
+        case 0b011: sector = FD_MC3P_SECTOR_SVM2; break;
+        case 0b010: sector = FD_MC3P_SECTOR_SVM3; break;
+        case 0b110: sector = FD_MC3P_SECTOR_SVM4; break;
+        case 0b100: sector = FD_MC3P_SECTOR_SVM5; break;
+        case 0b101: sector = FD_MC3P_SECTOR_SVM6; break;
+        default: sector = FD_MC3P_SECTOR_FLOAT; break; // should not happen
     }
     /* SVPWM zero-sequence injection */
     vmax = dutyu_q15;
@@ -595,7 +595,7 @@ void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
     dutyu_q15 = (dutyu_q15 - voff) + Q15_HALF;
     dutyv_q15 = (dutyv_q15 - voff) + Q15_HALF;
     dutyw_q15 = (dutyw_q15 - voff) + Q15_HALF;
-    #ifdef EL_MC3P_DTC_ACTIVE
+    #ifdef FD_MC3P_DTC_ACTIVE
     h->dutyu_q15 = __SSAT(dutyu_q15 + ((h->dtc_state & (1<<0))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
     h->dutyv_q15 = __SSAT(dutyv_q15 + ((h->dtc_state & (1<<1))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
     h->dutyw_q15 = __SSAT(dutyw_q15 + ((h->dtc_state & (1<<2))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
@@ -604,37 +604,37 @@ void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
     h->dutyv_q15 = dutyv_q15;
     h->dutyw_q15 = dutyw_q15;
     #endif
-    el_mc3p_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
+    fd_mc3p_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
     h->sector_last = sector;
 }
 
 //==============================================
 // Analog Reading functions
 //==============================================
-void mc3p_adc_mode(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
+void mc3p_adc_mode(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
     uint8_t is_svm = IS_SVM_SECTOR(sector);
     uint8_t is_trap = IS_TRAP_SECTOR(sector);
     if(is_svm)
     {
         LL_ADC_INJ_SetSequencerLength(ADC1, LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS);
-        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, EL_MC3P_VSBUS_ADC_CHANNEL);
-        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, EL_MC3P_CSU_ADC_CHANNEL);
-        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, EL_MC3P_CSV_ADC_CHANNEL);
-        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, EL_MC3P_CSW_ADC_CHANNEL);
-        h->sync_rank_scale[0] = EL_MC3P_VSBUS;
-        h->sync_rank_scale[1] = EL_MC3P_CSU;
-        h->sync_rank_scale[2] = EL_MC3P_CSV;
-        h->sync_rank_scale[3] = EL_MC3P_CSW;
+        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, FD_MC3P_VSBUS_ADC_CHANNEL);
+        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, FD_MC3P_CSU_ADC_CHANNEL);
+        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, FD_MC3P_CSV_ADC_CHANNEL);
+        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, FD_MC3P_CSW_ADC_CHANNEL);
+        h->sync_rank_scale[0] = FD_MC3P_VSBUS;
+        h->sync_rank_scale[1] = FD_MC3P_CSU;
+        h->sync_rank_scale[2] = FD_MC3P_CSV;
+        h->sync_rank_scale[3] = FD_MC3P_CSW;
     }else if(is_trap)
     {
         LL_ADC_INJ_SetSequencerLength(ADC1, LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS);
-        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, EL_MC3P_VSBUS_ADC_CHANNEL);
-        h->sync_rank_scale[0] = EL_MC3P_VSBUS;
+        LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, FD_MC3P_VSBUS_ADC_CHANNEL);
+        h->sync_rank_scale[0] = FD_MC3P_VSBUS;
     }
 }
 
-void mc3p_adc_svm_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
+void mc3p_adc_svm_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
     
 }
@@ -647,15 +647,15 @@ typedef struct {
 } mc3p_adc_map_t;
 
 static const mc3p_adc_map_t adc_trap_table[6] = {
-    [EL_MC3P_SECTOR_TRAP1 - 1] = { EL_MC3P_VSW_ADC_CHANNEL, EL_MC3P_CSV_ADC_CHANNEL, EL_MC3P_VSW, EL_MC3P_CSV},
-    [EL_MC3P_SECTOR_TRAP2 - 1] = { EL_MC3P_VSV_ADC_CHANNEL, EL_MC3P_CSW_ADC_CHANNEL, EL_MC3P_VSV, EL_MC3P_CSW},
-    [EL_MC3P_SECTOR_TRAP3 - 1] = { EL_MC3P_VSU_ADC_CHANNEL, EL_MC3P_CSW_ADC_CHANNEL, EL_MC3P_VSU, EL_MC3P_CSW},
-    [EL_MC3P_SECTOR_TRAP4 - 1] = { EL_MC3P_VSW_ADC_CHANNEL, EL_MC3P_CSU_ADC_CHANNEL, EL_MC3P_VSW, EL_MC3P_CSU},
-    [EL_MC3P_SECTOR_TRAP5 - 1] = { EL_MC3P_VSV_ADC_CHANNEL, EL_MC3P_CSU_ADC_CHANNEL, EL_MC3P_VSV, EL_MC3P_CSU},
-    [EL_MC3P_SECTOR_TRAP6 - 1] = { EL_MC3P_VSU_ADC_CHANNEL, EL_MC3P_CSV_ADC_CHANNEL, EL_MC3P_VSU, EL_MC3P_CSV},
+    [FD_MC3P_SECTOR_TRAP1 - 1] = { FD_MC3P_VSW_ADC_CHANNEL, FD_MC3P_CSV_ADC_CHANNEL, FD_MC3P_VSW, FD_MC3P_CSV},
+    [FD_MC3P_SECTOR_TRAP2 - 1] = { FD_MC3P_VSV_ADC_CHANNEL, FD_MC3P_CSW_ADC_CHANNEL, FD_MC3P_VSV, FD_MC3P_CSW},
+    [FD_MC3P_SECTOR_TRAP3 - 1] = { FD_MC3P_VSU_ADC_CHANNEL, FD_MC3P_CSW_ADC_CHANNEL, FD_MC3P_VSU, FD_MC3P_CSW},
+    [FD_MC3P_SECTOR_TRAP4 - 1] = { FD_MC3P_VSW_ADC_CHANNEL, FD_MC3P_CSU_ADC_CHANNEL, FD_MC3P_VSW, FD_MC3P_CSU},
+    [FD_MC3P_SECTOR_TRAP5 - 1] = { FD_MC3P_VSV_ADC_CHANNEL, FD_MC3P_CSU_ADC_CHANNEL, FD_MC3P_VSV, FD_MC3P_CSU},
+    [FD_MC3P_SECTOR_TRAP6 - 1] = { FD_MC3P_VSU_ADC_CHANNEL, FD_MC3P_CSV_ADC_CHANNEL, FD_MC3P_VSU, FD_MC3P_CSV},
 };
 
-void mc3p_adc_trap_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
+void mc3p_adc_trap_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
     const mc3p_adc_map_t *map = &adc_trap_table[sector - 1];
     LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, map->rank2_channel);
@@ -663,16 +663,16 @@ void mc3p_adc_trap_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
 }
 
 #include <string.h>
-void el_mc3p_read_sync(el_mc3p_handle_t *h, void *data)
+void fd_mc3p_read_sync(fd_mc3p_handle_t *h, void *data)
 {
 #define DTC_UPDATE_POLARITY(current, bit)         \
     do                                            \
     {                                             \
-        if ((current) > (int32_t)EL_MC3P_DTC_CTHRESH)       \
+        if ((current) > (int32_t)FD_MC3P_DTC_CTHRESH)       \
         {                                         \
             h->dtc_state |= (bit);             \
         }                                         \
-        else if ((current) < -(int32_t)EL_MC3P_DTC_CTHRESH) \
+        else if ((current) < -(int32_t)FD_MC3P_DTC_CTHRESH) \
         {                                         \
             h->dtc_state &= ~(bit);            \
         }                                         \
@@ -682,57 +682,57 @@ void el_mc3p_read_sync(el_mc3p_handle_t *h, void *data)
     uint8_t is_trap = IS_TRAP_SECTOR(h->sector_last);
     if (is_svm)
     {
-        ((el_mc3p_trap_data_t *)(data))->vbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
-        ((el_mc3p_svm_data_t *)(data))->cu_q31 = (h->sync_scale_q31[h->sync_rank_scale[1]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[1]][1]);
-        ((el_mc3p_svm_data_t *)(data))->cv_q31 = (h->sync_scale_q31[h->sync_rank_scale[2]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2)) + h->sync_scale_q31[h->sync_rank_scale[2]][1]);
-        ((el_mc3p_svm_data_t *)(data))->cw_q31 = (h->sync_scale_q31[h->sync_rank_scale[3]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_3)) + h->sync_scale_q31[h->sync_rank_scale[3]][1]);
+        ((fd_mc3p_trap_data_t *)(data))->vbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
+        ((fd_mc3p_svm_data_t *)(data))->cu_q31 = (h->sync_scale_q31[h->sync_rank_scale[1]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[1]][1]);
+        ((fd_mc3p_svm_data_t *)(data))->cv_q31 = (h->sync_scale_q31[h->sync_rank_scale[2]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2)) + h->sync_scale_q31[h->sync_rank_scale[2]][1]);
+        ((fd_mc3p_svm_data_t *)(data))->cw_q31 = (h->sync_scale_q31[h->sync_rank_scale[3]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_3)) + h->sync_scale_q31[h->sync_rank_scale[3]][1]);
         // Dead-time compensation
-        #ifdef EL_MC3P_DTC_ACTIVE
-        DTC_UPDATE_POLARITY(((el_mc3p_svm_data_t *)(data))->cu_q31, (1 << 0));
-        DTC_UPDATE_POLARITY(((el_mc3p_svm_data_t *)(data))->cv_q31, (1 << 1));
-        DTC_UPDATE_POLARITY(((el_mc3p_svm_data_t *)(data))->cw_q31, (1 << 2));
+        #ifdef FD_MC3P_DTC_ACTIVE
+        DTC_UPDATE_POLARITY(((fd_mc3p_svm_data_t *)(data))->cu_q31, (1 << 0));
+        DTC_UPDATE_POLARITY(((fd_mc3p_svm_data_t *)(data))->cv_q31, (1 << 1));
+        DTC_UPDATE_POLARITY(((fd_mc3p_svm_data_t *)(data))->cw_q31, (1 << 2));
         #endif
     }
     else if (is_trap)
     {
-        ((el_mc3p_trap_data_t *)(data))->vbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
-        ((el_mc3p_trap_data_t *)(data))->vbemf_q31 = (h->sync_scale_q31[h->sync_rank_scale[1]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2)) + h->sync_scale_q31[h->sync_rank_scale[1]][1]);
-        ((el_mc3p_trap_data_t *)(data))->cbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[2]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_3)) + h->sync_scale_q31[h->sync_rank_scale[2]][1]);
-        #ifdef EL_MC3P_DTC_ACTIVE
-        DTC_UPDATE_POLARITY(((el_mc3p_trap_data_t *)(data))->cbus_q31 , (1 << 3));
+        ((fd_mc3p_trap_data_t *)(data))->vbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
+        ((fd_mc3p_trap_data_t *)(data))->vbemf_q31 = (h->sync_scale_q31[h->sync_rank_scale[1]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2)) + h->sync_scale_q31[h->sync_rank_scale[1]][1]);
+        ((fd_mc3p_trap_data_t *)(data))->cbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[2]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_3)) + h->sync_scale_q31[h->sync_rank_scale[2]][1]);
+        #ifdef FD_MC3P_DTC_ACTIVE
+        DTC_UPDATE_POLARITY(((fd_mc3p_trap_data_t *)(data))->cbus_q31 , (1 << 3));
         #endif
     }
     else
     {
-        ((el_mc3p_trap_data_t *)(data))->vbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
+        ((fd_mc3p_trap_data_t *)(data))->vbus_q31 = (h->sync_scale_q31[h->sync_rank_scale[0]][0] * (LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1)) + h->sync_scale_q31[h->sync_rank_scale[0]][1]);
     }
 }
 
-uint8_t el_mc3p_read_bg(el_mc3p_handle_t *h, float* scanData)
+uint8_t fd_mc3p_read_bg(fd_mc3p_handle_t *h, float* scanData)
 {
     uint8_t readBuffer = 1 - mc3p_bg_active_buffer; // Always read from inactive buffer
-    for(int i = 0; i < EL_MC3P_BG_CHANNELS; i++)
+    for(int i = 0; i < FD_MC3P_BG_CHANNELS; i++)
     {
         mc3p_bg_data_V[i] = (h->adc_to_uV * (mc3p_bg_data[readBuffer][i]) ) / 1000000.0;
     }
-    memcpy(scanData, mc3p_bg_data_V, EL_MC3P_BG_CHANNELS * sizeof(float));
+    memcpy(scanData, mc3p_bg_data_V, FD_MC3P_BG_CHANNELS * sizeof(float));
     isReady = 0;
-    return EL_MC3P_BG_CHANNELS;
+    return FD_MC3P_BG_CHANNELS;
 }
 
 
-void el_mc3p_bg_startConv(el_mc3p_handle_t *h)
+void fd_mc3p_bg_startConv(fd_mc3p_handle_t *h)
 {
     isReady = 0;
     LL_ADC_REG_StartConversionSWStart(ADC1);
 }
 
-uint8_t el_mc3p_bg_channels(el_mc3p_handle_t *h)
+uint8_t fd_mc3p_bg_channels(fd_mc3p_handle_t *h)
 {
-    return EL_MC3P_BG_CHANNELS;
+    return FD_MC3P_BG_CHANNELS;
 }
 
-uint8_t el_mc3p_bg_isReady(el_mc3p_handle_t *h)
+uint8_t fd_mc3p_bg_isReady(fd_mc3p_handle_t *h)
 {
     return isReady;
 }
@@ -755,78 +755,78 @@ void DMA2_Stream0_IRQHandler(void)
     }
 }
 
-void el_mc3p_set_gain(el_mc3p_handle_t *h,  el_mc3p_sync s, float gain)
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync s, float gain)
 {
-    float scale = (s >= EL_MC3P_CSU && s <= EL_MC3P_CSW)? EL_MC3P_CS_SCALE : EL_MC3P_VS_SCALE;
+    float scale = (s >= FD_MC3P_CSU && s <= FD_MC3P_CSW)? FD_MC3P_CS_SCALE : FD_MC3P_VS_SCALE;
     h->sync_scale_q31[s][0] = ((gain * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * scale));
 }
-void el_mc3p_set_sync_scale(el_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
+void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
 {
     for(uint8_t i = 0; i < MC3P_SYNC_CHANNELS; i++)
     {
         //Gains
-        el_mc3p_set_gain(h, (el_mc3p_sync)i, scales[i][0]);
+        fd_mc3p_set_gain(h, (fd_mc3p_sync)i, scales[i][0]);
         //Offsets
-        if(i >= EL_MC3P_VSBUS || i <= EL_MC3P_VSW)
+        if(i >= FD_MC3P_VSBUS || i <= FD_MC3P_VSW)
         {
-            h->sync_scale_q31[i][1] = EL_MC3P_FLOAT_TO_VS(scales[i][1]);
+            h->sync_scale_q31[i][1] = FD_MC3P_FLOAT_TO_VS(scales[i][1]);
         }
-        else if(i >= EL_MC3P_CSV || i <= EL_MC3P_CSW)
+        else if(i >= FD_MC3P_CSV || i <= FD_MC3P_CSW)
         {
-            h->sync_scale_q31[i][1] = EL_MC3P_FLOAT_TO_CS(scales[i][1]);
+            h->sync_scale_q31[i][1] = FD_MC3P_FLOAT_TO_CS(scales[i][1]);
         }
     }
 }
 
-void mc3p_offset_calibration(el_mc3p_handle_t *h)
+void mc3p_offset_calibration(fd_mc3p_handle_t *h)
 {
     // Set all phases to Loww (0,0,0)
     // Set mode to calibration
-    h->mode = EL_MC3P_MODE_CALIB;
-    el_mc3p_write_phase_state(h, EL_MC3P_PHASE_L_ON, EL_MC3P_PHASE_L_ON, EL_MC3P_PHASE_L_ON);
-    el_mc3p_write_phase_duty(h, 0, 0, 0);
+    h->mode = FD_MC3P_MODE_CALIB;
+    fd_mc3p_write_phase_state(h, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_L_ON);
+    fd_mc3p_write_phase_duty(h, 0, 0, 0);
     // Read current sensor values (the reading is your offset) (make the injected sequence suitable)
     LL_ADC_INJ_SetSequencerLength(ADC1, LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, EL_MC3P_VSBUS_ADC_CHANNEL);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, EL_MC3P_CSU_ADC_CHANNEL);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, EL_MC3P_CSV_ADC_CHANNEL);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, EL_MC3P_CSW_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, FD_MC3P_VSBUS_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, FD_MC3P_CSU_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, FD_MC3P_CSV_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, FD_MC3P_CSW_ADC_CHANNEL);
     for(int i = 0; i < 4; i++)h->offset_calibration_sum[i] = 0;
-    h->offset_calibration_remaining_samples = EL_MC3P_OFFSET_CALIBRATION_SAMPLES;
+    h->offset_calibration_remaining_samples = FD_MC3P_OFFSET_CALIBRATION_SAMPLES;
     while(h->offset_calibration_remaining_samples);
     // Now we have the offsets
-    for(int i = 0; i < 4; i++)h->offset_calibration_sum[i] = h->offset_calibration_sum[i]/EL_MC3P_OFFSET_CALIBRATION_SAMPLES;
+    for(int i = 0; i < 4; i++)h->offset_calibration_sum[i] = h->offset_calibration_sum[i]/FD_MC3P_OFFSET_CALIBRATION_SAMPLES;
     //assign the averaged adc value after Q31 scaling
-    h->sync_scale_q31[EL_MC3P_CSU][1] =  ((h->offset_calibration_sum[1] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * EL_MC3P_CS_SCALE));
-    h->sync_scale_q31[EL_MC3P_CSV][1] =  ((h->offset_calibration_sum[2] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * EL_MC3P_CS_SCALE));
-    h->sync_scale_q31[EL_MC3P_CSW][1] =  ((h->offset_calibration_sum[3] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * EL_MC3P_CS_SCALE));
+    h->sync_scale_q31[FD_MC3P_CSU][1] =  ((h->offset_calibration_sum[1] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * FD_MC3P_CS_SCALE));
+    h->sync_scale_q31[FD_MC3P_CSV][1] =  ((h->offset_calibration_sum[2] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * FD_MC3P_CS_SCALE));
+    h->sync_scale_q31[FD_MC3P_CSW][1] =  ((h->offset_calibration_sum[3] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * FD_MC3P_CS_SCALE));
 
     // Read phase voltage sensor values (the reading is your offset) (make the injected sequence suitable)
     LL_ADC_INJ_SetSequencerLength(ADC1, LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, EL_MC3P_VSBUS_ADC_CHANNEL);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, EL_MC3P_VSU_ADC_CHANNEL);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, EL_MC3P_VSV_ADC_CHANNEL);
-    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, EL_MC3P_VSW_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_1, FD_MC3P_VSBUS_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_2, FD_MC3P_VSU_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_3, FD_MC3P_VSV_ADC_CHANNEL);
+    LL_ADC_INJ_SetSequencerRanks(ADC1, LL_ADC_INJ_RANK_4, FD_MC3P_VSW_ADC_CHANNEL);
     for(int i = 0; i < 4; i++)h->offset_calibration_sum[i] = 0;
-    h->offset_calibration_remaining_samples = EL_MC3P_OFFSET_CALIBRATION_SAMPLES;
+    h->offset_calibration_remaining_samples = FD_MC3P_OFFSET_CALIBRATION_SAMPLES;
     while(h->offset_calibration_remaining_samples);
     // Now we have the offsets
-    for(int i = 0; i < 4; i++)h->offset_calibration_sum[i] = h->offset_calibration_sum[i]/EL_MC3P_OFFSET_CALIBRATION_SAMPLES;
+    for(int i = 0; i < 4; i++)h->offset_calibration_sum[i] = h->offset_calibration_sum[i]/FD_MC3P_OFFSET_CALIBRATION_SAMPLES;
     //assign the averaged adc value after Q31 scaling
-    h->sync_scale_q31[EL_MC3P_VSU][1] =  ((h->offset_calibration_sum[1] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * EL_MC3P_VS_SCALE));
-    h->sync_scale_q31[EL_MC3P_VSV][1] =  ((h->offset_calibration_sum[2] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * EL_MC3P_VS_SCALE));
-    h->sync_scale_q31[EL_MC3P_VSW][1] =  ((h->offset_calibration_sum[3] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * EL_MC3P_VS_SCALE));
+    h->sync_scale_q31[FD_MC3P_VSU][1] =  ((h->offset_calibration_sum[1] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * FD_MC3P_VS_SCALE));
+    h->sync_scale_q31[FD_MC3P_VSV][1] =  ((h->offset_calibration_sum[2] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * FD_MC3P_VS_SCALE));
+    h->sync_scale_q31[FD_MC3P_VSW][1] =  ((h->offset_calibration_sum[3] * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * FD_MC3P_VS_SCALE));
 
     //Set phases to High-Z and call it a day
-    h->mode = EL_MC3P_MODE_NONE;
-    el_mc3p_write_float(h);
+    h->mode = FD_MC3P_MODE_NONE;
+    fd_mc3p_write_float(h);
 }
 
-void INTERNAL_mc3p_ADC_JEOS_IRQ(el_mc3p_handle_t *h)
+void INTERNAL_mc3p_ADC_JEOS_IRQ(fd_mc3p_handle_t *h)
 {
     switch (h->mode)
     {
-    case EL_MC3P_MODE_CALIB:
+    case FD_MC3P_MODE_CALIB:
     if(h->offset_calibration_remaining_samples){
         h->offset_calibration_sum[0] += LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1);
         h->offset_calibration_sum[1] += LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2);

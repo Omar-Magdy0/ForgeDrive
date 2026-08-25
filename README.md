@@ -1,5 +1,5 @@
 ---
-# ⚡ EcoDrive
+# ⚡ ForgeDriveMC
 
 A **modular, dual-platform** open-source firmware platform for **PMSM motor control** in electric vehicle applications.  
 Built for the **Cairo University Eco Racing Team** — validated in real-world racing.
@@ -10,7 +10,7 @@ Built for the **Cairo University Eco Racing Team** — validated in real-world r
 
 ## 🧠 Overview
 
-EcoDrive implements **Field-Oriented Control (FOC)** and **Self-Commissioning (SComm)** for PMSM drives with a clean hardware abstraction layer (`eldriver`) that runs identically on:
+ForgeDriveMC implements **Field-Oriented Control (FOC)** and **Self-Commissioning (SComm)** for PMSM drives with a clean hardware abstraction layer (`eldriver`) that runs identically on:
 
 | Platform | Purpose | Toolchain |
 |----------|---------|-----------|
@@ -39,7 +39,7 @@ EcoDrive implements **Field-Oriented Control (FOC)** and **Self-Commissioning (S
 | `middleware/` | ABF/IDV protocols, DAQ, scope stream |
 | `platform/host/` | Host eldrivers, SIL engine, GUI |
 | `platform/stm32f4/` | STM32F4 HAL, USB, FreeRTOS config |
-| `EcoTool/` | PC utility for USB communication |
+| `ForgeTool/` | PC utility for USB communication |
 | `test/` | SIL integration tests |
 
 ---
@@ -81,7 +81,7 @@ The Software-in-the-Loop engine models:
 
 Launch the GUI dashboard:
 ```bash
-./build/bin/EcoDrive
+./build/bin/ForgeDriveMC
 ```
 
 ---
@@ -118,7 +118,7 @@ This project is **MIT licensed** — see [LICENSE](LICENSE) for details.
 *Built with passion by the **Cairo University Eco Racing Team** 🏁*
 
 ---
-# ⚡ EcoDrive
+# ⚡ ForgeDriveMC
 
 A modular, open-source platform for developing **inverters**, **controllers**, and **embedded firmware** for electric vehicle applications.  
 Built with robust engineering principles and driven by passion.
@@ -129,7 +129,7 @@ Maintained by **Omar Magdy** for the **Cairo University Eco Racing Team**.
 
 ## 🧠 Overview
 
-EcoDrive implements a range of hardware and software solutions for electric drive systems.  
+ForgeDriveMC implements a range of hardware and software solutions for electric drive systems.  
 It includes:
 
 - Custom inverters (multi-phase and bidirectional support)

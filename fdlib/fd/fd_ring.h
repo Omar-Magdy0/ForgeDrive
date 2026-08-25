@@ -1,5 +1,5 @@
-#ifndef ELCORE_RSTREAM_H
-#define ELCORE_RSTREAM_H
+#ifndef FD_RING
+#define FD_RING
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -15,9 +15,9 @@ typedef struct {
     uint16_t capacity; // total capacity of the buffer (number of elements)
     volatile uint16_t head;
     volatile uint16_t tail;
-}el_ring_t;
+}fd_ring_t;
 
-static inline void el_ring_init(el_ring_t* cb,
+static inline void fd_ring_init(fd_ring_t* cb,
                                       void* storage,
                                       uint16_t capacity)
 {
@@ -27,7 +27,7 @@ static inline void el_ring_init(el_ring_t* cb,
     cb->tail = 0;
 }
 
-static inline uint16_t el_ring_size(const el_ring_t* cb) {
+static inline uint16_t fd_ring_size(const fd_ring_t* cb) {
     uint16_t head = cb->head;  // atomic read
     uint16_t tail = cb->tail;  // atomic read
     if (head >= tail)
@@ -35,30 +35,30 @@ static inline uint16_t el_ring_size(const el_ring_t* cb) {
     return cb->capacity - tail + head;
 }
 
-static inline uint16_t el_ring_free(const el_ring_t* cb) {
-    return cb->capacity - el_ring_size(cb) - 1;
+static inline uint16_t fd_ring_free(const fd_ring_t* cb) {
+    return cb->capacity - fd_ring_size(cb) - 1;
 }
 
-static inline void el_ring_write_commit(el_ring_t* cb, uint16_t count) {
+static inline void fd_ring_write_commit(fd_ring_t* cb, uint16_t count) {
     uint16_t head = cb->head;
     head = (head + count) - (head + count >= cb->capacity ? cb->capacity : 0);
     cb->head = head;
 }
 
-static inline void el_ring_read_commit(el_ring_t* cb, uint16_t count) {
+static inline void fd_ring_read_commit(fd_ring_t* cb, uint16_t count) {
     uint16_t tail = cb->tail;
     tail = (tail + count) - (tail + count >= cb->capacity ? cb->capacity : 0);
     cb->tail = tail;
 }
 
-static inline bool el_ring_write_reserve(el_ring_t* cb,
+static inline bool fd_ring_write_reserve(fd_ring_t* cb,
                                        uint16_t count,
                                        void** writeptr1,
                                        uint16_t* cont1,
                                        void** writeptr2,
                                        uint16_t* cont2)
 {
-    if (count > el_ring_free(cb))
+    if (count > fd_ring_free(cb))
     {
         return false;
     }
@@ -85,13 +85,13 @@ static inline bool el_ring_write_reserve(el_ring_t* cb,
     return true;
 }
 
-static inline bool el_ring_read_reserve(el_ring_t* cb,
+static inline bool fd_ring_read_reserve(fd_ring_t* cb,
                                       void** readptr1,
                                       uint16_t* cont1,
                                       void** readptr2,
                                       uint16_t* cont2)
 {
-    if (el_ring_size(cb) == 0)
+    if (fd_ring_size(cb) == 0)
     {
         *readptr1 = NULL;
         *cont1 = 0;
@@ -101,7 +101,7 @@ static inline bool el_ring_read_reserve(el_ring_t* cb,
     }
 
     uint16_t cont_space;
-    uint16_t count = el_ring_size(cb);
+    uint16_t count = fd_ring_size(cb);
 
     if (cb->tail >= cb->head)
         cont_space = cb->capacity - cb->tail;

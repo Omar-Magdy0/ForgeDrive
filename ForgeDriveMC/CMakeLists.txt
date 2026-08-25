@@ -3,14 +3,14 @@ cmake_minimum_required(VERSION 3.20)
 
 # Select target platform
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../ecolib)
+set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
 include(platform/${PLATFORM_NAME}/platform.cmake)
-project(EcoDrive LANGUAGES C CXX ASM)
+project(ForgeDriveMC LANGUAGES C CXX ASM)
 
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
@@ -78,8 +78,8 @@ set(APPLICATION_SRC
 
 
 file(GLOB_RECURSE CORE_SRC
-    ${ECOLIB_DIR}/el/*.cpp
-    ${ECOLIB_DIR}/el/*.c
+    ${ECOLIB_DIR}/fd/*.cpp
+    ${ECOLIB_DIR}/fd/*.c
 )
 
 

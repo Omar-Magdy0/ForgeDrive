@@ -2,10 +2,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_tim.h"
-#include "el_mc3p.h"
-#include "eld_conf.h"
+#include "fd_mc3p.h"
+#include "fd_driver_conf.h"
 
-#ifdef EL_MC3P_ENABLED
+#ifdef FD_MC3P_ENABLED
 
 TIM_HandleTypeDef        htim11;
 
@@ -49,7 +49,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
    * ClockDivision = 0
    * Counter direction = Up
    */
-  htim11.Init.Period = (1000000U / (EL_XMC3P_TICKFREQ)) - 1U;
+  htim11.Init.Period = (1000000U / (FD_XMC3P_TICKFREQ)) - 1U;
   htim11.Init.Prescaler = uwPrescalerValue;
   htim11.Init.ClockDivision = 0;
   htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -108,22 +108,22 @@ void HAL_ResumeTick(void)
 
 //==============================================================================
 
-__attribute__((weak)) void el_xmc3p_tickerCallback(void){}
-__attribute__((weak)) void el_mc3p_sync_postScanCallback(void){}
+__attribute__((weak)) void fd_xmc3p_tickerCallback(void){}
+__attribute__((weak)) void fd_mc3p_sync_postScanCallback(void){}
 
-static el_mc3p_handle_t* s_mc3p = NULL;
-void mc3p_irq_bind(el_mc3p_handle_t* h)
+static fd_mc3p_handle_t* s_mc3p = NULL;
+void mc3p_irq_bind(fd_mc3p_handle_t* h)
 {
     s_mc3p = h;
 }
-__attribute__((weak)) void INTERNAL_mc3p_ADC_JEOS_IRQ(el_mc3p_handle_t *h){}
+__attribute__((weak)) void INTERNAL_mc3p_ADC_JEOS_IRQ(fd_mc3p_handle_t *h){}
 
 void ADC_IRQHandler(void)
 {
 if (LL_ADC_IsActiveFlag_JEOS(ADC1)) {
     LL_ADC_ClearFlag_JEOS(ADC1);
     INTERNAL_mc3p_ADC_JEOS_IRQ(s_mc3p);
-    el_mc3p_sync_postScanCallback();
+    fd_mc3p_sync_postScanCallback();
 }
 }
 void TIM1_UP_TIM10_IRQHandler(void)
@@ -150,8 +150,8 @@ void TIM1_TRG_COM_TIM11_IRQHandler(void)
         LL_TIM_ClearFlag_UPDATE(TIM11);
         //Here We share Timer11 for HAL_ticking and motor Control Scheduling
         static uint8_t trg_cnt = 0;
-        el_xmc3p_tickerCallback();
-        pTASK(HAL_TICKER, trg_cnt, HAL_IncTick(), EL_XMC3P_TICKFREQ/1000);
+        fd_xmc3p_tickerCallback();
+        pTASK(HAL_TICKER, trg_cnt, HAL_IncTick(), FD_XMC3P_TICKFREQ/1000);
         trg_cnt++;
     }
 }

@@ -6,11 +6,11 @@
 cmake_minimum_required(VERSION 3.16)
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../ecolib)
+set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 # Only include if this is included as a subdirectory
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Standalone build mode
-    project(EcoDriveTests LANGUAGES CXX VERSION 1.0.0)
+    project(ForgeDriveMCTests LANGUAGES CXX VERSION 1.0.0)
 endif()
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
@@ -35,7 +35,7 @@ file(GLOB_RECURSE TEST_SOURCES
 )
 
 file(GLOB_RECURSE CORE_SOURCES
-    "${ECOLIB_DIR}/el/*.cpp"
+    "${ECOLIB_DIR}/fd/*.cpp"
 )
 
 file(GLOB_RECURSE MIDDLEWARE_SOURCES

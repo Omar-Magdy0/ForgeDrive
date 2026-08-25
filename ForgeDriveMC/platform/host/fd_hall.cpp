@@ -1,5 +1,5 @@
-#include "el_hall.h"
-#include "eld_conf.h"
+#include "fd_hall.h"
+#include "fd_driver_conf.h"
 
 
 #define CLK_FREQ 1000000  // 1 MHz = 1us resolution
@@ -31,7 +31,7 @@ uint8_t hall1_gpioRead()
     return SIL_HALL_TABLE_PI_3[(int)(theta_e / (2*M_PI/6))];
 }
 
-void el_hall1_init()
+void fd_hall1_init()
 {   
     usingHall = true;
     comDelayReady = false;
@@ -41,26 +41,26 @@ void el_hall1_init()
 }
 
 uint32_t last_t = 0;
-void el_hall1_setComDelay_uS(uint32_t delay_uS)
+void fd_hall1_setComDelay_uS(uint32_t delay_uS)
 {
     com_delay_us = delay_uS;
 }
 
 // Set your commutation callback function
-void el_hall1_setComCallback(void (*callback)(void))
+void fd_hall1_setComCallback(void (*callback)(void))
 {
     commutation_callback = callback;
 }
 
-float el_hall1_elec_speed(){
+float fd_hall1_elec_speed(){
     return sil.state.omega * sil.param.motor_pp;
 }
 
-uint8_t el_hall1_read(){
+uint8_t fd_hall1_read(){
     return hall1_value;
 }
 
-void el_comDelay_init()
+void fd_comDelay_init()
 {
     usingHall = false;
     comDelayReady = false;
@@ -68,7 +68,7 @@ void el_comDelay_init()
     comTriggered = false;
 }
 
-void el_comDelay_setComDelay_uS(uint32_t delay_uS)
+void fd_comDelay_setComDelay_uS(uint32_t delay_uS)
 {
     com_delay_us = delay_uS;
     trigger_time = sil.state.time;
@@ -76,7 +76,7 @@ void el_comDelay_setComDelay_uS(uint32_t delay_uS)
     comDelayReady = false;
 }
 
-void el_comDelay_setComCallback(void (*callback)(void))
+void fd_comDelay_setComCallback(void (*callback)(void))
 {
     commutation_callback = callback;
 }
@@ -105,7 +105,7 @@ void sil_hall_update()
     }
 }
 
-void el_hall1_reset()
+void fd_hall1_reset()
 {
 
 }

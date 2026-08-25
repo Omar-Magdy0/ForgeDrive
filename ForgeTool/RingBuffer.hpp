@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 
-// TODO #23 : use a cleaner/internal ecolib ring buffer implementation instead
+// TODO #23 : use a cleaner/internal fdlib ring buffer implementation instead
 
 class RingBuffer {
 public:

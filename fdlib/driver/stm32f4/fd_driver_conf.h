@@ -1,9 +1,9 @@
 /**
- * @file    eld_conf.h
+ * @file    fd_driver_conf.h
  * @author  Carol Nasser
  * @brief   Global Configuration for STM32F4 eldrivers.
  * @details Defines hardware mappings, buffer sizes, and peripheral enable 
- * flags for the entire EcoDrive driver suite.
+ * flags for the entire ForgeDriveMC driver suite.
  */
 
 #ifndef DRV_CONF_H
@@ -42,164 +42,164 @@
 //================================================
 // UART1 CONFIGURATION
 //================================================
-//#define EL_UART1_ENABLED
-#define EL_UART1_RX_PIN        6
-#define EL_UART1_RX_PORT       GPIOB
-#define EL_UART1_TX_PIN        7
-#define EL_UART1_TX_PORT       GPIOB
-#define EL_UART1_TX_BUFFER_SIZE 256
-#define EL_UART1_RX_BUFFER_SIZE 256
+//#define FD_UART1_ENABLED
+#define FD_UART1_RX_PIN        6
+#define FD_UART1_RX_PORT       GPIOB
+#define FD_UART1_TX_PIN        7
+#define FD_UART1_TX_PORT       GPIOB
+#define FD_UART1_TX_BUFFER_SIZE 256
+#define FD_UART1_RX_BUFFER_SIZE 256
 
 /** @name USB CDC Configuration */
 //================================================
 // USBCDC CONFIGURATION
 //================================================
-//#define EL_USBCDC_ENABLED
-#define EL_USBCDC_TX_BUFFER_SIZE 64
-#define EL_USBCDC_RX_BUFFER_SIZE 64
+//#define FD_USBCDC_ENABLED
+#define FD_USBCDC_TX_BUFFER_SIZE 64
+#define FD_USBCDC_RX_BUFFER_SIZE 64
 
 //================================================
 // USBXCH CONFIGURATION
 //================================================
-#define EL_USBXCH_ENABLED
-#define EL_USBXCH_TX_BUFFSIZE 4096
-#define EL_USBXCH_RX_BUFFSIZE 256
+#define FD_USBXCH_ENABLED
+#define FD_USBXCH_TX_BUFFSIZE 4096
+#define FD_USBXCH_RX_BUFFSIZE 256
 
 /** @name Motor Control (MC3P) Configuration */
 //================================================
 // MCADCPWM3P CONFIGURATION    
 //================================================
-#define EL_MC3P_ENABLED        
-#define EL_MC3P_CS_SCALE 50
-#define EL_MC3P_VS_SCALE 60
-#define CONF_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / EL_MC3P_VS_SCALE) * INT32_MAX))
-#define CONF_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / EL_MC3P_CS_SCALE) * INT32_MAX))
+#define FD_MC3P_ENABLED        
+#define FD_MC3P_CS_SCALE 50
+#define FD_MC3P_VS_SCALE 60
+#define CONF_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / FD_MC3P_VS_SCALE) * INT32_MAX))
+#define CONF_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / FD_MC3P_CS_SCALE) * INT32_MAX))
 
-#define EL_MC3P_DTC_ACTIVE
-#define EL_MC3P_DTC_CTHRESH CONF_MC3P_FLOAT_TO_CS(0.05)
-#define EL_MC3P_CS_NONE               0
-#define EL_MC3P_CS_TRIPLE_SHUNT       1
-#define EL_MC3P_CS_DOUBLE_SHUNT       2
-#define EL_MC3P_CS_SINGLE_SHUNT       3
-#define EL_MC3P_CS_INLINE             4
-#define EL_MC3P_CS                    EL_MC3P_CS_TRIPLE_SHUNT
+#define FD_MC3P_DTC_ACTIVE
+#define FD_MC3P_DTC_CTHRESH CONF_MC3P_FLOAT_TO_CS(0.05)
+#define FD_MC3P_CS_NONE               0
+#define FD_MC3P_CS_TRIPLE_SHUNT       1
+#define FD_MC3P_CS_DOUBLE_SHUNT       2
+#define FD_MC3P_CS_SINGLE_SHUNT       3
+#define FD_MC3P_CS_INLINE             4
+#define FD_MC3P_CS                    FD_MC3P_CS_TRIPLE_SHUNT
 //Motor control tasking frequency
-#define EL_XMC3P_TICKFREQ              4000
-#define EL_XMC3P_TICKPERIOD_US          (1000000/EL_XMC3P_TICKFREQ)
-#define EL_MC3P_ADCRES                 12
-//#define EL_MC3P_VREFEXT                2.495f
-#define EL_MC3P_HIN_ACTIVE            1
-#define EL_MC3P_LIN_ACTIVE            0
+#define FD_XMC3P_TICKFREQ              4000
+#define FD_XMC3P_TICKPERIOD_US          (1000000/FD_XMC3P_TICKFREQ)
+#define FD_MC3P_ADCRES                 12
+//#define FD_MC3P_VREFEXT                2.495f
+#define FD_MC3P_HIN_ACTIVE            1
+#define FD_MC3P_LIN_ACTIVE            0
 
-#define EL_MC3P_UH_PIN         LL_GPIO_PIN_8
-#define EL_MC3P_UH_PORT        GPIOA
-#define EL_MC3P_UL_PIN         LL_GPIO_PIN_13
-#define EL_MC3P_UL_PORT        GPIOB
-#define EL_MC3P_VH_PIN         LL_GPIO_PIN_9
-#define EL_MC3P_VH_PORT        GPIOA
-#define EL_MC3P_VL_PIN         LL_GPIO_PIN_14
-#define EL_MC3P_VL_PORT        GPIOB
-#define EL_MC3P_WH_PIN         LL_GPIO_PIN_10
-#define EL_MC3P_WH_PORT        GPIOA
-#define EL_MC3P_WL_PIN         LL_GPIO_PIN_15
-#define EL_MC3P_WL_PORT        GPIOB
+#define FD_MC3P_UH_PIN         LL_GPIO_PIN_8
+#define FD_MC3P_UH_PORT        GPIOA
+#define FD_MC3P_UL_PIN         LL_GPIO_PIN_13
+#define FD_MC3P_UL_PORT        GPIOB
+#define FD_MC3P_VH_PIN         LL_GPIO_PIN_9
+#define FD_MC3P_VH_PORT        GPIOA
+#define FD_MC3P_VL_PIN         LL_GPIO_PIN_14
+#define FD_MC3P_VL_PORT        GPIOB
+#define FD_MC3P_WH_PIN         LL_GPIO_PIN_10
+#define FD_MC3P_WH_PORT        GPIOA
+#define FD_MC3P_WL_PIN         LL_GPIO_PIN_15
+#define FD_MC3P_WL_PORT        GPIOB
 
-#define EL_MC3P_VSBUS_PIN               LL_GPIO_PIN_0
-#define EL_MC3P_VSBUS_PORT              GPIOA
-#define EL_MC3P_VSBUS_ADC_CHANNEL       LL_ADC_CHANNEL_0   // PA1 - ADC1_IN2
-#define EL_MC3P_VSU_PIN                 LL_GPIO_PIN_1
-#define EL_MC3P_VSU_PORT                GPIOA
-#define EL_MC3P_VSU_ADC_CHANNEL         LL_ADC_CHANNEL_1   // PA1 - ADC1_IN2
-#define EL_MC3P_VSV_PIN                 LL_GPIO_PIN_2
-#define EL_MC3P_VSV_PORT                GPIOA
-#define EL_MC3P_VSV_ADC_CHANNEL         LL_ADC_CHANNEL_2   // PA4 - ADC1_IN3
-#define EL_MC3P_VSW_PIN                 LL_GPIO_PIN_3
-#define EL_MC3P_VSW_PORT                GPIOA
-#define EL_MC3P_VSW_ADC_CHANNEL         LL_ADC_CHANNEL_3   // PA5 - ADC1_IN3
+#define FD_MC3P_VSBUS_PIN               LL_GPIO_PIN_0
+#define FD_MC3P_VSBUS_PORT              GPIOA
+#define FD_MC3P_VSBUS_ADC_CHANNEL       LL_ADC_CHANNEL_0   // PA1 - ADC1_IN2
+#define FD_MC3P_VSU_PIN                 LL_GPIO_PIN_1
+#define FD_MC3P_VSU_PORT                GPIOA
+#define FD_MC3P_VSU_ADC_CHANNEL         LL_ADC_CHANNEL_1   // PA1 - ADC1_IN2
+#define FD_MC3P_VSV_PIN                 LL_GPIO_PIN_2
+#define FD_MC3P_VSV_PORT                GPIOA
+#define FD_MC3P_VSV_ADC_CHANNEL         LL_ADC_CHANNEL_2   // PA4 - ADC1_IN3
+#define FD_MC3P_VSW_PIN                 LL_GPIO_PIN_3
+#define FD_MC3P_VSW_PORT                GPIOA
+#define FD_MC3P_VSW_ADC_CHANNEL         LL_ADC_CHANNEL_3   // PA5 - ADC1_IN3
 
-#if (EL_MC3P_CS == EL_MC3P_CS_TRIPLE_SHUNT || EL_MC3P_CS == EL_MC3P_CS_DOUBLE_SHUNT || EL_MC3P_CS == EL_MC3P_CS_INLINE)
+#if (FD_MC3P_CS == FD_MC3P_CS_TRIPLE_SHUNT || FD_MC3P_CS == FD_MC3P_CS_DOUBLE_SHUNT || FD_MC3P_CS == FD_MC3P_CS_INLINE)
     // Three shunt resistors - one per phase , (for double shunt and inline comment out unnused sensor)
-    #define EL_MC3P_CSU_PIN            4
-    #define EL_MC3P_CSU_PORT           GPIOA
-    #define EL_MC3P_CSU_ADC_CHANNEL    LL_ADC_CHANNEL_4   // PA3 - ADC1_IN4
-    #define EL_MC3P_CSV_PIN            5
-    #define EL_MC3P_CSV_PORT           GPIOA
-    #define EL_MC3P_CSV_ADC_CHANNEL    LL_ADC_CHANNEL_5   // PA4 - ADC1_IN5
-    #define EL_MC3P_CSW_PIN            6
-    #define EL_MC3P_CSW_PORT           GPIOA
-    #define EL_MC3P_CSW_ADC_CHANNEL    LL_ADC_CHANNEL_6   // PA5 - ADC1_IN6
+    #define FD_MC3P_CSU_PIN            4
+    #define FD_MC3P_CSU_PORT           GPIOA
+    #define FD_MC3P_CSU_ADC_CHANNEL    LL_ADC_CHANNEL_4   // PA3 - ADC1_IN4
+    #define FD_MC3P_CSV_PIN            5
+    #define FD_MC3P_CSV_PORT           GPIOA
+    #define FD_MC3P_CSV_ADC_CHANNEL    LL_ADC_CHANNEL_5   // PA4 - ADC1_IN5
+    #define FD_MC3P_CSW_PIN            6
+    #define FD_MC3P_CSW_PORT           GPIOA
+    #define FD_MC3P_CSW_ADC_CHANNEL    LL_ADC_CHANNEL_6   // PA5 - ADC1_IN6
     
-#elif (EL_MC3P_CS == EL_MC3P_CS_SINGLE_SHUNT)
+#elif (FD_MC3P_CS == FD_MC3P_CS_SINGLE_SHUNT)
     // Single shunt resistor on DC bus
-    #define EL_MC3P_CSBUS_PIN            3
-    #define EL_MC3P_CSBUS_PORT           GPIOA
-    #define EL_MC3P_CSBUS_ADC_CHANNEL    LL_ADC_CHANNEL_5   // PA3 - ADC1_IN4
+    #define FD_MC3P_CSBUS_PIN            3
+    #define FD_MC3P_CSBUS_PORT           GPIOA
+    #define FD_MC3P_CSBUS_ADC_CHANNEL    LL_ADC_CHANNEL_5   // PA3 - ADC1_IN4
 
 #endif
 
-#define EL_MC3P_BG_CHANNELS 0
-#if EL_MC3P_BG_CHANNELS > 0
-    #define EL_MC3P_BG1_PIN
-    #define EL_MC3P_BG1_PORT
-    #define EL_MC3P_BG1_ADC_CHANNEL
-    #define EL_MC3P_BG1_RANK
+#define FD_MC3P_BG_CHANNELS 0
+#if FD_MC3P_BG_CHANNELS > 0
+    #define FD_MC3P_BG1_PIN
+    #define FD_MC3P_BG1_PORT
+    #define FD_MC3P_BG1_ADC_CHANNEL
+    #define FD_MC3P_BG1_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 1
-    #define EL_MC3P_BG2_PIN
-    #define EL_MC3P_BG2_PORT
-    #define EL_MC3P_BG2_ADC_CHANNEL
-    #define EL_MC3P_BG2_RANK
+#if FD_MC3P_BG_CHANNELS > 1
+    #define FD_MC3P_BG2_PIN
+    #define FD_MC3P_BG2_PORT
+    #define FD_MC3P_BG2_ADC_CHANNEL
+    #define FD_MC3P_BG2_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 2
-    #define EL_MC3P_BG1_PIN
-    #define EL_MC3P_BG1_PORT
-    #define EL_MC3P_BG1_ADC_CHANNEL
-    #define EL_MC3P_BG1_RANK
+#if FD_MC3P_BG_CHANNELS > 2
+    #define FD_MC3P_BG1_PIN
+    #define FD_MC3P_BG1_PORT
+    #define FD_MC3P_BG1_ADC_CHANNEL
+    #define FD_MC3P_BG1_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 3
-    #define EL_MC3P_BG2_PIN
-    #define EL_MC3P_BG2_PORT
-    #define EL_MC3P_BG2_ADC_CHANNEL
-    #define EL_MC3P_BG2_RANK
+#if FD_MC3P_BG_CHANNELS > 3
+    #define FD_MC3P_BG2_PIN
+    #define FD_MC3P_BG2_PORT
+    #define FD_MC3P_BG2_ADC_CHANNEL
+    #define FD_MC3P_BG2_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 4
-    #define EL_MC3P_BG1_PIN
-    #define EL_MC3P_BG1_PORT
-    #define EL_MC3P_BG1_ADC_CHANNEL
-    #define EL_MC3P_BG1_RANK
+#if FD_MC3P_BG_CHANNELS > 4
+    #define FD_MC3P_BG1_PIN
+    #define FD_MC3P_BG1_PORT
+    #define FD_MC3P_BG1_ADC_CHANNEL
+    #define FD_MC3P_BG1_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 5
-    #define EL_MC3P_BG2_PIN
-    #define EL_MC3P_BG2_PORT
-    #define EL_MC3P_BG2_ADC_CHANNEL
-    #define EL_MC3P_BG2_RANK
+#if FD_MC3P_BG_CHANNELS > 5
+    #define FD_MC3P_BG2_PIN
+    #define FD_MC3P_BG2_PORT
+    #define FD_MC3P_BG2_ADC_CHANNEL
+    #define FD_MC3P_BG2_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 6
-    #define EL_MC3P_BG2_PIN
-    #define EL_MC3P_BG2_PORT
-    #define EL_MC3P_BG2_ADC_CHANNEL
-    #define EL_MC3P_BG2_RANK
+#if FD_MC3P_BG_CHANNELS > 6
+    #define FD_MC3P_BG2_PIN
+    #define FD_MC3P_BG2_PORT
+    #define FD_MC3P_BG2_ADC_CHANNEL
+    #define FD_MC3P_BG2_RANK
 #endif
-#if EL_MC3P_BG_CHANNELS > 7
-    #define EL_MC3P_BG2_PIN
-    #define EL_MC3P_BG2_PORT
-    #define EL_MC3P_BG2_ADC_CHANNEL
-    #define EL_MC3P_BG2_RANK
+#if FD_MC3P_BG_CHANNELS > 7
+    #define FD_MC3P_BG2_PIN
+    #define FD_MC3P_BG2_PORT
+    #define FD_MC3P_BG2_ADC_CHANNEL
+    #define FD_MC3P_BG2_RANK
 #endif
 
-#define EL_MC3P_OFFSET_CALIBRATION_SAMPLES 128
+#define FD_MC3P_OFFSET_CALIBRATION_SAMPLES 128
 
 /** @name Hall Sensor Configuration */
 //================================================
 // HALL SENSOR CONFIGURATION    
 //================================================
-#define EL_HALL1_ENABLED            
-#define EL_HALL1_A_PIN              LL_GPIO_PIN_15
-#define EL_HALL1_A_PORT             GPIOA
-#define EL_HALL1_B_PIN              LL_GPIO_PIN_3
-#define EL_HALL1_B_PORT             GPIOB
-#define EL_HALL1_C_PIN              LL_GPIO_PIN_10
-#define EL_HALL1_C_PORT             GPIOB
+#define FD_HALL1_ENABLED            
+#define FD_HALL1_A_PIN              LL_GPIO_PIN_15
+#define FD_HALL1_A_PORT             GPIOA
+#define FD_HALL1_B_PIN              LL_GPIO_PIN_3
+#define FD_HALL1_B_PORT             GPIOB
+#define FD_HALL1_C_PIN              LL_GPIO_PIN_10
+#define FD_HALL1_C_PORT             GPIOB
 
 
 
@@ -224,4 +224,4 @@
 #define UART1_NVIC_PRIORITY 4
 
 
-#endif//eld_conf.h
+#endif//fd_driver_conf.h

@@ -14,7 +14,7 @@ void PmsmControlCore::olstup_lut(Olstup &stup, q31_t &ec_sp_q31, float &rps)
         float ec_sp = stup.cfg.ec_tb[stup.tb_index] + ret_slp * (stup.cfg.ec_tb[stup.tb_index + 1] - stup.cfg.ec_tb[stup.tb_index]);
         float rpm = stup.cfg.rpm_tb[stup.tb_index] + ret_slp * (stup.cfg.rpm_tb[stup.tb_index + 1] - stup.cfg.rpm_tb[stup.tb_index]);
         rps = rpm * (float)(2 * M_PI / 60.0);
-        ec_sp_q31 = EL_MC3P_FLOAT_TO_CS(ec_sp);
+        ec_sp_q31 = FD_MC3P_FLOAT_TO_CS(ec_sp);
         if (stup.tb_index < (OLSTUP_TABLE_SIZE - 1) && et_ms > stup.cfg.time_ms_tb[stup.tb_index + 1])
         {
             stup.tb_index++;
@@ -38,9 +38,9 @@ void PmsmControlCore::init()
     Foc_init();
     /* hardware initialization */
     posDriver.init();
-    el_mc3p_set_sync_scale(&mc3p, PmsmControlConf::MC3P_SYNC_SCALE);
-    el_mc3p_init(&mc3p);
-    el_mc3p_write_float(&mc3p);
+    fd_mc3p_set_sync_scale(&mc3p, PmsmControlConf::MC3P_SYNC_SCALE);
+    fd_mc3p_init(&mc3p);
+    fd_mc3p_write_float(&mc3p);
 };
 
 void PmsmControlCore::xmcLoop()
@@ -69,15 +69,15 @@ void PmsmControlCore::pwmConfigUpdate(PmsmControlTypes::ConfigPwm cfg)
     mc3p.config.deadtime_nS = cfg.deadtime_ns;
     mc3p.config.duty_min = cfg.duty_min;
     mc3p.config.duty_max = cfg.duty_max;
-    el_mc3p_reconfigure_pwm(&mc3p);
+    fd_mc3p_reconfigure_pwm(&mc3p);
 }
 
 void PmsmControlCore::pwmLoop()
 {
     if (control.mc_mode == MCMode::None)
         return;
-    uint32_t start = el_prof_tick();
-    el_mc3p_read_sync(&mc3p, &mc3p_sync_meas);
+    uint32_t start = fd_prof_tick();
+    fd_mc3p_read_sync(&mc3p, &mc3p_sync_meas);
     switch (control.mc_mode)
     {
     case MCMode::Foc:
@@ -90,7 +90,7 @@ void PmsmControlCore::pwmLoop()
         break;
     }
     pTicks = pTicks + 1;
-    volatile uint32_t elapsed = el_prof_tock(start);
+    volatile uint32_t elapsed = fd_prof_tock(start);
 }
 
 void PmsmControlCore::setControlMode(MCMode mc_mode)

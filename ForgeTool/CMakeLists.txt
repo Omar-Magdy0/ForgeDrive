@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name and version
-project(EcoTool VERSION 1.0.0 LANGUAGES CXX)
+project(ForgeTool VERSION 1.0.0 LANGUAGES CXX)
 
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../ecolib)
+set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -29,13 +29,13 @@ file(GLOB_RECURSE MIDDLEWARE_SRC
 )
 
 file(GLOB_RECURSE CORE_SRC    
-    ${ECOLIB}/el/*.cpp
-    ${ECOLIB}/el/*.c
+    ${ECOLIB}/fd/*.cpp
+    ${ECOLIB}/fd/*.c
 )
 
 # Add executable
 add_executable(${PROJECT_NAME}
-    EcoTool.cpp
+    ForgeTool.cpp
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
     Serial.hpp

@@ -3,8 +3,8 @@
 void Sys::init()
 {
     platform_init();
-    el_usbxch_init(&usbxch);
-    el_core_init(&core);
+    fd_usbxch_init(&usbxch);
+    fd_core_init(&core);
     // enable motor control function
 
     // Control modes configuration
@@ -69,11 +69,11 @@ void Sys::init()
     daq_session.registerStreams(streams);
     while (true)
     {
-        el_usbxch_update(&usbxch);
-        uint16_t read_len = el_usbxch_read(&usbxch, abfStream_rx_buffer, sizeof(abfStream_rx_buffer));
+        fd_usbxch_update(&usbxch);
+        uint16_t read_len = fd_usbxch_read(&usbxch, abfStream_rx_buffer, sizeof(abfStream_rx_buffer));
         abfStream.process(abfStream_rx_buffer, read_len);
         daq_session.process(nullptr, 0);
-        el_delay(1);
+        fd_delay(1);
 #ifdef PLATFORM_HOST
         gui_loop();
 #endif

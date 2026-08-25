@@ -1,4 +1,4 @@
-#include "el_usbcdc.h"
+#include "fd_usbcdc.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -6,13 +6,13 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef EL_USBCDC_ENABLED
+#ifdef FD_USBCDC_ENABLED
 
 // Simple UART handle extension for file descriptor
 
 
 // Initialize by opening the socat-created virtual serial port
-void el_usbcdc_init(el_uart_handle_t *handle)
+void fd_usbcdc_init(fd_uart_handle_t *handle)
 {
     if (!handle) return;
 
@@ -57,7 +57,7 @@ void el_usbcdc_init(el_uart_handle_t *handle)
 }
 
 // Write exactly 'len' bytes from data
-uint8_t el_usbcdc_write(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
+uint8_t fd_usbcdc_write(fd_uart_handle_t *handle, uint8_t* data, uint8_t len)
 {
     if (!handle || handle->fd < 0 || !data || len == 0)
         return 0;
@@ -67,13 +67,13 @@ uint8_t el_usbcdc_write(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
 }
 
 // Other functions left empty
-uint16_t el_usbcdc_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
+uint16_t fd_usbcdc_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len)
 {
     (void)handle; (void)data; (void)len;
     return 0;
 }
 
-void el_usbcdc_resetStats(el_uart_handle_t *handle)
+void fd_usbcdc_resetStats(fd_uart_handle_t *handle)
 {
     (void)handle;
 }

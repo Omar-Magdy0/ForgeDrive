@@ -1,4 +1,4 @@
-#include "eld_core.h"
+#include "fd_driver_core.h"
 #include "stm32f4xx.h"
 
 
@@ -14,7 +14,7 @@ static inline void dwt_init(void)
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
-void el_core_init(el_core_t *h)
+void fd_core_init(fd_core_t *h)
 {
     dwt_init();
 }

@@ -2,17 +2,17 @@
 #include "stm32f4xx_ll_bus.h"
 #include "stm32f4xx_ll_usart.h"
 #include "stm32f4xx_ll_dma.h"
-#include "eld_conf.h"
-#include "el_uart.h"
+#include "fd_driver_conf.h"
+#include "fd_uart.h"
 #include <string.h>
 
-#ifdef EL_UART1_ENABLED
+#ifdef FD_UART1_ENABLED
 
 //======================================================
 //DMA static definitions for UART1 DMA and UART instance
 //======================================================
-static uint8_t uart1_tx_buffer[EL_UART1_TX_BUFFER_SIZE];
-static uint8_t uart1_rx_buffer[EL_UART1_RX_BUFFER_SIZE];
+static uint8_t uart1_tx_buffer[FD_UART1_TX_BUFFER_SIZE];
+static uint8_t uart1_rx_buffer[FD_UART1_RX_BUFFER_SIZE];
 
 //NEVER FORGET 
 //THAT YOU EVER CHANGE THESE VALUES FOR DMA YOU STILL HAVE TO CHANGE IMPLEMENTATION AND IRQ APPROPIATELY
@@ -32,7 +32,7 @@ void uart1_dma_receive_complete_register_callback(void(*func)(void));
 
 void uart1_dmaInit();
 void uart1_interruptInit();
-void uart1_uartInit(el_uart_handle_t *handle);
+void uart1_uartInit(fd_uart_handle_t *handle);
 
 
 //================================================
@@ -41,10 +41,10 @@ void uart1_uartInit(el_uart_handle_t *handle);
 
 
 // Rx and Tx Buffer management
-uint8_t uart1_rx_buf[EL_UART1_RX_BUFFER_SIZE];
-uint8_t uart1_tx_buf[EL_UART1_TX_BUFFER_SIZE];
-el_ring_t uart1_rx_stream;
-el_ring_t uart1_tx_stream;
+uint8_t uart1_rx_buf[FD_UART1_RX_BUFFER_SIZE];
+uint8_t uart1_tx_buf[FD_UART1_TX_BUFFER_SIZE];
+fd_ring_t uart1_rx_stream;
+fd_ring_t uart1_tx_stream;
 
 
 
@@ -81,7 +81,7 @@ void uart1_dmaInit()
     LL_DMA_SetMemoryAddress(UART1_DMA_INSTANCE, UART1_DMA_RX_STREAM, (uint32_t)uart1_rx_buffer);
     
     //Start the DMA reception on Rx!
-    LL_DMA_SetDataLength(UART1_DMA_INSTANCE, UART1_DMA_RX_STREAM, EL_UART1_RX_BUFFER_SIZE);
+    LL_DMA_SetDataLength(UART1_DMA_INSTANCE, UART1_DMA_RX_STREAM, FD_UART1_RX_BUFFER_SIZE);
     LL_DMA_EnableStream(UART1_DMA_INSTANCE, UART1_DMA_RX_STREAM);
     
     //#######
@@ -138,7 +138,7 @@ void uart1_gpio_init()
 //===========================================
 // FULL INITIALIZATION FUNCTION
 //============================================
-void el_uart1_init(el_uart_handle_t *handle)
+void fd_uart1_init(fd_uart_handle_t *handle)
 {
     // Initialize GPIO first
     uart1_gpioInit();
@@ -152,20 +152,20 @@ void el_uart1_init(el_uart_handle_t *handle)
 
 
 
-el_ring_stats_t el_uart1_rx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_uart1_rx_stats(fd_uart_handle_t *handle)
 {
-    return el_ring_getStats(&uart1_rx_buffer);
+    return fd_ring_getStats(&uart1_rx_buffer);
 }
 
-el_ring_stats_t el_uart1_tx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_uart1_tx_stats(fd_uart_handle_t *handle)
 {
-    return el_ring_getStats(&uart1_tx_buffer);
+    return fd_ring_getStats(&uart1_tx_buffer);
 }
 
-void el_uart1_resetStats(el_uart_handle_t *handle)
+void fd_uart1_resetStats(fd_uart_handle_t *handle)
 {
-    el_ring_write_reserve(&uart1_rx_buffer);
-    el_ring_write_reserve(&uart1_tx_buffer);
+    fd_ring_write_reserve(&uart1_rx_buffer);
+    fd_ring_write_reserve(&uart1_tx_buffer);
 }
 
 //===========================================

@@ -44,8 +44,8 @@ set(Platform_Src
 file(GLOB_RECURSE Driver_Core_Src
     ${ECOLIB_DIR}/driver/host/*.cpp
     ${ECOLIB_DIR}/driver/host/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/el_hall.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/el_mc3p.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fd_hall.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fd_mc3p.cpp
 )
 
 find_package(Threads REQUIRED)

@@ -4,8 +4,8 @@
 #include "stm32f4xx_ll_tim.h"
 #include "stm32f4xx_ll_bus.h"
 #include "stm32f4xx_ll_gpio.h"
-#include "el_hall.h"
-#include "eld_conf.h"
+#include "fd_hall.h"
+#include "fd_driver_conf.h"
 
 
 #define CLK_FREQ 1000000  // 1 MHz = 1us resolution
@@ -17,16 +17,16 @@ volatile static uint8_t hall1_value = 0b000;
 volatile static uint32_t hall1_period_uS = 0;
 
 
-#ifdef EL_HALL1_ENABLED
+#ifdef FD_HALL1_ENABLED
 
 
 uint8_t hall1_gpioRead()
 {
     uint8_t state = 0;
     // Read each pin and shift into the correct bit position
-    if (LL_GPIO_IsInputPinSet(EL_HALL1_A_PORT, EL_HALL1_A_PIN)) state |= (1 << 2); // MSB
-    if (LL_GPIO_IsInputPinSet(EL_HALL1_B_PORT, EL_HALL1_B_PIN)) state |= (1 << 1);
-    if (LL_GPIO_IsInputPinSet(EL_HALL1_C_PORT, EL_HALL1_C_PIN)) state |= (1 << 0); // LSB
+    if (LL_GPIO_IsInputPinSet(FD_HALL1_A_PORT, FD_HALL1_A_PIN)) state |= (1 << 2); // MSB
+    if (LL_GPIO_IsInputPinSet(FD_HALL1_B_PORT, FD_HALL1_B_PIN)) state |= (1 << 1);
+    if (LL_GPIO_IsInputPinSet(FD_HALL1_C_PORT, FD_HALL1_C_PIN)) state |= (1 << 0); // LSB
     
     return state;
 }
@@ -41,7 +41,7 @@ uint8_t hall1_gpioRead()
     LL_GPIO_Init(port, &GPIO_InitStruct);\
 }while(0)
 
-void el_hall1_init()
+void fd_hall1_init()
 {   
     // Enable Timer 2 clock
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
@@ -76,15 +76,15 @@ void el_hall1_init()
     NVIC_SetPriority(TIM2_IRQn, 2); // Lower priority than PWM timer
     NVIC_EnableIRQ(TIM2_IRQn);
 
-    HALL1_GPIO_INIT(EL_HALL1_A_PIN, EL_HALL1_A_PORT);
-    HALL1_GPIO_INIT(EL_HALL1_B_PIN, EL_HALL1_B_PORT);
-    HALL1_GPIO_INIT(EL_HALL1_C_PIN, EL_HALL1_C_PORT);
+    HALL1_GPIO_INIT(FD_HALL1_A_PIN, FD_HALL1_A_PORT);
+    HALL1_GPIO_INIT(FD_HALL1_B_PIN, FD_HALL1_B_PORT);
+    HALL1_GPIO_INIT(FD_HALL1_C_PIN, FD_HALL1_C_PORT);
 
     //Arm Hall1 value
     hall1_value = hall1_gpioRead();
 }
 
-void el_hall1_setComDelay_uS(uint32_t delay_uS)
+void fd_hall1_setComDelay_uS(uint32_t delay_uS)
 {
     uint32_t compare_value = US_TO_CLK(delay_uS);
     
@@ -98,16 +98,16 @@ void el_hall1_setComDelay_uS(uint32_t delay_uS)
 }
 
 // Set your commutation callback function
-void el_hall1_setComCallback(void (*callback)(void))
+void fd_hall1_setComCallback(void (*callback)(void))
 {
     commutation_callback = callback;
 }
 
-float el_hall1_elec_speed(){
+float fd_hall1_elec_speed(){
     return (((M_PI/3)*1000000)/hall1_period_uS);
 }
 
-uint8_t el_hall1_read(){
+uint8_t fd_hall1_read(){
     return hall1_value;
 }
 
@@ -115,7 +115,7 @@ uint8_t el_hall1_read(){
 
 #else
 
-void el_comDelay_init()
+void fd_comDelay_init()
 {
     // Enable Timer 2 clock
     LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
@@ -149,7 +149,7 @@ void el_comDelay_init()
     LL_TIM_DisableCounter(TIM2);
 }
 
-void el_comDelay_setComDelay_uS(uint32_t delay_uS)
+void fd_comDelay_setComDelay_uS(uint32_t delay_uS)
 {
     // Set compare value for CH2
     LL_TIM_OC_SetCompareCH2(TIM2, US_TO_CLK(delay_uS));
@@ -164,7 +164,7 @@ void el_comDelay_setComDelay_uS(uint32_t delay_uS)
     LL_TIM_EnableCounter(TIM2);
 }
 
-void el_comDelay_setComCallback(void (*callback)(void))
+void fd_comDelay_setComCallback(void (*callback)(void))
 {
     commutation_callback = callback;
 }
@@ -181,7 +181,7 @@ void TIM2_IRQHandler(void)
         // HALL change happened , capture the period and update the hall_value using hall1_gpioRead();
         hall1_period_uS = CLK_TO_US(LL_TIM_IC_GetCaptureCH1(TIM2));
         
-        #ifdef EL_HALL1_ENABLED
+        #ifdef FD_HALL1_ENABLED
         hall1_value = hall1_gpioRead();
         #endif
     }

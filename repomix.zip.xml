@@ -45,14 +45,14 @@ The content is organized as follows:
 
 <directory_structure>
 digest/
-  EcoDrive/
+  ForgeDriveMC/
     platform/
       host/
         CMakeLists.txt
-        el_hall.cpp
-        el_hall.h
-        el_mc3p.cpp
-        el_mc3p.h
+        fd_hall.cpp
+        fd_hall.h
+        fd_mc3p.cpp
+        fd_mc3p.h
         platform.cmake
         platform.cpp
         platform.h
@@ -81,38 +81,38 @@ digest/
     main.cpp
     sys.cpp
     sys.h
-  ecolib/
+  fdlib/
     driver/
       host/
-        el_core.c
-        el_core.h
-        el_uart.c
-        el_uart.h
-        el_usbcdc.c
-        el_usbcdc.h
-        el_usbxch.cpp
-        el_usbxch.h
-        eld_conf.h
+        fd_core.c
+        fd_core.h
+        fd_uart.c
+        fd_uart.h
+        fd_usbcdc.c
+        fd_usbcdc.h
+        fd_usbxch.cpp
+        fd_usbxch.h
+        fd_driver_conf.h
         TCPServer.cpp
         TCPServer.h
       stm32f4/
-        el_core.c
-        el_core.h
-        el_hall.c
-        el_hall.h
-        el_mc3p_it.c
-        el_mc3p.c
-        el_mc3p.h
-        el_uart.c
-        el_uart.h
-        el_usbcdc.c
-        el_usbcdc.h
-        el_usbxch.c
-        el_usbxch.h
-        eld_conf.h
-    el/
+        fd_core.c
+        fd_core.h
+        fd_hall.c
+        fd_hall.h
+        fd_mc3p_it.c
+        fd_mc3p.c
+        fd_mc3p.h
+        fd_uart.c
+        fd_uart.h
+        fd_usbcdc.c
+        fd_usbcdc.h
+        fd_usbxch.c
+        fd_usbxch.h
+        fd_driver_conf.h
+    fd/
       core.h
-      el_ring.h
+      fd_ring.h
       math.h
       mempool.h
       ring.h
@@ -125,17 +125,17 @@ digest/
       DAQStream.h
       IDV.h
       ScopeStream.h
-  EcoTool/
+  ForgeTool/
     CMakeLists.txt
     DAQSessionAPP.h
-    EcoTool.cpp
+    ForgeTool.cpp
     RingBuffer.hpp
     Serial.hpp
     TcpClient.hpp
     Usbxch.cpp
     Usbxch.h
   test/
-    el/
+    fd/
       test_ring.cpp
     middleware/
       test_ABFStream.cpp
@@ -152,7 +152,7 @@ digest/
 <files>
 This section contains the contents of the repository's files.
 
-<file path="digest/EcoDrive/platform/host/CMakeLists.txt">
+<file path="digest/ForgeDriveMC/platform/host/CMakeLists.txt">
 cmake_minimum_required(VERSION 3.20)
 
 # Host platform module used by top-level CMake via add_subdirectory(platform/host).
@@ -199,8 +199,8 @@ set(Platform_Src
 file(GLOB_RECURSE Driver_Core_Src
     ${ECOLIB_DIR}/driver/host/*.cpp
     ${ECOLIB_DIR}/driver/host/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/el_hall.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/el_mc3p.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fd_hall.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fd_mc3p.cpp
 )
 
 find_package(Threads REQUIRED)
@@ -252,45 +252,45 @@ set(PLATFORM_DEFINITIONS ${DEVICE_DEFINITIONS} PARENT_SCOPE)
 set(PLATFORM_SOURCE ${Driver_Core_Src} ${Platform_Src} PARENT_SCOPE)
 </file>
 
-<file path="digest/EcoDrive/platform/host/el_hall.cpp">
+<file path="digest/ForgeDriveMC/platform/host/fd_hall.cpp">
 uint8_t hall1_gpioRead()
 ⋮----
-void el_hall1_init()
+void fd_hall1_init()
 ⋮----
-void el_hall1_setComDelay_uS(uint32_t delay_uS)
+void fd_hall1_setComDelay_uS(uint32_t delay_uS)
 ⋮----
-void el_hall1_setComCallback(void (*callback)(void))
+void fd_hall1_setComCallback(void (*callback)(void))
 ⋮----
-float el_hall1_elec_speed(){
+float fd_hall1_elec_speed(){
 ⋮----
-uint8_t el_hall1_read(){
+uint8_t fd_hall1_read(){
 ⋮----
-void el_comDelay_init()
+void fd_comDelay_init()
 ⋮----
-void el_comDelay_setComDelay_uS(uint32_t delay_uS)
+void fd_comDelay_setComDelay_uS(uint32_t delay_uS)
 ⋮----
-void el_comDelay_setComCallback(void (*callback)(void))
+void fd_comDelay_setComCallback(void (*callback)(void))
 ⋮----
 void sil_hall_update()
 ⋮----
-void el_hall1_reset()
+void fd_hall1_reset()
 </file>
 
-<file path="digest/EcoDrive/platform/host/el_hall.h">
-void el_hall1_init();
-void el_hall1_setComDelay_uS(uint32_t COM_delay_uS);
-void el_hall1_setComCallback(void (*callback)(void));
-float el_hall1_elec_speed();
-uint8_t el_hall1_read();
+<file path="digest/ForgeDriveMC/platform/host/fd_hall.h">
+void fd_hall1_init();
+void fd_hall1_setComDelay_uS(uint32_t COM_delay_uS);
+void fd_hall1_setComCallback(void (*callback)(void));
+float fd_hall1_elec_speed();
+uint8_t fd_hall1_read();
 ⋮----
-void el_comDelay_init();
-void el_comDelay_setComDelay_uS(uint32_t COM_delay_uS);
-void el_comDelay_setComCallback(void (*callback)(void));
+void fd_comDelay_init();
+void fd_comDelay_setComDelay_uS(uint32_t COM_delay_uS);
+void fd_comDelay_setComCallback(void (*callback)(void));
 void sil_hall_update();
 </file>
 
-<file path="digest/EcoDrive/platform/host/el_mc3p.cpp">
-float el_mc3p_adc_read_single(el_mc3p_handle_t *h, uint32_t channel) { return 0.0; }
+<file path="digest/ForgeDriveMC/platform/host/fd_mc3p.cpp">
+float fd_mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel) { return 0.0; }
 ⋮----
 void postScanMethod()
 ⋮----
@@ -298,79 +298,79 @@ static void dPsim_dTheta_Sine(double theta_e, double dPsi_dTheta[3])
 ⋮----
 static void dPsim_dTheta_Trapezoidal(double theta_e, double dPsi_dTheta[3])
 ⋮----
-void el_mc3p_init(el_mc3p_handle_t *h)
+void fd_mc3p_init(fd_mc3p_handle_t *h)
 ⋮----
-void el_mc3p_reconfigure_pwm(el_mc3p_handle_t *h)
+void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h)
 ⋮----
-void el_mc3p_bg_startConv(el_mc3p_handle_t *h){}
-uint8_t el_mc3p_bg_channels(el_mc3p_handle_t *h){return 0;}
-uint8_t el_mc3p_read_bg(el_mc3p_handle_t *h, float* scanData){return 0;}
-uint8_t el_mc3p_bg_isReady(el_mc3p_handle_t *h){return 0;}
+void fd_mc3p_bg_startConv(fd_mc3p_handle_t *h){}
+uint8_t fd_mc3p_bg_channels(fd_mc3p_handle_t *h){return 0;}
+uint8_t fd_mc3p_read_bg(fd_mc3p_handle_t *h, float* scanData){return 0;}
+uint8_t fd_mc3p_bg_isReady(fd_mc3p_handle_t *h){return 0;}
 ⋮----
-void el_mc3p_read_sync(el_mc3p_handle_t *h, void* data)
+void fd_mc3p_read_sync(fd_mc3p_handle_t *h, void* data)
 ⋮----
-void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_u, el_mc3p_phase_state_t state_v, el_mc3p_phase_state_t state_w)
+void fd_mc3p_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
 ⋮----
-void el_mc3p_write_phase_duty(el_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15)
+void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15)
 ⋮----
-void el_mc3p_write_float(el_mc3p_handle_t *h)
+void fd_mc3p_write_float(fd_mc3p_handle_t *h)
 ⋮----
 } mc3p_trap_sector_map_t;
 ⋮----
-void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t duty_q15)
+void fd_mc3p_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15)
 ⋮----
-void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
+void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
 ⋮----
-void el_mc3p_set_gain(el_mc3p_handle_t *h,  el_mc3p_sync s, float gain)
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync s, float gain)
 ⋮----
-void el_mc3p_set_sync_scale(el_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
+void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
 </file>
 
-<file path="digest/EcoDrive/platform/host/el_mc3p.h">
-} el_mc3p_sector_t;
+<file path="digest/ForgeDriveMC/platform/host/fd_mc3p.h">
+} fd_mc3p_sector_t;
 ⋮----
-} el_mc3p_mode_t;
+} fd_mc3p_mode_t;
 ⋮----
-} el_mc3p_phase_state_t;
+} fd_mc3p_phase_state_t;
 ⋮----
-}el_mc3p_sync;
+}fd_mc3p_sync;
 ⋮----
-}el_mc3p_config_t;
+}fd_mc3p_config_t;
 ⋮----
-}el_mc3p_handle_t;
+}fd_mc3p_handle_t;
 ⋮----
-} el_mc3p_svm_data_t;
+} fd_mc3p_svm_data_t;
 ⋮----
-} el_mc3p_trap_data_t;
+} fd_mc3p_trap_data_t;
 ⋮----
-void el_mc3p_init(el_mc3p_handle_t *h);
-void el_mc3p_reconfigure_pwm(el_mc3p_handle_t *h);
-void el_mc3p_set_gain(el_mc3p_handle_t *h, el_mc3p_sync s, float gain);
-void el_mc3p_set_sync_scale(el_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2]);
-void el_mc3p_bg_startConv(el_mc3p_handle_t *h);
-uint8_t el_mc3p_bg_channels(el_mc3p_handle_t *h);
-float el_mc3p_adc_read_single(el_mc3p_handle_t *h, uint32_t channel);
+void fd_mc3p_init(fd_mc3p_handle_t *h);
+void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h);
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h, fd_mc3p_sync s, float gain);
+void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2]);
+void fd_mc3p_bg_startConv(fd_mc3p_handle_t *h);
+uint8_t fd_mc3p_bg_channels(fd_mc3p_handle_t *h);
+float fd_mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel);
 ⋮----
-uint8_t el_mc3p_read_bg(el_mc3p_handle_t *h, float *scanData);
-uint8_t el_mc3p_bg_isReady(el_mc3p_handle_t *h);
-void el_mc3p_read_sync(el_mc3p_handle_t *h, void* scanData);
+uint8_t fd_mc3p_read_bg(fd_mc3p_handle_t *h, float *scanData);
+uint8_t fd_mc3p_bg_isReady(fd_mc3p_handle_t *h);
+void fd_mc3p_read_sync(fd_mc3p_handle_t *h, void* scanData);
 ⋮----
-void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_u, el_mc3p_phase_state_t state_v, el_mc3p_phase_state_t state_w);
-void el_mc3p_write_phase_duty(el_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15);
+void fd_mc3p_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w);
+void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15);
 ⋮----
-void el_mc3p_write_float(el_mc3p_handle_t *h);
-void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t duty_q15);
-void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15);
+void fd_mc3p_write_float(fd_mc3p_handle_t *h);
+void fd_mc3p_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15);
+void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15);
 ⋮----
-__attribute__((weak)) void el_xmc3p_tickerCallback(void);
-__attribute__((weak)) void el_mc3p_sync_postScanCallback(void);
+__attribute__((weak)) void fd_xmc3p_tickerCallback(void);
+__attribute__((weak)) void fd_mc3p_sync_postScanCallback(void);
 </file>
 
-<file path="digest/EcoDrive/platform/host/platform.cmake">
+<file path="digest/ForgeDriveMC/platform/host/platform.cmake">
 
 </file>
 
-<file path="digest/EcoDrive/platform/host/platform.cpp">
+<file path="digest/ForgeDriveMC/platform/host/platform.cpp">
 static inline uint64_t now_ns(void) {
 ⋮----
 unsigned int register_timer(vtimer_manager_t* mgr, timer_callback_t cb, uint64_t timestep_ns) {
@@ -395,7 +395,7 @@ void gui_loop() {
 void platform_init()
 </file>
 
-<file path="digest/EcoDrive/platform/host/platform.h">
+<file path="digest/ForgeDriveMC/platform/host/platform.h">
 } vtimer_t;
 ⋮----
 } vtimer_manager_t;
@@ -407,7 +407,7 @@ void platform_init();
 void gui_loop();
 </file>
 
-<file path="digest/EcoDrive/platform/host/sil.h">
+<file path="digest/ForgeDriveMC/platform/host/sil.h">
 struct DummyLoad{
 ⋮----
 struct Sil
@@ -453,7 +453,7 @@ void logStop()
 bool isLogOn()
 </file>
 
-<file path="digest/EcoDrive/platform/host/silgui.h">
+<file path="digest/ForgeDriveMC/platform/host/silgui.h">
 inline ScopeStream<float> scope(scope_buffer, CHANNELS, SAMPLE_DEPTH);
 ⋮----
 enum class VoltagePlotType
@@ -485,7 +485,7 @@ inline void silgui_init()
 inline void silgui_updateData()
 </file>
 
-<file path="digest/EcoDrive/platform/stm32f4/CMakeLists.txt">
+<file path="digest/ForgeDriveMC/platform/stm32f4/CMakeLists.txt">
 cmake_minimum_required(VERSION 3.20)
 # Include device-specific CMake configuration
 
@@ -633,7 +633,7 @@ set(PLATFORM_DEFINITIONS ${DEVICE_DEFINITIONS} PARENT_SCOPE)
 set(PLATFORM_SOURCE ${Driver_Core_Src} ${Platform_Src} PARENT_SCOPE)
 </file>
 
-<file path="digest/EcoDrive/platform/stm32f4/platform.c">
+<file path="digest/ForgeDriveMC/platform/stm32f4/platform.c">
 void SystemClock_Config(void)
 ⋮----
 int __io_putchar(int ch){
@@ -649,18 +649,18 @@ static inline void ENABLE_ALL_GPIO_CLOCKS(void) {
 void platform_init(void)
 </file>
 
-<file path="digest/EcoDrive/platform/stm32f4/platform.cmake">
+<file path="digest/ForgeDriveMC/platform/stm32f4/platform.cmake">
 set(CMAKE_TOOLCHAIN_FILE "${THIRDPARTY_DIR}/stm32/f4/toolchain/gcc-arm-none-eabi.cmake")
 </file>
 
-<file path="digest/EcoDrive/platform/stm32f4/platform.h">
+<file path="digest/ForgeDriveMC/platform/stm32f4/platform.h">
 void platform_init(void);
 void Error_Handler(void);
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControl.cpp">
-void el_mc3p_sync_postScanCallback(){pmsmC1.mc.pwmLoop();}
-void el_xmc3p_tickerCallback(){pmsmC1.mc.xmcLoop();}
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControl.cpp">
+void fd_mc3p_sync_postScanCallback(){pmsmC1.mc.pwmLoop();}
+void fd_xmc3p_tickerCallback(){pmsmC1.mc.xmcLoop();}
 ⋮----
 PmsmControlTypes::ERR PmsmControl::init()
 ⋮----
@@ -687,9 +687,9 @@ PmsmControlTypes::ERR PmsmControl::setOnFault(void (*onFault)(void *))
 PmsmControlTypes::ERR PmsmControl::clearFault()
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControl.h">
-friend void el_mc3p_sync_postScanCallback();
-friend void el_xmc3p_tickerCallback();
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControl.h">
+friend void fd_mc3p_sync_postScanCallback();
+friend void fd_xmc3p_tickerCallback();
 ⋮----
 static constexpr uint8_t olstup_tb_size() {return PmsmControlTypes::OLSTUP_TABLE_SIZE;};
 ⋮----
@@ -700,11 +700,11 @@ PmsmControlTypes::ERR setOnFault(void(*onFault)(void*));
 PmsmControlTypes::ERR clearFault();
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlConf.h">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlConf.h">
 
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlCore_Foc.cpp">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlCore_Foc.cpp">
 static inline q31_t maxa_minb_2_q31(q31_t i1,q31_t i2)
 ⋮----
 void PmsmControlCore::Foc_init()
@@ -718,7 +718,7 @@ void PmsmControlCore::Foc_xmcLoop()
 void PmsmControlCore::Foc_pwmLoop()
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlCore_Foc.h">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlCore_Foc.h">
 struct Foc
 ⋮----
 void Foc_olstup_start();
@@ -729,7 +729,7 @@ void Foc_pwmLoop();
 void Foc_xmcLoop();
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlCore_SComm.cpp">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlCore_SComm.cpp">
 void PmsmControlCore::SComm_init()
 ⋮----
 void PmsmControlCore::SComm_onEnter(MCMode prev_mct)
@@ -741,7 +741,7 @@ void PmsmControlCore::SComm_pwmLoop()
 void PmsmControlCore::SComm_xmcLoop()
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlCore_SComm.h">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlCore_SComm.h">
 struct SComm
 ⋮----
 enum class IDStage
@@ -755,7 +755,7 @@ void SComm_pwmLoop();
 void SComm_xmcLoop();
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlCore.cpp">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlCore.cpp">
 void PmsmControlCore::olstup_lut_run(Olstup &stup, q31_t &ec_sp_q31, float &rps)
 ⋮----
 void PmsmControlCore::init()
@@ -769,9 +769,9 @@ void PmsmControlCore::pwmLoop()
 void PmsmControlCore::setControlMode(MCMode mc_mode)
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlCore.h">
-float voltage_q31_to_float(q31_t voltage_q31) const { return EL_MC3P_VS_TO_FLOAT(voltage_q31); }
-float current_q31_to_float(q31_t current_q31) const { return EL_MC3P_CS_TO_FLOAT(current_q31); }
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlCore.h">
+float voltage_q31_to_float(q31_t voltage_q31) const { return FD_MC3P_VS_TO_FLOAT(voltage_q31); }
+float current_q31_to_float(q31_t current_q31) const { return FD_MC3P_CS_TO_FLOAT(current_q31); }
 float angle_q31_to_float(q31_t eAngle_q31) const { return (float)eAngle_q31 * (M_PI / INT32_MAX);}
 inline uint32_t xTicks_to_us(uint32_t ticks)const{return ticks*xTicks_period_us;};
 inline uint32_t xTicks_to_ms(uint32_t ticks)const{return xTicks_to_us(ticks)/1000;};
@@ -790,7 +790,7 @@ void pwmLoop();
 void xmcLoop();
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PmsmControlTypes.h">
+<file path="digest/ForgeDriveMC/PmsmControl/PmsmControlTypes.h">
 enum class Direction : uint8_t
 ⋮----
 enum class RunMode : uint8_t
@@ -828,7 +828,7 @@ struct ConfigMechLimits
 struct Pid
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PosDriver.cpp">
+<file path="digest/ForgeDriveMC/PmsmControl/PosDriver.cpp">
 bool PosOpen::init_impl()
 ⋮----
 void PosOpen::pTickUpdate_impl()
@@ -836,7 +836,7 @@ void PosOpen::pTickUpdate_impl()
 void PosOpen::xTickUpdate_impl()
 </file>
 
-<file path="digest/EcoDrive/PmsmControl/PosDriver.h">
+<file path="digest/ForgeDriveMC/PmsmControl/PosDriver.h">
 const Impl &self() const { return static_cast<const Impl &>(*this); }
 ⋮----
 void align();
@@ -867,20 +867,20 @@ void setCommAngle_impl(q31_t  _commAngle_q31)
 void reset_impl()
 </file>
 
-<file path="digest/EcoDrive/CMakeLists.txt">
+<file path="digest/ForgeDriveMC/CMakeLists.txt">
 cmake_minimum_required(VERSION 3.20)
 
 
 # Select target platform
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../ecolib)
+set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
 include(platform/${PLATFORM_NAME}/platform.cmake)
-project(EcoDrive LANGUAGES C CXX ASM)
+project(ForgeDriveMC LANGUAGES C CXX ASM)
 
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
@@ -947,8 +947,8 @@ set(APPLICATION_SRC
 
 
 file(GLOB_RECURSE CORE_SRC
-    ${ECOLIB_DIR}/el/*.cpp
-    ${ECOLIB_DIR}/el/*.c
+    ${ECOLIB_DIR}/fd/*.cpp
+    ${ECOLIB_DIR}/fd/*.c
 )
 
 
@@ -1020,21 +1020,21 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 endif()
 </file>
 
-<file path="digest/EcoDrive/DAQSessionAPP.h">
+<file path="digest/ForgeDriveMC/DAQSessionAPP.h">
 uint8_t send() override
 ⋮----
 uint8_t on_mark(daq::MARKER mark, bool entry)override
 </file>
 
-<file path="digest/EcoDrive/main.cpp">
+<file path="digest/ForgeDriveMC/main.cpp">
 int main(){
 </file>
 
-<file path="digest/EcoDrive/sys.cpp">
+<file path="digest/ForgeDriveMC/sys.cpp">
 void Sys::init()
 </file>
 
-<file path="digest/EcoDrive/sys.h">
+<file path="digest/ForgeDriveMC/sys.h">
 static inline void onFrame(void* ctx, uint8_t id, uint8_t* payload, uint8_t payload_len)
 ⋮----
 static inline void onError(void* ctx, uint8_t id)
@@ -1042,41 +1042,41 @@ static inline void onError(void* ctx, uint8_t id)
 static void init(void);
 </file>
 
-<file path="digest/ecolib/driver/host/el_core.c">
-void el_core_init(el_core_t *h)
+<file path="digest/fdlib/driver/host/fd_core.c">
+void fd_core_init(fd_core_t *h)
 </file>
 
-<file path="digest/ecolib/driver/host/el_core.h">
-}el_core_t;
+<file path="digest/fdlib/driver/host/fd_core.h">
+}fd_core_t;
 ⋮----
-void el_core_init(el_core_t *h);
+void fd_core_init(fd_core_t *h);
 ⋮----
-static inline uint32_t el_prof_tick()
+static inline uint32_t fd_prof_tick()
 ⋮----
-static inline uint32_t el_prof_tock(uint32_t start)
+static inline uint32_t fd_prof_tock(uint32_t start)
 ⋮----
-typedef uint16_t el_pin_t;
+typedef uint16_t fd_pin_t;
 ⋮----
-} el_gpio_mode_t;
+} fd_gpio_mode_t;
 ⋮----
-} el_gpio_state_t;
+} fd_gpio_state_t;
 ⋮----
-static inline void el_gpio_mode(el_pin_t pin_num, el_gpio_mode_t mode) {
+static inline void fd_gpio_mode(fd_pin_t pin_num, fd_gpio_mode_t mode) {
 ⋮----
-static inline void el_gpio_write(el_pin_t pin_num, el_gpio_state_t state) {
+static inline void fd_gpio_write(fd_pin_t pin_num, fd_gpio_state_t state) {
 ⋮----
-static inline void el_gpio_toggle(el_pin_t pin_num) {
+static inline void fd_gpio_toggle(fd_pin_t pin_num) {
 ⋮----
-static inline el_gpio_state_t el_gpio_read(el_pin_t pin_num) {
+static inline fd_gpio_state_t fd_gpio_read(fd_pin_t pin_num) {
 ⋮----
-static inline uint32_t el_atomic_start(void) {
+static inline uint32_t fd_atomic_start(void) {
 ⋮----
-static inline void el_atomic_end(uint32_t primask) {
+static inline void fd_atomic_end(uint32_t primask) {
 ⋮----
-static inline void el_delay(uint32_t delay_ms)
+static inline void fd_delay(uint32_t delay_ms)
 </file>
 
-<file path="digest/ecolib/driver/host/el_uart.c">
+<file path="digest/fdlib/driver/host/fd_uart.c">
 void uart1_dma_receive_handle();
 ⋮----
 static void uart1_dma_transmit_complete_callback();
@@ -1085,7 +1085,7 @@ void uart1_dma_receive_complete_register_callback(void(*func)(void));
 ⋮----
 void uart1_dmaInit();
 void uart1_interruptInit();
-void uart1_uartInit(el_uart_handle_t *handle);
+void uart1_uartInit(fd_uart_handle_t *handle);
 ⋮----
 void uart1_dmaInit()
 ⋮----
@@ -1093,93 +1093,93 @@ void uart1_interruptInit()
 ⋮----
 void uart1_gpio_init()
 ⋮----
-void el_uart1_init(el_uart_handle_t *handle)
+void fd_uart1_init(fd_uart_handle_t *handle)
 ⋮----
-el_ring_stats_t el_uart1_rx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_uart1_rx_stats(fd_uart_handle_t *handle)
 ⋮----
-el_ring_stats_t el_uart1_tx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_uart1_tx_stats(fd_uart_handle_t *handle)
 ⋮----
-void el_uart1_resetStats(el_uart_handle_t *handle)
+void fd_uart1_resetStats(fd_uart_handle_t *handle)
 ⋮----
 void DMA2_Stream5_IRQHandler(void) {
 ⋮----
 void DMA2_Stream7_IRQHandler(void)
 </file>
 
-<file path="digest/ecolib/driver/host/el_uart.h">
-}el_uart_config_t;
+<file path="digest/fdlib/driver/host/fd_uart.h">
+}fd_uart_config_t;
 ⋮----
-}el_uart_status_t;
+}fd_uart_status_t;
 ⋮----
-}el_uart_handle_t;
+}fd_uart_handle_t;
 ⋮----
-void el_uart1_init(el_uart_handle_t *handle);
-uint8_t el_uart1_write(el_uart_handle_t *handle, const uint8_t* data, uint8_t len);
-uint16_t el_uart1_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len);
-el_ring_stats_t el_uart1_rx_stats(el_uart_handle_t *handle);
-el_ring_stats_t el_uart1_tx_stats(el_uart_handle_t *handle);
-void el_uart1_resetStats(el_uart_handle_t *handle);
+void fd_uart1_init(fd_uart_handle_t *handle);
+uint8_t fd_uart1_write(fd_uart_handle_t *handle, const uint8_t* data, uint8_t len);
+uint16_t fd_uart1_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len);
+fd_ring_stats_t fd_uart1_rx_stats(fd_uart_handle_t *handle);
+fd_ring_stats_t fd_uart1_tx_stats(fd_uart_handle_t *handle);
+void fd_uart1_resetStats(fd_uart_handle_t *handle);
 </file>
 
-<file path="digest/ecolib/driver/host/el_usbcdc.c">
-void el_usbcdc_init(el_uart_handle_t *handle)
+<file path="digest/fdlib/driver/host/fd_usbcdc.c">
+void fd_usbcdc_init(fd_uart_handle_t *handle)
 ⋮----
-uint8_t el_usbcdc_write(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
+uint8_t fd_usbcdc_write(fd_uart_handle_t *handle, uint8_t* data, uint8_t len)
 ⋮----
-uint16_t el_usbcdc_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
+uint16_t fd_usbcdc_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len)
 ⋮----
-el_ring_stats_t el_usbcdc_rx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_usbcdc_rx_stats(fd_uart_handle_t *handle)
 ⋮----
-el_ring_stats_t el_usbcdc_tx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_usbcdc_tx_stats(fd_uart_handle_t *handle)
 ⋮----
-void el_usbcdc_resetStats(el_uart_handle_t *handle)
+void fd_usbcdc_resetStats(fd_uart_handle_t *handle)
 </file>
 
-<file path="digest/ecolib/driver/host/el_usbcdc.h">
-void el_usbcdc_init(el_uart_handle_t *handle);
-uint8_t el_usbcdc_write(el_uart_handle_t *handle, uint8_t* data, uint8_t len);
-uint16_t el_usbcdc_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len);
-el_ring_stats_t el_usbcdc_rx_stats(el_uart_handle_t *handle);
-el_ring_stats_t el_usbcdc_tx_stats(el_uart_handle_t *handle);
-void el_usbcdc_resetStats(el_uart_handle_t *handle);
+<file path="digest/fdlib/driver/host/fd_usbcdc.h">
+void fd_usbcdc_init(fd_uart_handle_t *handle);
+uint8_t fd_usbcdc_write(fd_uart_handle_t *handle, uint8_t* data, uint8_t len);
+uint16_t fd_usbcdc_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len);
+fd_ring_stats_t fd_usbcdc_rx_stats(fd_uart_handle_t *handle);
+fd_ring_stats_t fd_usbcdc_tx_stats(fd_uart_handle_t *handle);
+void fd_usbcdc_resetStats(fd_uart_handle_t *handle);
 </file>
 
-<file path="digest/ecolib/driver/host/el_usbxch.cpp">
-void el_usbxch_init(el_usbxch_handle_t *h)
+<file path="digest/fdlib/driver/host/fd_usbxch.cpp">
+void fd_usbxch_init(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_write(el_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
 ⋮----
-uint32_t el_usbxch_read(el_usbxch_handle_t *h, uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
 ⋮----
-bool el_usbxch_connected(el_usbxch_handle_t *h)
+bool fd_usbxch_connected(fd_usbxch_handle_t *h)
 ⋮----
-void el_usbxch_update(el_usbxch_handle_t *h)
+void fd_usbxch_update(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_write_available(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_write_available(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_flush(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_flush(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_read_available(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_read_available(fd_usbxch_handle_t *h)
 </file>
 
-<file path="digest/ecolib/driver/host/el_usbxch.h">
-}el_usbxch_handle_t;
+<file path="digest/fdlib/driver/host/fd_usbxch.h">
+}fd_usbxch_handle_t;
 ⋮----
-void el_usbxch_init(el_usbxch_handle_t *h);
-uint32_t el_usbxch_write(el_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
-uint32_t el_usbxch_write_available(el_usbxch_handle_t *h);
-uint32_t el_usbxch_flush(el_usbxch_handle_t *h);
-uint32_t el_usbxch_read(el_usbxch_handle_t *h, uint8_t *data, uint32_t length);
-uint32_t el_usbxch_read_available(el_usbxch_handle_t *h);
-bool el_usbxch_connected(el_usbxch_handle_t *h);
-void el_usbxch_update(el_usbxch_handle_t *h);
+void fd_usbxch_init(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
+uint32_t fd_usbxch_write_available(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_flush(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length);
+uint32_t fd_usbxch_read_available(fd_usbxch_handle_t *h);
+bool fd_usbxch_connected(fd_usbxch_handle_t *h);
+void fd_usbxch_update(fd_usbxch_handle_t *h);
 </file>
 
-<file path="digest/ecolib/driver/host/eld_conf.h">
+<file path="digest/fdlib/driver/host/fd_driver_conf.h">
 
 </file>
 
-<file path="digest/ecolib/driver/host/TCPServer.cpp">
+<file path="digest/fdlib/driver/host/TCPServer.cpp">
 bool TCPServer::init(uint16_t port)
 ⋮----
 bool TCPServer::pollClient()
@@ -1197,7 +1197,7 @@ int TCPServer::write(const void* data, size_t len)
 int TCPServer::read(void* data, size_t len)
 </file>
 
-<file path="digest/ecolib/driver/host/TCPServer.h">
+<file path="digest/fdlib/driver/host/TCPServer.h">
 bool init(uint16_t port);
 bool pollClient();
 ⋮----
@@ -1213,99 +1213,99 @@ int write(const void* data, size_t len);
 int read(void* data, size_t len);
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_core.c">
+<file path="digest/fdlib/driver/stm32f4/fd_core.c">
 static inline void dwt_init(void)
 ⋮----
-void el_core_init(el_core_t *h)
+void fd_core_init(fd_core_t *h)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_core.h">
-}el_core_t;
+<file path="digest/fdlib/driver/stm32f4/fd_core.h">
+}fd_core_t;
 ⋮----
-void el_core_init(el_core_t *h);
+void fd_core_init(fd_core_t *h);
 ⋮----
-static inline uint32_t el_prof_tick()
+static inline uint32_t fd_prof_tick()
 ⋮----
-static inline uint32_t el_prof_tock(uint32_t start)
+static inline uint32_t fd_prof_tock(uint32_t start)
 ⋮----
-typedef uint16_t el_pin_t;
+typedef uint16_t fd_pin_t;
 ⋮----
-} el_gpio_mode_t;
+} fd_gpio_mode_t;
 ⋮----
-} el_gpio_state_t;
+} fd_gpio_state_t;
 ⋮----
-static inline void el_gpio_mode(el_pin_t pin_num, el_gpio_mode_t mode) {
+static inline void fd_gpio_mode(fd_pin_t pin_num, fd_gpio_mode_t mode) {
 ⋮----
-static inline void el_gpio_write(el_pin_t pin_num, el_gpio_state_t state) {
+static inline void fd_gpio_write(fd_pin_t pin_num, fd_gpio_state_t state) {
 ⋮----
-static inline void el_gpio_toggle(el_pin_t pin_num) {
+static inline void fd_gpio_toggle(fd_pin_t pin_num) {
 ⋮----
-static inline el_gpio_state_t el_gpio_read(el_pin_t pin_num) {
+static inline fd_gpio_state_t fd_gpio_read(fd_pin_t pin_num) {
 ⋮----
-static inline uint32_t el_atomic_start(void) {
+static inline uint32_t fd_atomic_start(void) {
 ⋮----
-static inline void el_atomic_end(uint32_t primask) {
+static inline void fd_atomic_end(uint32_t primask) {
 ⋮----
-static inline void el_delay(uint32_t delay_ms)
+static inline void fd_delay(uint32_t delay_ms)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_hall.c">
+<file path="digest/fdlib/driver/stm32f4/fd_hall.c">
 uint8_t hall1_gpioRead()
 ⋮----
-void el_hall1_init()
+void fd_hall1_init()
 ⋮----
-void el_hall1_setComDelay_uS(uint32_t delay_uS)
+void fd_hall1_setComDelay_uS(uint32_t delay_uS)
 ⋮----
-void el_hall1_setComCallback(void (*callback)(void))
+void fd_hall1_setComCallback(void (*callback)(void))
 ⋮----
-float el_hall1_elec_speed(){
+float fd_hall1_elec_speed(){
 ⋮----
-uint8_t el_hall1_read(){
+uint8_t fd_hall1_read(){
 ⋮----
-void el_comDelay_init()
+void fd_comDelay_init()
 ⋮----
-void el_comDelay_setComDelay_uS(uint32_t delay_uS)
+void fd_comDelay_setComDelay_uS(uint32_t delay_uS)
 ⋮----
-void el_comDelay_setComCallback(void (*callback)(void))
+void fd_comDelay_setComCallback(void (*callback)(void))
 ⋮----
 void TIM2_IRQHandler(void)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_hall.h">
-void el_hall1_init();
+<file path="digest/fdlib/driver/stm32f4/fd_hall.h">
+void fd_hall1_init();
 ⋮----
-void el_hall1_setComDelay_uS(uint32_t delay_uS);
+void fd_hall1_setComDelay_uS(uint32_t delay_uS);
 ⋮----
-void el_hall1_setComCallback(void (*callback)(void));
+void fd_hall1_setComCallback(void (*callback)(void));
 ⋮----
-float el_hall1_elec_speed();
+float fd_hall1_elec_speed();
 ⋮----
-uint8_t el_hall1_read();
+uint8_t fd_hall1_read();
 ⋮----
-int32_t el_hall1_elec_angle_q31();
+int32_t fd_hall1_elec_angle_q31();
 ⋮----
-void el_hall1_reset();
+void fd_hall1_reset();
 ⋮----
-void el_comDelay_init();
+void fd_comDelay_init();
 ⋮----
-void el_comDelay_setComDelay_uS(uint32_t COM_delay_uS);
+void fd_comDelay_setComDelay_uS(uint32_t COM_delay_uS);
 ⋮----
-void el_comDelay_setComCallback(void (*callback)(void));
+void fd_comDelay_setComCallback(void (*callback)(void));
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_mc3p_it.c">
+<file path="digest/fdlib/driver/stm32f4/fd_mc3p_it.c">
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 ⋮----
 void HAL_SuspendTick(void)
 ⋮----
 void HAL_ResumeTick(void)
 ⋮----
-__attribute__((weak)) void el_xmc3p_tickerCallback(void){}
-__attribute__((weak)) void el_mc3p_sync_postScanCallback(void){}
+__attribute__((weak)) void fd_xmc3p_tickerCallback(void){}
+__attribute__((weak)) void fd_mc3p_sync_postScanCallback(void){}
 ⋮----
-void mc3p_irq_bind(el_mc3p_handle_t* h)
+void mc3p_irq_bind(fd_mc3p_handle_t* h)
 ⋮----
-__attribute__((weak)) void INTERNAL_mc3p_ADC_JEOS_IRQ(el_mc3p_handle_t *h){}
+__attribute__((weak)) void INTERNAL_mc3p_ADC_JEOS_IRQ(fd_mc3p_handle_t *h){}
 ⋮----
 void ADC_IRQHandler(void)
 ⋮----
@@ -1314,19 +1314,19 @@ void TIM1_UP_TIM10_IRQHandler(void)
 void TIM1_TRG_COM_TIM11_IRQHandler(void)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_mc3p.c">
-void mc3p_adc_svm_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector);
-void mc3p_adc_trap_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector);
-void mc3p_adc_mode(el_mc3p_handle_t *h, el_mc3p_sector_t sector);
-void mc3p_offset_calibration(el_mc3p_handle_t *h);
+<file path="digest/fdlib/driver/stm32f4/fd_mc3p.c">
+void mc3p_adc_svm_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void mc3p_adc_trap_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void mc3p_adc_mode(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void mc3p_offset_calibration(fd_mc3p_handle_t *h);
 ⋮----
 uint16_t adc1_Sample_Single_Channel_Temporary(uint32_t channel)
 ⋮----
-float mc3p_adc_read_single(el_mc3p_handle_t *h, uint32_t channel)
+float mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel)
 ⋮----
-void mc3p_adc_calibrate(el_mc3p_handle_t *h)
+void mc3p_adc_calibrate(fd_mc3p_handle_t *h)
 ⋮----
-void mc3p_adc_init(el_mc3p_handle_t *h)
+void mc3p_adc_init(fd_mc3p_handle_t *h)
 ⋮----
 void mc3p_gpio_init()
 ⋮----
@@ -1334,107 +1334,107 @@ void mc3p_dma_init()
 ⋮----
 void mc3p_interrupt_init(){
 ⋮----
-static void mc3p_tim1_init(el_mc3p_handle_t *h){
+static void mc3p_tim1_init(fd_mc3p_handle_t *h){
 ⋮----
-void el_mc3p_init(el_mc3p_handle_t *h)
+void fd_mc3p_init(fd_mc3p_handle_t *h)
 ⋮----
-void el_mc3p_reconfigure_pwm(el_mc3p_handle_t *h)
+void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h)
 ⋮----
-void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_u, el_mc3p_phase_state_t state_v, el_mc3p_phase_state_t state_w)
+void fd_mc3p_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
 ⋮----
-void el_mc3p_write_phase_duty(el_mc3p_handle_t *h, int16_t dutyu_q15, int16_t dutyv_q15, int16_t dutyw_q15)
+void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t dutyu_q15, int16_t dutyv_q15, int16_t dutyw_q15)
 ⋮----
-void el_mc3p_write_float(el_mc3p_handle_t *h)
+void fd_mc3p_write_float(fd_mc3p_handle_t *h)
 ⋮----
 } mc3p_trap_sector_map_t;
 ⋮----
-void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t duty_q15)
+void fd_mc3p_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15)
 ⋮----
-void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
+void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
 ⋮----
-void mc3p_adc_mode(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
+void mc3p_adc_mode(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 ⋮----
-void mc3p_adc_svm_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
+void mc3p_adc_svm_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 ⋮----
 } mc3p_adc_map_t;
 ⋮----
-void mc3p_adc_trap_update(el_mc3p_handle_t *h, el_mc3p_sector_t sector)
+void mc3p_adc_trap_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 ⋮----
-void el_mc3p_read_sync(el_mc3p_handle_t *h, void *data)
+void fd_mc3p_read_sync(fd_mc3p_handle_t *h, void *data)
 ⋮----
-uint8_t el_mc3p_read_bg(el_mc3p_handle_t *h, float* scanData)
+uint8_t fd_mc3p_read_bg(fd_mc3p_handle_t *h, float* scanData)
 ⋮----
-void el_mc3p_bg_startConv(el_mc3p_handle_t *h)
+void fd_mc3p_bg_startConv(fd_mc3p_handle_t *h)
 ⋮----
-uint8_t el_mc3p_bg_channels(el_mc3p_handle_t *h)
+uint8_t fd_mc3p_bg_channels(fd_mc3p_handle_t *h)
 ⋮----
-uint8_t el_mc3p_bg_isReady(el_mc3p_handle_t *h)
+uint8_t fd_mc3p_bg_isReady(fd_mc3p_handle_t *h)
 ⋮----
 void DMA2_Stream0_IRQHandler(void)
 ⋮----
-void el_mc3p_set_gain(el_mc3p_handle_t *h,  el_mc3p_sync s, float gain)
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync s, float gain)
 ⋮----
-void el_mc3p_set_sync_scale(el_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
+void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
 ⋮----
-void mc3p_offset_calibration(el_mc3p_handle_t *h)
+void mc3p_offset_calibration(fd_mc3p_handle_t *h)
 ⋮----
-void INTERNAL_mc3p_ADC_JEOS_IRQ(el_mc3p_handle_t *h)
+void INTERNAL_mc3p_ADC_JEOS_IRQ(fd_mc3p_handle_t *h)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_mc3p.h">
-} el_mc3p_sector_t;
+<file path="digest/fdlib/driver/stm32f4/fd_mc3p.h">
+} fd_mc3p_sector_t;
 ⋮----
-} el_mc3p_mode_t;
+} fd_mc3p_mode_t;
 ⋮----
-} el_mc3p_phase_state_t;
+} fd_mc3p_phase_state_t;
 ⋮----
-} el_mc3p_sync;
+} fd_mc3p_sync;
 ⋮----
-} el_mc3p_config_t;
+} fd_mc3p_config_t;
 ⋮----
-} el_mc3p_handle_t;
+} fd_mc3p_handle_t;
 ⋮----
-} el_mc3p_svm_data_t;
+} fd_mc3p_svm_data_t;
 ⋮----
-} el_mc3p_trap_data_t;
+} fd_mc3p_trap_data_t;
 ⋮----
-void mc3p_irq_bind(el_mc3p_handle_t *h);
+void mc3p_irq_bind(fd_mc3p_handle_t *h);
 ⋮----
-void el_mc3p_init(el_mc3p_handle_t *h);
-void el_mc3p_reconfigure_pwm(el_mc3p_handle_t *h);
+void fd_mc3p_init(fd_mc3p_handle_t *h);
+void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h);
 ⋮----
-void el_mc3p_set_gain(el_mc3p_handle_t *h, el_mc3p_sync s, float gain);
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h, fd_mc3p_sync s, float gain);
 ⋮----
-void el_mc3p_set_sync_scale(el_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2]);
+void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2]);
 ⋮----
-void el_mc3p_bg_startConv(el_mc3p_handle_t *h);
+void fd_mc3p_bg_startConv(fd_mc3p_handle_t *h);
 ⋮----
-uint8_t el_mc3p_bg_channels(el_mc3p_handle_t *h);
+uint8_t fd_mc3p_bg_channels(fd_mc3p_handle_t *h);
 ⋮----
-uint8_t el_mc3p_read_bg(el_mc3p_handle_t *h, float *scanData);
+uint8_t fd_mc3p_read_bg(fd_mc3p_handle_t *h, float *scanData);
 ⋮----
-uint8_t el_mc3p_bg_isReady(el_mc3p_handle_t *h);
+uint8_t fd_mc3p_bg_isReady(fd_mc3p_handle_t *h);
 ⋮----
-void el_mc3p_read_sync(el_mc3p_handle_t *h, void *scanData);
+void fd_mc3p_read_sync(fd_mc3p_handle_t *h, void *scanData);
 ⋮----
-float el_mc3p_adc_read_single(el_mc3p_handle_t *h, uint32_t channel);
+float fd_mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel);
 ⋮----
-void el_mc3p_write_phase_state(el_mc3p_handle_t *h, el_mc3p_phase_state_t state_u, el_mc3p_phase_state_t state_v, el_mc3p_phase_state_t state_w);
+void fd_mc3p_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w);
 ⋮----
-void el_mc3p_write_phase_duty(el_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15);
+void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15);
 ⋮----
-void el_mc3p_write_float(el_mc3p_handle_t *h);
+void fd_mc3p_write_float(fd_mc3p_handle_t *h);
 ⋮----
-void el_mc3p_write_trap(el_mc3p_handle_t *h, el_mc3p_sector_t sector, uint16_t duty_q15);
+void fd_mc3p_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15);
 ⋮----
-void el_mc3p_write_svm(el_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15);
+void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15);
 ⋮----
-__attribute__((weak)) void el_xmc3p_tickerCallback(void);
+__attribute__((weak)) void fd_xmc3p_tickerCallback(void);
 ⋮----
-__attribute__((weak)) void el_mc3p_sync_postScanCallback(void);
+__attribute__((weak)) void fd_mc3p_sync_postScanCallback(void);
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_uart.c">
+<file path="digest/fdlib/driver/stm32f4/fd_uart.c">
 void uart1_dma_receive_handle();
 ⋮----
 static void uart1_dma_transmit_complete_callback();
@@ -1443,7 +1443,7 @@ void uart1_dma_receive_complete_register_callback(void(*func)(void));
 ⋮----
 void uart1_dmaInit();
 void uart1_interruptInit();
-void uart1_uartInit(el_uart_handle_t *handle);
+void uart1_uartInit(fd_uart_handle_t *handle);
 ⋮----
 void uart1_dmaInit()
 ⋮----
@@ -1451,89 +1451,89 @@ void uart1_interruptInit()
 ⋮----
 void uart1_gpio_init()
 ⋮----
-void el_uart1_init(el_uart_handle_t *handle)
+void fd_uart1_init(fd_uart_handle_t *handle)
 ⋮----
-el_ring_stats_t el_uart1_rx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_uart1_rx_stats(fd_uart_handle_t *handle)
 ⋮----
-el_ring_stats_t el_uart1_tx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_uart1_tx_stats(fd_uart_handle_t *handle)
 ⋮----
-void el_uart1_resetStats(el_uart_handle_t *handle)
+void fd_uart1_resetStats(fd_uart_handle_t *handle)
 ⋮----
 void DMA2_Stream5_IRQHandler(void) {
 ⋮----
 void DMA2_Stream7_IRQHandler(void)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_uart.h">
-}el_uart_config_t;
+<file path="digest/fdlib/driver/stm32f4/fd_uart.h">
+}fd_uart_config_t;
 ⋮----
-}el_uart_status_t;
+}fd_uart_status_t;
 ⋮----
-}el_uart_handle_t;
+}fd_uart_handle_t;
 ⋮----
-void el_uart1_init(el_uart_handle_t *handle);
+void fd_uart1_init(fd_uart_handle_t *handle);
 ⋮----
-uint8_t el_uart1_write(el_uart_handle_t *handle, const uint8_t* data, uint8_t len);
+uint8_t fd_uart1_write(fd_uart_handle_t *handle, const uint8_t* data, uint8_t len);
 ⋮----
-uint16_t el_uart1_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len);
+uint16_t fd_uart1_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len);
 ⋮----
-el_ring_stats_t el_uart1_rx_stats(el_uart_handle_t *handle);
+fd_ring_stats_t fd_uart1_rx_stats(fd_uart_handle_t *handle);
 ⋮----
-el_ring_stats_t el_uart1_tx_stats(el_uart_handle_t *handle);
+fd_ring_stats_t fd_uart1_tx_stats(fd_uart_handle_t *handle);
 ⋮----
-void el_uart1_resetStats(el_uart_handle_t *handle);
+void fd_uart1_resetStats(fd_uart_handle_t *handle);
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_usbcdc.c">
-void el_usbcdc_init(el_uart_handle_t *handle)
+<file path="digest/fdlib/driver/stm32f4/fd_usbcdc.c">
+void fd_usbcdc_init(fd_uart_handle_t *handle)
 ⋮----
-uint8_t el_usbcdc_write(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
+uint8_t fd_usbcdc_write(fd_uart_handle_t *handle, uint8_t* data, uint8_t len)
 ⋮----
-uint16_t el_usbcdc_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len)
+uint16_t fd_usbcdc_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len)
 ⋮----
-el_ring_stats_t el_usbcdc_rx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_usbcdc_rx_stats(fd_uart_handle_t *handle)
 ⋮----
-el_ring_stats_t el_usbcdc_tx_stats(el_uart_handle_t *handle)
+fd_ring_stats_t fd_usbcdc_tx_stats(fd_uart_handle_t *handle)
 ⋮----
-void el_usbcdc_resetStats(el_uart_handle_t *handle)
+void fd_usbcdc_resetStats(fd_uart_handle_t *handle)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_usbcdc.h">
-void el_usbcdc_init(el_uart_handle_t *handle);
+<file path="digest/fdlib/driver/stm32f4/fd_usbcdc.h">
+void fd_usbcdc_init(fd_uart_handle_t *handle);
 ⋮----
-uint8_t el_usbcdc_write(el_uart_handle_t *handle, uint8_t* data, uint8_t len);
+uint8_t fd_usbcdc_write(fd_uart_handle_t *handle, uint8_t* data, uint8_t len);
 ⋮----
-uint16_t el_usbcdc_read(el_uart_handle_t *handle, uint8_t* data, uint8_t len);
+uint16_t fd_usbcdc_read(fd_uart_handle_t *handle, uint8_t* data, uint8_t len);
 ⋮----
-el_ring_stats_t el_usbcdc_rx_stats(el_uart_handle_t *handle);
+fd_ring_stats_t fd_usbcdc_rx_stats(fd_uart_handle_t *handle);
 ⋮----
-el_ring_stats_t el_usbcdc_tx_stats(el_uart_handle_t *handle);
+fd_ring_stats_t fd_usbcdc_tx_stats(fd_uart_handle_t *handle);
 ⋮----
-void el_usbcdc_resetStats(el_uart_handle_t *handle);
+void fd_usbcdc_resetStats(fd_uart_handle_t *handle);
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_usbxch.c">
-static void usbxch_start_tx(el_usbxch_handle_t *h);
+<file path="digest/fdlib/driver/stm32f4/fd_usbxch.c">
+static void usbxch_start_tx(fd_usbxch_handle_t *h);
 ⋮----
-void el_usbxch_init(el_usbxch_handle_t *h)
+void fd_usbxch_init(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_write(el_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
 ⋮----
-uint32_t el_usbxch_write_available(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_write_available(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_flush(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_flush(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_clear(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_clear(fd_usbxch_handle_t *h)
 ⋮----
-uint32_t el_usbxch_read(el_usbxch_handle_t *h, uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
 ⋮----
-uint32_t el_usbxch_read_available(el_usbxch_handle_t *h)
+uint32_t fd_usbxch_read_available(fd_usbxch_handle_t *h)
 ⋮----
-bool el_usbxch_connected(el_usbxch_handle_t *h)
+bool fd_usbxch_connected(fd_usbxch_handle_t *h)
 ⋮----
-void el_usbxch_update(el_usbxch_handle_t *h)
+void fd_usbxch_update(fd_usbxch_handle_t *h)
 ⋮----
-static void usbxch_start_tx(el_usbxch_handle_t *h)
+static void usbxch_start_tx(fd_usbxch_handle_t *h)
 ⋮----
 void USBD_XCH_GetRxStorage(void *ctx, uint8_t **ptr, uint16_t *size)
 ⋮----
@@ -1542,91 +1542,91 @@ void USBD_XCH_RxComplete(void *ctx, uint8_t *rx_buf, uint16_t size)
 void USBD_XCH_TxComplete(void *ctx)
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/el_usbxch.h">
-} el_usbxch_flags_t;
+<file path="digest/fdlib/driver/stm32f4/fd_usbxch.h">
+} fd_usbxch_flags_t;
 ⋮----
-} el_usbxch_handle_t;
+} fd_usbxch_handle_t;
 ⋮----
-void el_usbxch_init(el_usbxch_handle_t *h);
+void fd_usbxch_init(fd_usbxch_handle_t *h);
 ⋮----
-uint32_t el_usbxch_write(el_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
+uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
 ⋮----
-uint32_t el_usbxch_write_available(el_usbxch_handle_t *h);
+uint32_t fd_usbxch_write_available(fd_usbxch_handle_t *h);
 ⋮----
-uint32_t el_usbxch_flush(el_usbxch_handle_t *h);
+uint32_t fd_usbxch_flush(fd_usbxch_handle_t *h);
 ⋮----
-uint32_t el_usbxch_clear(el_usbxch_handle_t *h);
+uint32_t fd_usbxch_clear(fd_usbxch_handle_t *h);
 ⋮----
-uint32_t el_usbxch_read(el_usbxch_handle_t *h, uint8_t *data, uint32_t length);
+uint32_t fd_usbxch_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length);
 ⋮----
-uint32_t el_usbxch_read_available(el_usbxch_handle_t *h);
+uint32_t fd_usbxch_read_available(fd_usbxch_handle_t *h);
 ⋮----
-bool el_usbxch_connected(el_usbxch_handle_t *h);
+bool fd_usbxch_connected(fd_usbxch_handle_t *h);
 ⋮----
-void el_usbxch_update(el_usbxch_handle_t *h);
+void fd_usbxch_update(fd_usbxch_handle_t *h);
 </file>
 
-<file path="digest/ecolib/driver/stm32f4/eld_conf.h">
+<file path="digest/fdlib/driver/stm32f4/fd_driver_conf.h">
 
 </file>
 
-<file path="digest/ecolib/el/core.h">
-}el_swttimer_t;
+<file path="digest/fdlib/fd/core.h">
+}fd_swttimer_t;
 ⋮----
-static inline uint32_t el_swttimer_elapsed_ticks(el_swttimer_t *t, uint32_t tick_current)
+static inline uint32_t fd_swttimer_elapsed_ticks(fd_swttimer_t *t, uint32_t tick_current)
 ⋮----
-static inline float el_swttimer_elapsed_time(el_swttimer_t *t, uint32_t tick_current)
+static inline float fd_swttimer_elapsed_time(fd_swttimer_t *t, uint32_t tick_current)
 ⋮----
-static inline uint8_t el_swttimer_timout(el_swttimer_t *t, uint32_t tick_curret, uint32_t ticks_to_pass)
+static inline uint8_t fd_swttimer_timout(fd_swttimer_t *t, uint32_t tick_curret, uint32_t ticks_to_pass)
 ⋮----
-static inline void el_swttimer_reset(el_swttimer_t *t, uint32_t start_tick)
+static inline void fd_swttimer_reset(fd_swttimer_t *t, uint32_t start_tick)
 </file>
 
-<file path="digest/ecolib/el/el_ring.h">
-} el_ring_stats_t;
+<file path="digest/fdlib/fd/fd_ring.h">
+} fd_ring_stats_t;
 ⋮----
-}el_ring_t;
+}fd_ring_t;
 ⋮----
-static inline void el_ring_init(el_ring_t* cb,
+static inline void fd_ring_init(fd_ring_t* cb,
 ⋮----
-static inline el_ring_stats_t el_ring_getStats(const el_ring_t* cb)
+static inline fd_ring_stats_t fd_ring_getStats(const fd_ring_t* cb)
 ⋮----
-static inline void el_ring_resetStats(el_ring_t* cb)
+static inline void fd_ring_resetStats(fd_ring_t* cb)
 ⋮----
-static inline uint16_t el_ring_occupied(const el_ring_t* cb) {
+static inline uint16_t fd_ring_occupied(const fd_ring_t* cb) {
 ⋮----
-static inline uint16_t el_ring_freeSpace(const el_ring_t* cb) {
+static inline uint16_t fd_ring_freeSpace(const fd_ring_t* cb) {
 ⋮----
-static inline void el_ring_commitWrite(el_ring_t* cb, uint16_t count) {
+static inline void fd_ring_commitWrite(fd_ring_t* cb, uint16_t count) {
 ⋮----
-static inline void el_ring_releaseRead(el_ring_t* cb, uint16_t count) {
+static inline void fd_ring_releaseRead(fd_ring_t* cb, uint16_t count) {
 ⋮----
-static inline bool el_ring_reserveWrite(el_ring_t* cb,
+static inline bool fd_ring_reserveWrite(fd_ring_t* cb,
 ⋮----
-static inline void el_ring_reserveWriteOverride(
+static inline void fd_ring_reserveWriteOverride(
 ⋮----
-static inline bool el_ring_peekRead(el_ring_t* cb,
+static inline bool fd_ring_peekRead(fd_ring_t* cb,
 </file>
 
-<file path="digest/ecolib/el/math.h">
-static inline int el_increment_roll(int x, int min, int max)
+<file path="digest/fdlib/fd/math.h">
+static inline int fd_increment_roll(int x, int min, int max)
 ⋮----
-static inline int el_decrement_roll(int x, int min, int max)
+static inline int fd_decrement_roll(int x, int min, int max)
 ⋮----
-static inline float el_linearInterp(float *y_arr, float *x_arr, float x)
+static inline float fd_linearInterp(float *y_arr, float *x_arr, float x)
 </file>
 
-<file path="digest/ecolib/el/mempool.h">
+<file path="digest/fdlib/fd/mempool.h">
 } smem_t;
 ⋮----
-static inline void el_smem_init(smem_t *cp, uint8_t *mem, uint32_t memsize)
+static inline void fd_smem_init(smem_t *cp, uint8_t *mem, uint32_t memsize)
 ⋮----
-static inline void *el_smem_alloc(smem_t *cp, uint32_t size)
+static inline void *fd_smem_alloc(smem_t *cp, uint32_t size)
 ⋮----
-static inline void *el_smem_alloc_aligned(smem_t *cp, uint32_t size)
+static inline void *fd_smem_alloc_aligned(smem_t *cp, uint32_t size)
 </file>
 
-<file path="digest/ecolib/el/ring.h">
+<file path="digest/fdlib/fd/ring.h">
 bool isPowerOfTwo(uint16_t x)
 ⋮----
 bool isPowerOfTwoAssert(uint16_t x)
@@ -1665,11 +1665,11 @@ uint16_t tail() const { return tail_; }
 uint16_t head() const { return head_; }
 </file>
 
-<file path="digest/ecolib/el/vector">
+<file path="digest/fdlib/fd/vector">
 
 </file>
 
-<file path="digest/ecolib/middleware/ABFStream.cpp">
+<file path="digest/fdlib/middleware/ABFStream.cpp">
 uint8_t Stream::crc8Calculate(const uint8_t* data, uint8_t len)
 ⋮----
 Stream::Stream(uint8_t* buffer, uint8_t bufferSize, void *_context, void(*_onFrame)(void*, uint8_t, uint8_t*, uint8_t), void(*_onError)(void*, uint8_t))
@@ -1683,7 +1683,7 @@ void Stream::reset()
 abf::Stats Stream::getStats() const
 </file>
 
-<file path="digest/ecolib/middleware/ABFStream.h">
+<file path="digest/fdlib/middleware/ABFStream.h">
 enum class Err : uint8_t
 ⋮----
 enum class State : uint8_t
@@ -1701,7 +1701,7 @@ Stats getStats() const;
 static uint8_t crc8Calculate(const uint8_t *data, uint8_t len);
 </file>
 
-<file path="digest/ecolib/middleware/DAQCodec.h">
+<file path="digest/fdlib/middleware/DAQCodec.h">
 enum class Escape : uint8_t
 ⋮----
 enum class Err : uint8_t
@@ -1757,7 +1757,7 @@ inline Err syncUpdate()
 inline Err emitSample()
 </file>
 
-<file path="digest/ecolib/middleware/DAQStream.cpp">
+<file path="digest/fdlib/middleware/DAQStream.cpp">
 void Session::annonate()
 ⋮----
 idv::Err Session::discovery_req()
@@ -1773,7 +1773,7 @@ idv::Err Channel::serialize(idv::Writer &writer, uint8_t parent_id)
 idv::Err Session::serialize(idv::Writer &writer, uint8_t parent_id)
 </file>
 
-<file path="digest/ecolib/middleware/DAQStream.h">
+<file path="digest/fdlib/middleware/DAQStream.h">
 enum class ID : uint8_t
 ⋮----
 enum class MARKER : uint8_t
@@ -1792,7 +1792,7 @@ idv::Err discovery_respond();
 uint8_t process(const uint8_t *data, uint16_t data_len);
 </file>
 
-<file path="digest/ecolib/middleware/IDV.h">
+<file path="digest/fdlib/middleware/IDV.h">
 enum class Err : uint8_t
 ⋮----
 inline Err addPrimitive(uint8_t id, const T &value)
@@ -1831,7 +1831,7 @@ inline uint8_t valueLength() const
 inline uint8_t id() const
 </file>
 
-<file path="digest/ecolib/middleware/ScopeStream.h">
+<file path="digest/fdlib/middleware/ScopeStream.h">
 constexpr uint32_t buffer_size(uint8_t channels, uint32_t sample_depth) const {
 ⋮----
 void write(const T *data)
@@ -1855,15 +1855,15 @@ void update_decimation(uint8_t divisions, uint32_t time_per_div_us, uint32_t sam
 void update_decimation(uint8_t decimation)
 </file>
 
-<file path="digest/EcoTool/CMakeLists.txt">
+<file path="digest/ForgeTool/CMakeLists.txt">
 cmake_minimum_required(VERSION 3.10)
 
 # Project name and version
-project(EcoTool VERSION 1.0.0 LANGUAGES CXX)
+project(ForgeTool VERSION 1.0.0 LANGUAGES CXX)
 
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../ecolib)
+set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -1887,13 +1887,13 @@ file(GLOB_RECURSE MIDDLEWARE_SRC
 )
 
 file(GLOB_RECURSE CORE_SRC    
-    ${ECOLIB}/el/*.cpp
-    ${ECOLIB}/el/*.c
+    ${ECOLIB}/fd/*.cpp
+    ${ECOLIB}/fd/*.c
 )
 
 # Add executable
 add_executable(${PROJECT_NAME}
-    EcoTool.cpp
+    ForgeTool.cpp
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
     Serial.hpp
@@ -1936,7 +1936,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 </file>
 
-<file path="digest/EcoTool/DAQSessionAPP.h">
+<file path="digest/ForgeTool/DAQSessionAPP.h">
 struct Field
 ⋮----
 std::memcpy(value.data(), &v, sizeof(T));
@@ -1950,7 +1950,7 @@ uint8_t on_mark(daq::MARKER marker, bool entry) override
 uint8_t on_field(daq::ID id, idv::Reader &reader) override
 </file>
 
-<file path="digest/EcoTool/EcoTool.cpp">
+<file path="digest/ForgeTool/ForgeTool.cpp">
 void print_buffer(const uint8_t *data, size_t len)
 ⋮----
 static inline void onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len);
@@ -1971,7 +1971,7 @@ int main()
 ; // Bulk OUT endpoint
 </file>
 
-<file path="digest/EcoTool/RingBuffer.hpp">
+<file path="digest/ForgeTool/RingBuffer.hpp">
 class RingBuffer {
 ⋮----
 explicit RingBuffer(size_t capacity = 16384)
@@ -1988,7 +1988,7 @@ size_t push(const uint8_t* data, size_t len) {
 size_t pop(uint8_t* dst, size_t len) {
 </file>
 
-<file path="digest/EcoTool/Serial.hpp">
+<file path="digest/ForgeTool/Serial.hpp">
 class Serial {
 ⋮----
 Serial() : serial_port_(io_context_) {}
@@ -2017,7 +2017,7 @@ void txLoop() {
 std::unique_lock<std::mutex> lk(tx_mutex_);
 </file>
 
-<file path="digest/EcoTool/TcpClient.hpp">
+<file path="digest/ForgeTool/TcpClient.hpp">
 class TcpClient
 ⋮----
 TcpClient() = default;
@@ -2035,7 +2035,7 @@ int write(const void* data, size_t length)
 int read(void* buffer, size_t length)
 </file>
 
-<file path="digest/EcoTool/Usbxch.cpp">
+<file path="digest/ForgeTool/Usbxch.cpp">
 bool UsbxchLibusb::connect(const std::string &serial_number,
 ⋮----
 void UsbxchLibusb::disconnect()
@@ -2075,7 +2075,7 @@ double UsbxchTcp::getTxSpeedBytesPerSecond() const { return speed_tracker_.txBps
 void UsbxchTcp::resetSpeeds() { speed_tracker_.reset(); }
 </file>
 
-<file path="digest/EcoTool/Usbxch.h">
+<file path="digest/ForgeTool/Usbxch.h">
 struct SpeedTracker
 ⋮----
 void reset()
@@ -2112,7 +2112,7 @@ void resetSpeeds() override;
 void ioLoop();
 </file>
 
-<file path="digest/test/el/test_ring.cpp">
+<file path="digest/test/fd/test_ring.cpp">
 
 </file>
 
@@ -2181,11 +2181,11 @@ CodecTestHelper test(stream, channelCount);
 cmake_minimum_required(VERSION 3.16)
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../ecolib)
+set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 # Only include if this is included as a subdirectory
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Standalone build mode
-    project(EcoDriveTests LANGUAGES CXX VERSION 1.0.0)
+    project(ForgeDriveMCTests LANGUAGES CXX VERSION 1.0.0)
 endif()
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
@@ -2209,7 +2209,7 @@ file(GLOB_RECURSE TEST_SOURCES
 )
 
 file(GLOB_RECURSE CORE_SOURCES
-    "${ECOLIB_DIR}/el/*.cpp"
+    "${ECOLIB_DIR}/fd/*.cpp"
 )
 
 file(GLOB_RECURSE MIDDLEWARE_SOURCES

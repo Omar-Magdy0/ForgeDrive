@@ -1,13 +1,13 @@
 #pragma once
-#include "eld_conf.h"
-#include "el_hall.h"
+#include "fd_driver_conf.h"
+#include "fd_hall.h"
 #include "PmsmControlTypes.h"
 #include "math/math.h"
-#include "el_mc3p.h"
+#include "fd_mc3p.h"
 #include <cstdint>
 
-#ifndef EL_HALL1_ENABLED
-#define EL_BEMFZC_ENABLED
+#ifndef FD_HALL1_ENABLED
+#define FD_BEMFZC_ENABLED
 #endif
 
 class PmsmControlCore;
@@ -63,7 +63,7 @@ class PosOpen : public PosDriverBase<PosOpen>
     }
 };
 
-#ifdef EL_HALL1_ENABLED
+#ifdef FD_HALL1_ENABLED
 using PosDriver = PosOpen;
 #else
 using PosDriver = PosOpen;

@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-// TODO : Implement A cleaner ASIO TCP Host for Host TCP server ecolib/driver/host
+// TODO : Implement A cleaner ASIO TCP Host for Host TCP server fdlib/driver/host
 #include <cstdint>
 class TCPServer
 {
