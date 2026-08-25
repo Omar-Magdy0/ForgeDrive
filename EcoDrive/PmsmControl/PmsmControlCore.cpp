@@ -19,8 +19,6 @@ void PmsmControlCore::olstup_lut(Olstup &stup, q31_t &ec_sp_q31, float &rps)
         {
             stup.tb_index++;
         }
-    }else{
-
     }
     stup.is_complete = is_complete;
 }
@@ -97,7 +95,6 @@ void PmsmControlCore::pwmLoop()
 
 void PmsmControlCore::setControlMode(MCMode mc_mode)
 {
-    //Todo: Sanity check, and probably don't allow all or any electrical or motor control changes while motor is running
     if (control.mc_mode != mc_mode)
     {
         // Exit current mode

@@ -3,6 +3,11 @@
 #include "ABFStream.h"
 #include "el_usbxch.h"
 #include <etl/span.h>
+
+
+
+// TODO #24 : FULLY INTEGRATE DAQSession into the application, starting with pmsm control
+
 class DAQSessionAPP : public daq::Session
 {
 protected:
