@@ -10,7 +10,7 @@ set(DEVICE_DEFINITIONS
 )
 
 # Path configurations
-set(HAL_CONFIG_DIR ${THIRDPARTY_DIR}/stm32/f4)
+set(HAL_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/hconf)
 set(STM32CMX_DIR ${THIRDPARTY_DIR}/stm32)
 set(STM32F4xx_HAL_DRIVER_DIR ${THIRDPARTY_DIR}/stm32/f4/STM32F4xx_HAL_Driver)
 set(CMSIS_DEVICE_DIR ${THIRDPARTY_DIR}/CMSIS/Device/ST/STM32F4xx/Include)
@@ -93,9 +93,9 @@ set(USBD_Src
     ${USBD_DIR}/Core/Src/usbd_ctlreq.c
     ${USBD_DIR}/Core/Src/usbd_ioreq.c
     ${USBD_DIR}/Class/XCH/Src/usbd_xch.c
-    ${USBD_DIR}/App/usbd_desc.c
-    ${USBD_DIR}/App/usb_device.c
-    ${STM32CMX_DIR}/f4/Target/usbd_conf.c
+    
+    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/usbd_desc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/usb_device.c
 )
 
 set(CMSISCORE ${THIRDPARTY_DIR}/CMSIS)

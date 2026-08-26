@@ -8,7 +8,7 @@ set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 
 ####platform specific settings
-# SET TOOLCHAIN BEFORE PROJECT - ADD THIS LINE
+# SET TOOLCHAIN BEFORE PROJECT
 include(platform/${PLATFORM_NAME}/platform.cmake)
 project(ForgeDriveMC LANGUAGES C CXX ASM)
 
