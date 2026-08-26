@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "DAQCodec.h"
-#include "el/ring.h"
+#include "fd/ring.h"
 
 #include <vector>
 #include <cmath>

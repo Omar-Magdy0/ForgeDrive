@@ -4,7 +4,7 @@
 ARM_VERSION="15.2.rel1"
 ARM_DIR="arm-gnu-toolchain-${ARM_VERSION}-x86_64-arm-none-eabi"
 ARM_PATH="/opt/${ARM_DIR}"
-ARM_URL="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_VERSION}/binrel/${ARM_DIR}.tar.xz"
+ARM_URL="https://developer.arm.com/-/media/Files/downloads/gnu/${ARM_VERSION}/binrfd/${ARM_DIR}.tar.xz"
 
 # Always update and install apt packages
 sudo apt update

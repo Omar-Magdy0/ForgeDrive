@@ -2,71 +2,67 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "EcoDrive: MCU Release",
+            "label": "ForgeDriveMC: MCU Release",
             "type": "shell",
-            "command": "cd EcoDrive/build  && cmake .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM_NAME=stm32f4 && make -j4",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeDriveMC/build  && cmake .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM_NAME=stm32f4 && make -j4", 
         },
         {
-            "label": "EcoDrive: MCU Debug",
+            "label": "ForgeDriveMC: MCU Debug",
             "type": "shell",
-            "command": "cd EcoDrive/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=stm32f4 && make -j4",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeDriveMC/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=stm32f4 && make -j4", 
         },
         {   
-            "label": "EcoDrive: Clean",
+            "label": "ForgeDriveMC: Clean",
             "type": "shell", 
-            "command": "cd EcoDrive/build  && rm -rf *",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeDriveMC/build  && rm -rf *", 
         },
         {
-            "label": "EcoDrive: Host Debug",
+            "label": "ForgeDriveMC: Host Debug",
             "type": "shell",
-            "command": "cd EcoDrive/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=host && make -j4",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeDriveMC/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=host && make -j4", 
         },
-       // EcoTool
+       // ForgeTool
         {
-            "label": "EcoTool: Debug",
+            "label": "ForgeTool: Debug",
             "type": "shell",
-            "command": "cd EcoTool/build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeTool/build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4", 
         },
         {
-            "label": "EcoTool: Release",
+            "label": "ForgeTool: Release",
             "type": "shell",
-            "command": "cd EcoTool/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4",
-            "group": "build",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeTool/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4", 
         },
         {
-            "label": "EcoTool: Clean",
+            "label": "ForgeTool: Clean",
             "type": "shell",
-            "command": "cd EcoTool/build && rm -rf *",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd ForgeTool/build && rm -rf *", 
         },
+        // Unit testing
         {
             "label": "Test: Debug",
             "type": "shell",
-            "command": "cd test/build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd test/build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j4", 
         },
                 {
             "label": "Test: Clean",
             "type": "shell",
-            "command": "cd test/build && rm -rf *",
-            "problemMatcher": ["$gcc"] 
+            "command": "cd test/build && rm -rf *", 
+        },
+        // EcoJM
+        {
+            "label": "EcoJM: MCU Release",
+            "type": "shell",
+            "command": "cd EcoJM/build  && cmake .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM_NAME=stm32f1 && make -j4", 
         },
         {
-            "label": "Virtual PORTS",
+            "label": "EcoJM: MCU Debug",
             "type": "shell",
-            "command": "sudo socat -d -d pty,link=/dev/ttyACM_CDC0,raw,echo=0,mode=666 pty,link=/dev/ttyACM_CDC1,raw,echo=0,mode=666",
-            "isBackground": true
+            "command": "cd EcoJM/build  && cmake .. -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_NAME=stm32f1 && make -j4", 
+        },
+        {   
+            "label": "EcoJM: Clean",
+            "type": "shell", 
+            "command": "cd EcoJM/build  && rm -rf *", 
         },
     ]
 }

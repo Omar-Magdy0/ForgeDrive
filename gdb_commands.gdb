@@ -20,5 +20,5 @@ target extended-remote /dev/ttyBmpGdb
 monitor swdp_scan
 attach 1
 set mem inaccessible-by-default off
-file build/bin/EcoDrive.elf
+file build/bin/ForgeDriveMC.elf
 load
