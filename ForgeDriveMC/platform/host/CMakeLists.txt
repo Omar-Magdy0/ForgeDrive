@@ -40,6 +40,7 @@ set(IMGUI_SRC
 
 set(Platform_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/platform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/cortos_port.c
 )
 
 file(GLOB_RECURSE Driver_Core_Src

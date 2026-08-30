@@ -78,6 +78,7 @@ set(STM32_Drivers_Src
 
 set(Platform_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/platform.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/cortos_port.c
 )
 
 set(STM32CMX_Src

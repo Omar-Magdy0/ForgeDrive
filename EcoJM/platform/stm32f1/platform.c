@@ -121,7 +121,6 @@ void assert_failed(uint8_t *file, uint32_t line)
 
 static inline void ENABLE_ALL_GPIO_CLOCKS(void)
 {
-  /* STM32F4/F7/H7 have GPIOA-H */
 #ifdef GPIOA
   __HAL_RCC_GPIOA_CLK_ENABLE();
 #endif

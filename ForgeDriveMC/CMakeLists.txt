@@ -46,6 +46,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}
     ${ECOLIB_DIR}
     ${ECOLIB_DIR}/middleware
+    ${ECOLIB_DIR}/middleware/cortos
     ${PMSMCONTROL_DIR}
 )
 
