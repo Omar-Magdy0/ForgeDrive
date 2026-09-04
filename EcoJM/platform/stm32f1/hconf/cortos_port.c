@@ -39,4 +39,5 @@ extern void Ticker_IRQ();
 void SysTick_Handler(void)
 {
     Ticker_IRQ();
+    HAL_IncTick();
 }

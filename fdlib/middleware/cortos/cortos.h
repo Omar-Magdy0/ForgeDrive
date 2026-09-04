@@ -70,13 +70,15 @@ typedef struct {
     Task *current;
 } Scheduler;
 
-
+#define xYield() return
 
 #define xTICK_PERIOD_MS ( 1000 / cortosTICK_RATE_HZ )
 #define xMS_TO_TICKS(x)((x) * xTICK_PERIOD_MS)
 #define xTICKS_TO_MS(x)   ((x) * xTICK_PERIOD_MS)
 
+extern uint32_t CORTOS_PortProfTick_rate_hz();
 #define xPROFTICK_PERIOD_NS ( 1000000000 / CORTOS_PortProfTick_rate_hz() )
+#define xMS_TO_PROFTICK(x) ( ((x) * 1000)/ CORTOS_PortProfTick_rate_hz())
 #define xPROFTICKS_TO_NS(x)(((uint64_t)x * 1000000000)/CORTOS_PortProfTick_rate_hz())
 #define xPROFTICKS_TO_US(x)(((uint64_t)x * 1000000)/CORTOS_PortProfTick_rate_hz())
 

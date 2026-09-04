@@ -163,7 +163,7 @@ uint32_t xTaskNotifyTake()
     return value;
 }
 
-#define xYield() return
+
 
 void xTaskSleep(uint32_t sleep_ticks)
 {

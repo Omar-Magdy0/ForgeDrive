@@ -1,5 +1,5 @@
 #include "cortos.h"
-#include "stm32f1xx.h"
+#include "stm32f4xx.h"
 #include "cortos_conf.h"
 
 uint32_t CORTOS_PortProfTick_rate_hz(){return SystemCoreClock;} 

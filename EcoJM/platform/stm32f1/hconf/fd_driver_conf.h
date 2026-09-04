@@ -38,7 +38,7 @@
 // USBXCH CONFIGURATION
 //================================================
 #define FD_USBXCH_ENABLED
-#define FD_USBXCH_TX_BUFFSIZE 4096
+#define FD_USBXCH_TX_BUFFSIZE 2048
 #define FD_USBXCH_RX_BUFFSIZE 256
 
 

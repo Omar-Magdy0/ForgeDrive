@@ -95,6 +95,7 @@ set(USBD_Src
     ${USBD_DIR}/Class/XCH/Src/usbd_xch.c
     
     ${CMAKE_CURRENT_SOURCE_DIR}/hconf/usbd_desc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/usbd_conf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/hconf/usb_device.c
 )
 

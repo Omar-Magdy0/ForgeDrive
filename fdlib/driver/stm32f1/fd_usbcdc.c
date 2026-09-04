@@ -21,9 +21,4 @@ fd_ring_stats_t fd_usbcdc_rx_stats(fd_uart_handle_t *handle)
 fd_ring_stats_t fd_usbcdc_tx_stats(fd_uart_handle_t *handle)
 {
 }
-
-void fd_usbcdc_resetStats(fd_uart_handle_t *handle)
-{
-}
-
 #endif

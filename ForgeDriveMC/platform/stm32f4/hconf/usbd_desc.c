@@ -25,16 +25,16 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define USBD_VID                      0x0000
-#define USBD_PID                      0x0000  /* Replace '0xaaaa' with your device product ID */
-#define USBD_LANGID_STRING            0x0409   /* Replace '0xbbb' with your device language ID */
-#define USBD_MANUFACTURER_STRING      "OMAR-MAGDY" /* Add your manufacturer string */
-#define USBD_PRODUCT_HS_STRING        "xxxxx" /* Add your product High Speed string */
-#define USBD_PRODUCT_FS_STRING        "EcoDrive" /* Add your product Full Speed string */
-#define USBD_CONFIGURATION_HS_STRING  "xxxxx" /* Add your configuration High Speed string */
-#define USBD_INTERFACE_HS_STRING      "xxxxx" /* Add your Interface High Speed string */
-#define USBD_CONFIGURATION_FS_STRING  "EcoDrive" /* Add your configuration Full Speed string */
-#define USBD_INTERFACE_FS_STRING      "EcoDrive" /* Add your Interface Full Speed string */
+#define USBD_VID                      0xFFFF
+#define USBD_PID                      0x0001
+#define USBD_LANGID_STRING            0x0409
+#define USBD_MANUFACTURER_STRING      "ForgeDrive" 
+#define USBD_PRODUCT_HS_STRING        "ForgeDriveMC" 
+#define USBD_PRODUCT_FS_STRING        "ForgeDriveMC"
+#define USBD_CONFIGURATION_HS_STRING  "Default Configuration" 
+#define USBD_INTERFACE_HS_STRING      "PMSM Drive" 
+#define USBD_CONFIGURATION_FS_STRING  "Default Configuration"
+#define USBD_INTERFACE_FS_STRING      "PMSM Drive"
 
 /* Private macro -------------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/

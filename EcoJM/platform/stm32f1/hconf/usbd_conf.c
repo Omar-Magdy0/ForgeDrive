@@ -44,17 +44,14 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
 
   /* Configure USB DM (PA11) and DP (PA12) */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_11 | LL_GPIO_PIN_12;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
 
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* Enable USB FS Clock */
   __HAL_RCC_USB_CLK_ENABLE();
-
-  /* Enable SYSCFG Clock */
-  __HAL_RCC_SYSCFG_CLK_ENABLE();
 
   HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
@@ -69,9 +66,6 @@ void HAL_PCD_MspDeInit(PCD_HandleTypeDef *hpcd)
 {
   /* Disable USB FS Clock */
   __HAL_RCC_USB_CLK_DISABLE();
-
-  /* Disable SYSCFG Clock */
-  __HAL_RCC_SYSCFG_CLK_DISABLE();
 }
 
 /*******************************************************************************
@@ -195,6 +189,7 @@ void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
 /*******************************************************************************
                        LL Driver Interface (USB Device Library --> PCD)
 *******************************************************************************/
+#include "stm32f1xx.h"
 
 /**
  * @brief  Initializes the Low Level portion of the Device driver.
@@ -217,10 +212,10 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   pdev->pData = &hpcd;
   /* Initialize LL Driver */
   HAL_PCD_Init(pdev->pData);
-  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , 0x00 , PCD_SNG_BUF, 0x18);
-  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , 0x80 , PCD_SNG_BUF, 0x58);
-  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , 0x81 , PCD_SNG_BUF, 0x98);  
-  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData , 0x01 , PCD_SNG_BUF, 0xD8); 
+  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef *)pdev->pData, 0x00, PCD_SNG_BUF, 0x18);
+  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef *)pdev->pData, 0x80, PCD_SNG_BUF, 0x58);
+  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef *)pdev->pData, 0x81, PCD_SNG_BUF, 0x98);
+  HAL_PCDEx_PMAConfig((PCD_HandleTypeDef *)pdev->pData, 0x01, PCD_SNG_BUF, 0xD8);
   return USBD_OK;
 }
 
@@ -432,4 +427,3 @@ void *USBD_static_malloc(uint32_t size)
 void USBD_static_free(void *p)
 {
 }
-
