@@ -1,22 +1,15 @@
 #pragma once
 
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <cerrno>
+#include <asio.hpp>
 #include <cstdint>
-#include <cstring>
 #include <string>
 
-// TODO #22: Add a Cleaner Asio TCP Client for ForgeTool
 class TcpClient
 {
 public:
-    TcpClient() = default;
+    TcpClient() 
+        : socket_(io_context_) 
+    {}
 
     ~TcpClient()
     {
@@ -27,81 +20,76 @@ public:
     {
         disconnect();
 
-        sock_ = socket(AF_INET, SOCK_STREAM, 0);
-        if (sock_ < 0)
+        asio::error_code ec;
+        asio::ip::tcp::resolver resolver(io_context_);
+        auto endpoints = resolver.resolve(host, std::to_string(port), ec);
+
+        if (ec)
             return false;
 
-        int buffer_size = 4 * 1024 * 1024;
-        setsockopt(sock_, SOL_SOCKET, SO_SNDBUF,
-                   &buffer_size, sizeof(buffer_size));
-        setsockopt(sock_, SOL_SOCKET, SO_RCVBUF,
-                   &buffer_size, sizeof(buffer_size));
-                   
-        sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-
-        if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1)
+        asio::connect(socket_, endpoints, ec);
+        if (ec)
         {
             disconnect();
             return false;
         }
 
-        if (::connect(sock_, (sockaddr*)&addr, sizeof(addr)) < 0)
-        {
-            disconnect();
-            return false;
-        }
+        // ضبط حجم الـ Buffers (4 MB)
+        const int buffer_size = 4 * 1024 * 1024;
+        socket_.set_option(asio::socket_base::send_buffer_size(buffer_size), ec);
+        socket_.set_option(asio::socket_base::receive_buffer_size(buffer_size), ec);
 
-        int flags = fcntl(sock_, F_GETFL, 0);
-        fcntl(sock_, F_SETFL, flags | O_NONBLOCK);
+        // جعل الـ Socket غير حجب (Non-blocking) كما في الكود الأصلي
+        socket_.non_blocking(true, ec);
 
-        return true;
+        return !ec;
     }
 
     void disconnect()
     {
-        if (sock_ >= 0)
+        asio::error_code ec;
+        if (socket_.is_open())
         {
-            close(sock_);
-            sock_ = -1;
+            socket_.close(ec);
         }
     }
 
     bool is_connected() const
     {
-        return sock_ >= 0;
+        return socket_.is_open();
     }
 
     int available() const
     {
-        if (sock_ < 0)
+        if (!socket_.is_open())
             return -1;
 
-        int bytes = 0;
-
-        if (ioctl(sock_, FIONREAD, &bytes) < 0)
-            return -1;
-
-        return bytes;
+        asio::error_code ec;
+        std::size_t bytes = socket_.available(ec);
+        return ec ? -1 : static_cast<int>(bytes);
     }
 
     int write(const void* data, size_t length)
     {
-        if (sock_ < 0)
+        if (!socket_.is_open())
             return -1;
 
-        return send(sock_, data, length, MSG_NOSIGNAL);
+        asio::error_code ec;
+        size_t written = socket_.write_some(asio::buffer(data, length), ec);
+        return ec ? -1 : static_cast<int>(written);
     }
 
     int read(void* buffer, size_t length)
     {
-        if (sock_ < 0)
+        if (!socket_.is_open())
             return -1;
 
-        return recv(sock_, buffer, length, 0);
+        asio::error_code ec;
+        size_t bytes_read = socket_.read_some(asio::buffer(buffer, length), ec);
+        return ec ? -1 : static_cast<int>(bytes_read);
     }
 
 private:
-    int sock_ = -1;
+    asio::io_context io_context_;
+    asio::ip::tcp::socket socket_;
 };
