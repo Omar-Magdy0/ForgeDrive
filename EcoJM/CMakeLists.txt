@@ -5,12 +5,11 @@ cmake_minimum_required(VERSION 3.20)
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (stm32f1)")
 set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT
 include(platform/${PLATFORM_NAME}/platform.cmake)
-project(ForgeDriveMC LANGUAGES C CXX ASM)
+project(EcoJM LANGUAGES C CXX ASM)
 
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
@@ -46,6 +45,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}
     ${ECOLIB_DIR}
     ${ECOLIB_DIR}/middleware
+    ${ECOLIB_DIR}/middleware/cortos
     ${PMSMCONTROL_DIR}
 )
 
@@ -62,9 +62,8 @@ include_directories(${PLATFORM_INCLUDES})
 file(GLOB_RECURSE MIDDLEWARE_SRC    
     ${ECOLIB_DIR}/middleware/*.cpp
     ${ECOLIB_DIR}/middleware/*.c
+    ${ECOLIB_DIR}/middleware/cortos/*.c
 )
-
-
 
 set(APPLICATION_SRC
     ${CMAKE_SOURCE_DIR}/main.cpp

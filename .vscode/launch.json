@@ -5,34 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch ForgeDriveMC",
+            "name": "(gdb) Launch ForgeDriveMC HOST",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/ForgeDriveMC/build/bin/ForgeDriveMC",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
-            "name": "(gdb) Launch abf_test",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/build/bin/test_abf",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -100,20 +76,20 @@
                 }
             ]
         },
-
         {
-            "name": "BMP launch",
-            "cwd": "${workspaceRoot}",
-            "executable": "${workspaceRoot}/ForgeDriveMC/build/bin/ForgeDriveMC.elf",
-            "armToolchainPath": "/usr/bin",
-            "gdbPath": "/opt/gcc-arm-none-eabi-10.3/bin/arm-none-eabi-gdb",
-            "BMPGDBSerialPort": "/dev/ttyBmpGdb",
-            "showDevDebugOutput": "raw",
-            "request": "launch",    // "launch" also works perhaps
+            "name": "EcoJM — BMP",
             "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/EcoJM/build/bin/EcoJM.elf",
             "servertype": "bmp",
+            "BMPGDBSerialPort": "/dev/ttyBmpGdb",
             "interface": "swd",
-            "device": "STM32FF401"
+            "device": "STM32F103",
+            "targetId": 1,
+            "armToolchainPath": "/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin",
+            "gdbPath": "/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gdb",
+            "showDevDebugOutput": "raw"
         }
     ]
 }
