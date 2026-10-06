@@ -27,7 +27,7 @@ void print_buffer(const uint8_t *data, size_t len)
 
 uint8_t abf_rx_buf[255];
 uint8_t idv_rx_buf[255];
-IUsbxch *usb;
+Usbxch *usb;
 DAQSessionAPP *idaq;
 static inline void onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len);
 static inline void onError(void *ctx, uint8_t id);
@@ -48,7 +48,7 @@ using Clock = std::chrono::steady_clock;
 int main()
 {
     auto nextEvent = Clock::now() + std::chrono::seconds(5);
-    usb = new UsbxchLibusb;
+    usb = new Usbxch;
     idaq = new DAQSessionAPP(astream, *usb, idv_rx_buf, sizeof(idv_rx_buf));
     while(!usb->connect(
         "",     // serial number (empty = first matching device)

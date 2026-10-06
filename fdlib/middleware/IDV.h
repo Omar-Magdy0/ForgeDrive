@@ -97,7 +97,7 @@ class Reader
     const uint8_t *idv_value;
 public:
     Reader() = default;
-    Reader(etl::span<uint8_t> buf)
+    Reader(etl::span<uint8_t> buf) : buf(buf)
     {
         reset();
     }

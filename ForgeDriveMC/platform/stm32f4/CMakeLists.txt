@@ -37,7 +37,7 @@ set(STM32_COMMON_INCLUDES
     ${USBD_DIR}/Class/XCH/Inc
     ${USBD_DIR}/App
     ${STM32CMX_DIR}/f4/Target
-    ${ECOLIB_DIR}/driver/stm32f4
+    ${FDLIB_DIR}/driver/stm32f4
 )
 
 # ===== HAL DRIVERS (for complex protocols) =====
@@ -107,8 +107,8 @@ add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp_s
 # where weak startup symbols prevent strong handler definitions from being linked.
 # Instead, they are linked directly from the parent scope (see PLATFORM_DRIVER_CORE_SOURCES).
 file(GLOB_RECURSE Driver_Core_Src
-    ${ECOLIB_DIR}/driver/stm32f4/*.cpp
-    ${ECOLIB_DIR}/driver/stm32f4/*.c
+    ${FDLIB_DIR}/driver/stm32f4/*.cpp
+    ${FDLIB_DIR}/driver/stm32f4/*.c
 )
 
 add_library(stm32f4_platform STATIC)

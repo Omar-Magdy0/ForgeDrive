@@ -21,7 +21,7 @@ set(HOST_COMMON_INCLUDES
     ${IMPLOT_DIR}
     ${IMGUIFD_DIR}
     ${EIGEN_DIR}
-    ${ECOLIB_DIR}/driver/host
+    ${FDLIB_DIR}/driver/host
 )
 
 set(IMGUI_SRC  
@@ -44,8 +44,8 @@ set(Platform_Src
 )
 
 file(GLOB_RECURSE Driver_Core_Src
-    ${ECOLIB_DIR}/driver/host/*.cpp
-    ${ECOLIB_DIR}/driver/host/*.c
+    ${FDLIB_DIR}/driver/host/*.cpp
+    ${FDLIB_DIR}/driver/host/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/fd_hall.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/fd_mc3p.cpp
 )

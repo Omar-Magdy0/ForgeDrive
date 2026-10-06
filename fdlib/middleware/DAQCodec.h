@@ -64,8 +64,8 @@ namespace daq::codec
         friend CodecTest;
         etl::span<ChannelState> ccs;
         uint32_t &sample_counter;
-        el::ring_fast<uint8_t> stream;
-        el::ring_fast<ControlMark> marks;
+        fd::ring_fast<uint8_t> stream;
+        fd::ring_fast<ControlMark> marks;
         uint8_t samples_till_sync = 0;
         uint8_t sync_period = 64;
         uint8_t reserve;
@@ -228,7 +228,7 @@ namespace daq::codec
             if (bytes_to_read > buf.size())
                 bytes_to_read = buf.size();
             uint8_t *r1, *r2;
-            uint16_t c1, c2;
+            size_t c1, c2;
             if (!stream.read_reserve(&r1, &c1, &r2, &c2))
                 return 0;
             uint16_t copied = 0;

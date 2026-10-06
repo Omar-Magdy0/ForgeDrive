@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 
 # Select target platform
 set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
+set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 
@@ -44,9 +44,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}
-    ${ECOLIB_DIR}
-    ${ECOLIB_DIR}/middleware
-    ${ECOLIB_DIR}/middleware/cortos
+    ${FDLIB_DIR}
+    ${FDLIB_DIR}/middleware
+    ${FDLIB_DIR}/middleware/cortos
     ${PMSMCONTROL_DIR}
 )
 
@@ -61,8 +61,8 @@ message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
 include_directories(${PLATFORM_INCLUDES})
 
 file(GLOB_RECURSE MIDDLEWARE_SRC    
-    ${ECOLIB_DIR}/middleware/*.cpp
-    ${ECOLIB_DIR}/middleware/*.c
+    ${FDLIB_DIR}/middleware/*.cpp
+    ${FDLIB_DIR}/middleware/*.c
 )
 
 
@@ -79,8 +79,8 @@ set(APPLICATION_SRC
 
 
 file(GLOB_RECURSE CORE_SRC
-    ${ECOLIB_DIR}/fd/*.cpp
-    ${ECOLIB_DIR}/fd/*.c
+    ${FDLIB_DIR}/fd/*.cpp
+    ${FDLIB_DIR}/fd/*.c
 )
 
 

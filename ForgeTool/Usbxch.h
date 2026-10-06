@@ -1,195 +1,101 @@
 #pragma once
 
+#include <libusb-1.0/libusb.h>
+
 #include <atomic>
-#include <chrono>
 #include <cstdint>
-#include <iostream>
+#include <deque>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
-#include <condition_variable>
-#include <algorithm>
-#include <libusb.h>
-#include <array>
-#include "RingBuffer.hpp"
+#include "fd/ring.h"
 
-// TODO #21: Refactor the USBXCH implementation , more coincise code
-struct SpeedTracker
+struct UsbDeviceInfo
 {
-    std::chrono::steady_clock::time_point last{};
-    size_t rx_bytes = 0;
-    size_t tx_bytes = 0;
-    double rx_speed = 0.0;
-    double tx_speed = 0.0;
-    mutable std::mutex mutex;
+    uint16_t vid;
+    uint16_t pid;
 
-    void update(size_t rx, size_t tx)
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        const auto now = std::chrono::steady_clock::now();
-        if (last != std::chrono::steady_clock::time_point{})
-        {
-            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count();
-            if (ms >= 1000)
-            {
-                const double s = ms / 1000.0;
-                rx_speed = rx_bytes / s;
-                tx_speed = tx_bytes / s;
-                last = now;
-                rx_bytes = 0;
-                tx_bytes = 0;
-            }
-        }
-        else
-        {
-            last = now;
-        }
-        rx_bytes += rx;
-        tx_bytes += tx;
-    }
+    uint8_t bus;
+    uint8_t address;
 
-    void reset()
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        last = {};
-        rx_bytes = 0;
-        tx_bytes = 0;
-        rx_speed = 0.0;
-        tx_speed = 0.0;
-    }
-
-    double rxBps() const
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        return rx_speed;
-    }
-
-    double txBps() const
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        return tx_speed;
-    }
+    std::string manufacturer;
+    std::string product;
+    std::string serial_number;
+    std::vector<uint8_t> interfaces;
 };
 
-class IUsbxch
-{
-    protected:
-    SpeedTracker speed_tracker_;
-    public:
-    virtual ~IUsbxch() = default;
-    virtual bool connect(const std::string &serial_number,
-                         uint16_t vid,
-                         uint16_t pid,
-                         int interface_number,
-                         unsigned char bulk_in_ep,
-                         unsigned char bulk_out_ep,
-                         int timeout_ms) = 0;
-    virtual void disconnect() = 0;
-    virtual bool isConnected() const = 0;
-    virtual int write(const uint8_t *data, size_t length) = 0;
-    virtual int write(const std::vector<uint8_t> &data) = 0;
-    virtual int read(uint8_t *data, size_t max_len) = 0;
-    virtual size_t available() = 0;
-    virtual double getRxSpeedBytesPerSecond() const = 0;
-    virtual double getTxSpeedBytesPerSecond() const = 0;
-    virtual void resetSpeeds() = 0;
-};
-
-class UsbxchLibusb : public IUsbxch
+class Usbxch
 {
 public:
-    UsbxchLibusb() = default;
-    ~UsbxchLibusb() override;
+    static constexpr size_t RXBUF_SIZE = (1 << 24);
+    static constexpr size_t TXBUF_SIZE = (1 << 24);
 
-    bool connect(const std::string &serial_number,
+    Usbxch()
+        : rxbuf_(new uint8_t[RXBUF_SIZE]),
+          rx_stream(rxbuf_.get(), RXBUF_SIZE),
+          txbuf_(new uint8_t[TXBUF_SIZE]),
+          tx_stream(txbuf_.get(), TXBUF_SIZE)
+    {
+    }
+
+    ~Usbxch();
+
+    static std::vector<UsbDeviceInfo> scan();
+    bool connect(const std::string& serial_number,
                  uint16_t vid,
                  uint16_t pid,
                  int interface_number,
                  unsigned char bulk_in_ep,
                  unsigned char bulk_out_ep,
-                 int timeout_ms) override;
+                 int timeout_ms);
 
-    void disconnect() override;
+    void disconnect();
+    bool isConnected() const;
+    void (*onConnect)(void *ctx) = nullptr;
+    void (*onDisconnect)(void *ctx) = nullptr;
+    void (*onError)(void *ctx, int ec) = nullptr;
+    void *callback_ctx = nullptr;
+    inline static int timeout = 50000;
 
-    bool isConnected() const override;
-
-    int write(const uint8_t *data, size_t length) override;
-
-    int write(const std::vector<uint8_t> &data) override
+    int write(const uint8_t* data, size_t length);
+    int write(const std::vector<uint8_t>& data)
     {
         return write(data.data(), data.size());
     }
-    int read(uint8_t *data, size_t max_len) override;
-    size_t available() override;
-    double getRxSpeedBytesPerSecond() const override;
-    double getTxSpeedBytesPerSecond() const override;
-    void resetSpeeds() override;
+    int read(uint8_t* data, size_t max_len);
+    size_t available();
 
 private:
-    libusb_context *context_ = nullptr;
+    libusb_context* context_ = nullptr;
+    std::thread event_thread_;
+    std::atomic<bool> event_running_{false};
+    void event_loop();
+    int arm_rx();
+    int arm_tx();
+    void finish_disconnect();
     libusb_device_handle *handle_ = nullptr;
-    std::thread io_thread_;
-    std::atomic<bool> running_{false};
+    libusb_transfer* rx_transfer = nullptr;
+    libusb_transfer* tx_transfer = nullptr;
+
+    std::atomic<bool> disconnect_req{false};
     std::atomic<bool> connected_{false};
+    std::atomic<bool> rx_active_{false};
+    std::atomic<bool> tx_active_{false};
 
-    RingBuffer rx_buffer_{16384};
+    std::unique_ptr<uint8_t[]> rxbuf_;
+    fd::ring_fast<uint8_t> rx_stream;
+    std::atomic<bool> rx_paused_{false};
 
-    std::mutex tx_mutex_;
-    std::condition_variable tx_cv_;
+    std::unique_ptr<uint8_t[]> txbuf_;
+    fd::ring_fast<uint8_t> tx_stream;
 
-    int timeout_ms_ = 1000;
     int interface_number_ = 0;
-    unsigned char bulk_in_ep_ = 0x81;
-    unsigned char bulk_out_ep_ = 0x01;
 
-    void ioLoop();
-};
+    unsigned char bulk_in_ep_ = 0;
+    unsigned char bulk_out_ep_ = 0;
 
-#include "TcpClient.hpp"
-class UsbxchTcp : public IUsbxch
-{
-public:
-    UsbxchTcp() = default;
-    ~UsbxchTcp() override;
-
-    bool connect(const std::string &serial_number,
-                 uint16_t vid,
-                 uint16_t pid,
-                 int interface_number,
-                 unsigned char bulk_in_ep,
-                 unsigned char bulk_out_ep,
-                 int timeout_ms) override;
-
-    void disconnect() override;
-
-    bool isConnected() const override;
-
-    int write(const uint8_t *data, size_t length) override;
-
-    int write(const std::vector<uint8_t> &data) override
-    {
-        return write(data.data(), data.size());
-    }
-    int read(uint8_t *data, size_t max_len) override;
-    size_t available() override;
-    double getRxSpeedBytesPerSecond() const override;
-    double getTxSpeedBytesPerSecond() const override;
-    void resetSpeeds() override;
-
-private:
-    TcpClient client;
-    std::thread io_thread_;
-    std::thread speed_thread_;
-    std::atomic<bool> running_{false};
-    std::atomic<bool> stats_running_{false};
-    std::atomic<bool> connected_{false};
-
-    std::mutex tx_mutex_;
-    mutable std::mutex speed_mutex_;
-    std::condition_variable tx_cv_;
-
-    int timeout_ms_ = 1000;
-    int interface_number_ = 0;
-    void ioLoop();
+    static void LIBUSB_CALL tx_callback(libusb_transfer* transfer);
+    static void LIBUSB_CALL rx_callback(libusb_transfer* transfer);
 };
