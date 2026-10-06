@@ -26,11 +26,13 @@ std::string read_string_descriptor(libusb_device_handle* handle, uint8_t index)
 Usbxch::~Usbxch()
 {
     disconnect();
+    if (event_thread_.joinable())
+        event_thread_.join();
 }
 
 int Usbxch::arm_rx()
 {
-    if (!connected_)
+    if (!connected_.load())
         return false;
 
     const size_t available =
@@ -38,6 +40,16 @@ int Usbxch::arm_rx()
 
     if (available == 0)
         return false;
+
+    bool expected = false;
+    
+    if (!rx_active_.compare_exchange_strong(
+            expected,
+            true,
+            std::memory_order_acquire))
+    {
+        return false;
+    }
 
     size_t c1, c2;
     uint8_t *w1, *w2;
@@ -63,20 +75,26 @@ int Usbxch::arm_rx()
 
     if (rc != LIBUSB_SUCCESS)
     {
+        rx_active_.store(false, std::memory_order_release);
         if(onError)onError(callback_ctx, rc);
         return false;
     }    
-
-    rx_active_.store(true, std::memory_order_release);
     return true;
 }
 
 int Usbxch::arm_tx()
 {
-    if (!connected_)
+    if (!connected_.load())
         return false;
-    if (tx_active_.load())
+
+    bool expected = false;
+    if (!tx_active_.compare_exchange_strong(
+            expected,
+            true,
+            std::memory_order_acquire))
+    {
         return false;
+    }
 
     const size_t to_send = tx_stream.size();
 
@@ -106,11 +124,11 @@ int Usbxch::arm_tx()
 
     if (rc != LIBUSB_SUCCESS)
     {
+        tx_active_.store(false, std::memory_order_release);
         onError(callback_ctx, rc);
         return false;
     }    
 
-    tx_active_.store(true, std::memory_order_release);
     return true;
 }
 
@@ -209,6 +227,9 @@ bool Usbxch::connect(const std::string &serial_number, uint16_t vid, uint16_t pi
         return false;
 
     disconnect();
+    if (event_thread_.joinable())
+        event_thread_.join();
+    disconnect_req.store(false);
 
     if (libusb_init(&context_) != LIBUSB_SUCCESS)
     {
@@ -375,7 +396,7 @@ void Usbxch::event_loop()
         //also finish events/requests here ,, like the disconnect one 
         if (disconnect_req.load())
         {
-            if(!rx_active_.load() && !tx_active_.load())finish_disconnect();
+            if(!rx_active_.load() && !tx_active_.load()){finish_disconnect();}
         }
     }
 }
@@ -403,7 +424,8 @@ void LIBUSB_CALL Usbxch::rx_callback(libusb_transfer* transfer)
         ctx->rx_active_.store(false);
     } else if (transfer->status == LIBUSB_TRANSFER_ERROR)
     {
-        ctx->onError(ctx->callback_ctx, transfer->status );
+        if(ctx->onError)ctx->onError(ctx->callback_ctx, transfer->status );
+        ctx->rx_active_.store(false);
     }
 }
 
@@ -422,6 +444,7 @@ void LIBUSB_CALL Usbxch::tx_callback(libusb_transfer* transfer)
         ctx->tx_active_.store(false);
     } else if (transfer->status == LIBUSB_TRANSFER_ERROR)
     {
-        ctx->onError(ctx->callback_ctx, transfer->status);
+        if(ctx->onError)ctx->onError(ctx->callback_ctx, transfer->status);
+        ctx->tx_active_.store(false);
     }
 }

@@ -13,7 +13,6 @@ class TCPServer
 {
 public:
     bool init(uint16_t port);
-    bool pollClient();
 
     void disconnect();
     void stop();

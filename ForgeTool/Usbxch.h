@@ -57,7 +57,7 @@ public:
     void (*onDisconnect)(void *ctx) = nullptr;
     void (*onError)(void *ctx, int ec) = nullptr;
     void *callback_ctx = nullptr;
-    inline static int timeout = 50000;
+    inline static int timeout = 5000;
 
     int write(const uint8_t* data, size_t length);
     int write(const std::vector<uint8_t>& data)
