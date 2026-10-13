@@ -4,7 +4,7 @@
 PmsmControl pmsmC1;
 //Static Callback registration
 void fd_mc3p_sync_postScanCallback(){pmsmC1.mc.pwmLoop();}
-void fd_xmc3p_tickerCallback(){pmsmC1.mc.xmcLoop();}
+void fd_mc3p_tickerCallback(){pmsmC1.mc.xmcLoop();}
 
 using namespace PmsmControlTypes;
 using namespace PmsmControlConf;

@@ -108,7 +108,7 @@ void HAL_ResumeTick(void)
 
 //==============================================================================
 
-__attribute__((weak)) void fd_xmc3p_tickerCallback(void){}
+__attribute__((weak)) void fd_mc3p_tickerCallback(void){}
 __attribute__((weak)) void fd_mc3p_sync_postScanCallback(void){}
 
 static fd_mc3p_handle_t* s_mc3p = NULL;
@@ -150,7 +150,7 @@ void TIM1_TRG_COM_TIM11_IRQHandler(void)
         LL_TIM_ClearFlag_UPDATE(TIM11);
         //Here We share Timer11 for HAL_ticking and motor Control Scheduling
         static uint8_t trg_cnt = 0;
-        fd_xmc3p_tickerCallback();
+        fd_mc3p_tickerCallback();
         pTASK(HAL_TICKER, trg_cnt, HAL_IncTick(), FD_XMC3P_TICKFREQ/1000);
         trg_cnt++;
     }

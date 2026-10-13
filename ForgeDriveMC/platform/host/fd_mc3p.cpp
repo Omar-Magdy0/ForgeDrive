@@ -83,7 +83,7 @@ void fd_mc3p_init(fd_mc3p_handle_t *h)
     h->dtc_comp_q15 = (int16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
     #endif
     sil_pwm_timer = register_timer(&timer_manager, postScanMethod, (uint64_t)(1e9/h->config.pwm_Hz));
-    register_timer(&timer_manager, fd_xmc3p_tickerCallback, (uint64_t)(1e9/FD_XMC3P_TICKFREQ));
+    register_timer(&timer_manager, fd_mc3p_tickerCallback, (uint64_t)(1e9/FD_XMC3P_TICKFREQ));
 }
 
 void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h)
@@ -330,7 +330,7 @@ void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
     h->sector_last = sector;
 }
 
-void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync s, float gain)
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync_t s, float gain)
 {
     float scale = (s >= FD_MC3P_CSU && s <= FD_MC3P_CSW)? FD_MC3P_CS_SCALE : FD_MC3P_VS_SCALE;
     h->sync_scale_q31[s][0] = ((gain * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * scale));
@@ -340,7 +340,7 @@ void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CH
     for(uint8_t i = FD_MC3P_VSBUS; i < MC3P_SYNC_CHANNELS; i++)
     {
         //Gains
-        fd_mc3p_set_gain(h, (fd_mc3p_sync)i, scales[i][0]);
+        fd_mc3p_set_gain(h, (fd_mc3p_sync_t)i, scales[i][0]);
         //Offsets
         if(i >= FD_MC3P_VSBUS || i <= FD_MC3P_VSW)
         {

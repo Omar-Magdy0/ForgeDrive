@@ -755,7 +755,7 @@ void DMA2_Stream0_IRQHandler(void)
     }
 }
 
-void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync s, float gain)
+void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync_t s, float gain)
 {
     float scale = (s >= FD_MC3P_CSU && s <= FD_MC3P_CSW)? FD_MC3P_CS_SCALE : FD_MC3P_VS_SCALE;
     h->sync_scale_q31[s][0] = ((gain * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * scale));
@@ -765,7 +765,7 @@ void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CH
     for(uint8_t i = 0; i < MC3P_SYNC_CHANNELS; i++)
     {
         //Gains
-        fd_mc3p_set_gain(h, (fd_mc3p_sync)i, scales[i][0]);
+        fd_mc3p_set_gain(h, (fd_mc3p_sync_t)i, scales[i][0]);
         //Offsets
         if(i >= FD_MC3P_VSBUS || i <= FD_MC3P_VSW)
         {

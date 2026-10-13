@@ -8,7 +8,7 @@ class PmsmControl
 private:
     PmsmControlCore mc;
     friend void fd_mc3p_sync_postScanCallback();
-    friend void fd_xmc3p_tickerCallback();
+    friend void fd_mc3p_tickerCallback();
     void(*onFault)(void *ctx);
 public:
     static constexpr uint8_t olstup_tb_size() {return PmsmControlTypes::OLSTUP_TABLE_SIZE;};

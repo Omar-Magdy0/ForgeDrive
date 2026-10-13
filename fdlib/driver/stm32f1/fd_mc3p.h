@@ -85,7 +85,7 @@ extern "C"
         FD_MC3P_CSV,                       /**< Phase V Current */
         FD_MC3P_CSW,                       /**< Phase W Current */
         FD_MC3P_CSBUS = FD_MC3P_CSU, /**< DC Bus Current */
-    } fd_mc3p_sync;
+    } fd_mc3p_sync_t;
 
     /**
      * @brief Configuration structure for MC3P PWM and duty limits.
@@ -169,7 +169,7 @@ extern "C"
      * @param s Signal selector.
      * @param gain Gain applied before Q31 scaling.
      */
-    void fd_mc3p_set_gain(fd_mc3p_handle_t *h, fd_mc3p_sync s, float gain);
+    void fd_mc3p_set_gain(fd_mc3p_handle_t *h, fd_mc3p_sync_t s, float gain);
 
     void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2]);
     /**
@@ -282,7 +282,7 @@ extern "C"
     void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15);
 
     /** @brief Weak callback for system ticker. */
-    __attribute__((weak)) void fd_xmc3p_tickerCallback(void);
+    __attribute__((weak)) void fd_mc3p_tickerCallback(void);
 
     /** @brief Weak callback after synchronized ADC scan completion. */
     __attribute__((weak)) void fd_mc3p_sync_postScanCallback(void);
