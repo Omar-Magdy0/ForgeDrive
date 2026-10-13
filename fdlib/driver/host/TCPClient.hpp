@@ -14,6 +14,7 @@ private:
     tcp::socket socket_;
     bool connected_ = false;
 
+
 public:
     TCPClient() : socket_(io_context_) {}
 
@@ -21,7 +22,7 @@ public:
         close();
     }
 
-    bool connect(const std::string& host, uint16_t port) {
+    bool connect(const std::string& host, uint16_t port, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024) {
         asio::error_code ec;
         tcp::resolver resolver(io_context_);
         auto endpoints = resolver.resolve(host, std::to_string(port), ec);
@@ -36,6 +37,9 @@ public:
             return false;
         }
 
+        socket_.set_option(asio::socket_base::send_buffer_size(tx_buf_kb * 1024), ec);
+        socket_.set_option(asio::socket_base::receive_buffer_size(rx_buf_kb * 1024), ec);
+            
         // Set socket to non-blocking mode to mirror server architecture
         socket_.non_blocking(true, ec);
         if (ec) {

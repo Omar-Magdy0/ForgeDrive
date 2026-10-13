@@ -19,11 +19,10 @@ private:
         tcp::acceptor acceptor;
         tcp::socket socket;
         bool connected = false;
-
         SILPort(asio::io_context& io, uint16_t p) 
             : port(p), 
               acceptor(io, tcp::endpoint(tcp::v4(), p)), 
-              socket(io) {}
+              socket(io){}
     };
 
     asio::io_context io_context_;
@@ -51,13 +50,13 @@ public:
     }
 
     // Register a port for a peripheral and start its background accept loop
-    bool register_port(uint16_t port) {
+    bool register_port(uint16_t port, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024) {
         if (ports_.find(port) != ports_.end()) return false;
 
         auto channel = std::make_unique<SILPort>(io_context_, port);
 
         // Launch background accept coroutine for this specific port
-        asio::co_spawn(io_context_, [this, port]() -> asio::awaitable<void> {
+        asio::co_spawn(io_context_, [this, port, rx_buf_kb, tx_buf_kb]() -> asio::awaitable<void> {
             auto& chan = ports_[port];
             for (;;) {
                 asio::error_code ec;
@@ -65,6 +64,8 @@ public:
                     asio::redirect_error(asio::use_awaitable, ec)
                 );
                 if (!ec) {
+                    new_sock.set_option(asio::socket_base::send_buffer_size(tx_buf_kb * 1024), ec);
+                    new_sock.set_option(asio::socket_base::receive_buffer_size(rx_buf_kb * 1024), ec);
                     if (chan->socket.is_open()) chan->socket.close();
                     chan->socket = std::move(new_sock);
                     chan->socket.non_blocking(true, ec);
