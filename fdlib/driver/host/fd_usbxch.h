@@ -2,12 +2,12 @@
 #define USBXCH
 #include <stdint.h>
 #include <stdbool.h>
-#include "TCPServer.h"
+#include "SILServer.hpp"
 
+#define SILSERVER_PORT_USBXCH 5001
+struct fd_usbxch_handle_t{
 
-typedef struct{
-    TCPServer tcps;
-}fd_usbxch_handle_t;
+};
 
 void fd_usbxch_init(fd_usbxch_handle_t *h);
 uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
