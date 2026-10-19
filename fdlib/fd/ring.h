@@ -89,7 +89,7 @@ namespace fd
             tail_ = (tail_ + n) & mask_;
             return true;
         }
-        bool distanceFromTail(int16_t idx, uint16_t &distance)
+        bool distanceFromTail(size_t idx, size_t &distance)
         {
             if (idx >= capacity_)
                 return false;

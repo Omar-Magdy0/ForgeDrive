@@ -34,37 +34,6 @@
 #define FD_UART1_TX_PORT       FD_NONE
 #define FD_UART1_TX_BUFFER_SIZE 256
 #define FD_UART1_RX_BUFFER_SIZE 256
-//================================================
-// USBCDC CONFIGURATION
-//================================================
-#define FD_USBCDC_ENABLED
-#define FD_USBCDC_TX_BUFFER_SIZE 4096
-#define FD_USBCDC_RX_BUFFER_SIZE 1024
-//================================================
-// MCADCPWM3P CONFIGURATION    
-//================================================
-#define FD_MC3P_ENABLED        
-#define FD_MC3P_CS_SCALE 50
-#define FD_MC3P_VS_SCALE 60
-#define CONF_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / FD_MC3P_VS_SCALE) * INT32_MAX))
-#define CONF_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / FD_MC3P_CS_SCALE) * INT32_MAX))
-
-#define FD_MC3P_DTC_ACTIVE
-#define FD_MC3P_DTC_CTHRESH CONF_MC3P_FLOAT_TO_CS(0.05)
-#define FD_MC3P_CS_NONE               0
-#define FD_MC3P_CS_TRIPLE_SHUNT       1
-#define FD_MC3P_CS_DOUBLE_SHUNT       2
-#define FD_MC3P_CS_SINGLE_SHUNT       3
-#define FD_MC3P_CS_INLINE             4
-#define FD_MC3P_CS                    FD_MC3P_CS_TRIPLE_SHUNT
-//Motor control tasking frequency
-#define FD_XMC3P_TICKFREQ              4000
-#define FD_XMC3P_TICKPERIOD_US          (1000000/FD_XMC3P_TICKFREQ)
-#define FD_MC3P_ADCRES                 12
-//#define FD_MC3P_VREFEXT                2.495f
-#define FD_MC3P_HIN_ACTIVE            1
-#define FD_MC3P_LIN_ACTIVE            0
-
 
 
 

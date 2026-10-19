@@ -21,6 +21,41 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     ")
 endif()
 
+###### FD_DRIVER GENERATION START #######
+
+set(Python3_EXECUTABLE "${CMAKE_SOURCE_DIR}/../venv/bin/python3")
+set(GEN_SCRIPT "${FDLIB_DIR}/driver/gen/generate.py")
+set(CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_conf.py")
+set(FDDRV_OUT_DIR "${CMAKE_BINARY_DIR}/generated")
+
+# Optional: Glob templates or dependencies inside fdlib or local directory for auto-reconfiguration
+file(GLOB_RECURSE TEMPLATE_FILES 
+    "${FDLIB_DIR}/driver/*.c"
+    "${FDLIB_DIR}/driver/*.h"
+    "${FDLIB_DIR}/driver/*.j2"
+)
+
+# Tell CMake to re-configure if the generator script, config, or templates change
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
+    "${GEN_SCRIPT}"
+    "${CONFIG_FILE}"
+    ${TEMPLATE_FILES}
+)
+
+# Run your exact generator command at configure time
+message(STATUS "Running driver generator for platform: ${PLATFORM_NAME}...")
+execute_process(
+    COMMAND ${Python3_EXECUTABLE} ${GEN_SCRIPT} ${CONFIG_FILE} -d ${PLATFORM_NAME} -o ${FDDRV_OUT_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE GEN_RESULT
+)
+
+if(NOT GEN_RESULT EQUAL 0)
+    message(FATAL_ERROR "Driver code generation failed with exit code ${GEN_RESULT}")
+endif()
+
+########### FD_DRIVER GENERATION END ################
+
 # Setup cmake module path and compiler settings
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -47,6 +82,7 @@ include_directories(
     ${FDLIB_DIR}
     ${FDLIB_DIR}/middleware
     ${FDLIB_DIR}/middleware/cortos
+    ${FDDRV_OUT_DIR}
     ${PMSMCONTROL_DIR}
 )
 
@@ -65,7 +101,10 @@ file(GLOB_RECURSE MIDDLEWARE_SRC
     ${FDLIB_DIR}/middleware/*.c
 )
 
-
+file(GLOB_RECURSE FDDRV_SRC    
+    ${FDDRV_OUT_DIR}/*.cpp
+    ${FDDRV_OUT_DIR}/*.c
+)
 
 set(APPLICATION_SRC
     ${PMSMCONTROL_DIR}/PmsmControl.cpp
@@ -85,7 +124,7 @@ file(GLOB_RECURSE CORE_SRC
 
 
 # Create executable
-add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
+add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC} ${FDDRV_SRC})
 
 # Add eld sources directly to the executable to ensure strong IRQ handlers
 # override weak startup symbols (avoids linker archive symbol resolution issues)

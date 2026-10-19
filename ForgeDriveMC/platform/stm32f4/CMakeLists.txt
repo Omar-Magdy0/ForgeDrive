@@ -37,7 +37,6 @@ set(STM32_COMMON_INCLUDES
     ${USBD_DIR}/Class/XCH/Inc
     ${USBD_DIR}/App
     ${STM32CMX_DIR}/f4/Target
-    ${FDLIB_DIR}/driver/stm32f4
 )
 
 # ===== HAL DRIVERS (for complex protocols) =====
@@ -78,7 +77,6 @@ set(STM32_Drivers_Src
 
 set(Platform_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/platform.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/cortos_port.c
 )
 
 set(STM32CMX_Src
@@ -102,14 +100,6 @@ set(USBD_Src
 
 set(CMSISCORE ${THIRDPARTY_DIR}/CMSIS)
 add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp_stm32f4)
-
-# Driver core sources are NOT added to the static library to avoid linker archive issues
-# where weak startup symbols prevent strong handler definitions from being linked.
-# Instead, they are linked directly from the parent scope (see PLATFORM_DRIVER_CORE_SOURCES).
-file(GLOB_RECURSE Driver_Core_Src
-    ${FDLIB_DIR}/driver/stm32f4/*.cpp
-    ${FDLIB_DIR}/driver/stm32f4/*.c
-)
 
 add_library(stm32f4_platform STATIC)
 target_sources(stm32f4_platform PRIVATE

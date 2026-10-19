@@ -202,7 +202,7 @@ namespace daq::codec
             // No entropy compression for now, to be added later
             ControlMark next_mark;
             bool has_mark = marks.peek(next_mark);
-            uint16_t dist_to_mark;
+            size_t dist_to_mark;
             uint16_t bytes_to_read;
             if (has_mark)
             {

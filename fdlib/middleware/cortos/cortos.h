@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "cortos_conf.h"
-// TODO : Initialize a fully fledged cooperative Rtos
 
 #ifdef __cplusplus
 extern "C" {

@@ -33,14 +33,14 @@ void PmsmControlCore::init()
     current_q31_to_float(state.Ibus_q31);
     angle_q31_to_float(state.eTheta_q31);
 
-    mc3p.offset_calibration = true;
+    MC3P1.offset_calibration = true;
     SComm_init();
     Foc_init();
     /* hardware initialization */
     posDriver.init();
-    fd_mc3p_set_sync_scale(&mc3p, PmsmControlConf::MC3P_SYNC_SCALE);
-    fd_mc3p_init(&mc3p);
-    fd_mc3p_write_float(&mc3p);
+    fd_mc3p_set_sync_scale(MC3P1, PmsmControlConf::MC3P_SYNC_SCALE);
+    fd_mc3p_init(MC3P1);
+    fd_mc3p_write_float(MC3P1);
 };
 
 void PmsmControlCore::xmcLoop()
@@ -65,11 +65,11 @@ void PmsmControlCore::pwmConfigUpdate(PmsmControlTypes::ConfigPwm cfg)
 {
     pwm_freq_hz = cfg.pwm_freq_hz;
     pTick_period_ns = static_cast<uint32_t>(1'000'000'000 / static_cast<float>(pwm_freq_hz));
-    mc3p.config.pwm_Hz = pwm_freq_hz;
-    mc3p.config.deadtime_nS = cfg.deadtime_ns;
-    mc3p.config.duty_min = cfg.duty_min;
-    mc3p.config.duty_max = cfg.duty_max;
-    fd_mc3p_reconfigure_pwm(&mc3p);
+    MC3P1.config.pwm_Hz = pwm_freq_hz;
+    MC3P1.config.deadtime_nS = cfg.deadtime_ns;
+    MC3P1.config.duty_min = cfg.duty_min;
+    MC3P1.config.duty_max = cfg.duty_max;
+    fd_mc3p_reconfigure_pwm(MC3P1);
 }
 
 void PmsmControlCore::pwmLoop()
@@ -77,7 +77,7 @@ void PmsmControlCore::pwmLoop()
     if (control.mc_mode == MCMode::None)
         return;
     uint32_t start = fd_prof_tick();
-    fd_mc3p_read_sync(&mc3p, &mc3p_sync_meas);
+    fd_mc3p_read_sync(MC3P1, &mc3p_sync_meas);
     switch (control.mc_mode)
     {
     case MCMode::Foc:

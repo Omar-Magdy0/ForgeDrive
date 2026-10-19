@@ -40,12 +40,9 @@ set(IMGUI_SRC
 
 set(Platform_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/platform.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/hconf/cortos_port.c
 )
 
-file(GLOB_RECURSE Driver_Core_Src
-    ${FDLIB_DIR}/driver/host/*.cpp
-    ${FDLIB_DIR}/driver/host/*.c
+file(GLOB Driver_Core_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/fd_hall.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/fd_mc3p.cpp
 )

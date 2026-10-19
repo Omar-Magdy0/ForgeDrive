@@ -3,7 +3,7 @@
 #include "fd_mc3p.h"
 #include "fd_driver_conf.h"
 #include "fd_hall.h"
-#include "fd_driver_core.h"
+#include "fd_drv.h"
 #include "PosDriver.h"
 #include "math/math.h"
 #include <array>
@@ -28,7 +28,7 @@ class PmsmControlCore
 
     #define RPM_TO_RPS(rpm)(rpm * (2*M_PI/60.0))
     volatile uint32_t xTicks;
-    const uint32_t xTicks_period_us = (uint32_t)FD_XMC3P_TICKPERIOD_US;
+    const uint32_t xTicks_period_us = (uint32_t)FD_MC3P_TICKPERIOD_US;
     volatile uint32_t pTicks{};                                                       /** PWM period in ticks (timer ticks). */
     uint32_t pwm_freq_hz;                                               /** PWM carrier frequency (Hz). */
     uint32_t pTick_period_ns{ (uint32_t)(1'000'000'000.0f / static_cast<float>(10000)) }; /** PWM tick period (us). */
@@ -38,13 +38,12 @@ class PmsmControlCore
     inline uint32_t xTicks_to_us(uint32_t ticks)const{return ticks*xTicks_period_us;};
     inline uint32_t xTicks_to_ms(uint32_t ticks)const{return xTicks_to_us(ticks)/1000;};
     inline int32_t rps_to_rpxt(float rps){    
-        return  (int32_t)((rps) * (FD_XMC3P_TICKPERIOD_US / 1000000.0f / PI) * (1<<24));
+        return  (int32_t)((rps) * (FD_MC3P_TICKPERIOD_US / 1000000.0f / PI) * (1<<24));
     }
     inline float rpxt_to_rps(int32_t rpxt){
-        return ((float)rpxt * ((M_PI*1000000.0f)/FD_XMC3P_TICKPERIOD_US))/(1<<24);
+        return ((float)rpxt * ((M_PI*1000000.0f)/FD_MC3P_TICKPERIOD_US))/(1<<24);
     }
     // Owned hardware elements
-    fd_mc3p_handle_t mc3p{}; /** Underlying MC3P driver instance. */
     PosDriver posDriver;
     union
     {

@@ -38,156 +38,15 @@
 //########################################################################
 /** @} */
 
-/** @name UART1 Configuration */
-//================================================
-// UART1 CONFIGURATION
-//================================================
-//#define FD_UART1_ENABLED
-#define FD_UART1_RX_PIN        6
-#define FD_UART1_RX_PORT       GPIOB
-#define FD_UART1_TX_PIN        7
-#define FD_UART1_TX_PORT       GPIOB
-#define FD_UART1_TX_BUFFER_SIZE 256
-#define FD_UART1_RX_BUFFER_SIZE 256
-
-/** @name USB CDC Configuration */
-//================================================
-// USBCDC CONFIGURATION
-//================================================
-//#define FD_USBCDC_ENABLED
-#define FD_USBCDC_TX_BUFFER_SIZE 64
-#define FD_USBCDC_RX_BUFFER_SIZE 64
-
-//================================================
-// USBXCH CONFIGURATION
-//================================================
-#define FD_USBXCH_ENABLED
-#define FD_USBXCH_TX_BUFFSIZE 4096
-#define FD_USBXCH_RX_BUFFSIZE 256
+//=============================
+// MC2P
+#define FD_MC2P_BG_CHANNELS 0
 
 /** @name Motor Control (MC3P) Configuration */
 //================================================
 // MCADCPWM3P CONFIGURATION    
 //================================================
-#define FD_MC3P_ENABLED        
-#define FD_MC3P_CS_SCALE 50
-#define FD_MC3P_VS_SCALE 60
-#define CONF_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / FD_MC3P_VS_SCALE) * INT32_MAX))
-#define CONF_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / FD_MC3P_CS_SCALE) * INT32_MAX))
 
-#define FD_MC3P_DTC_ACTIVE
-#define FD_MC3P_DTC_CTHRESH CONF_MC3P_FLOAT_TO_CS(0.05)
-#define FD_MC3P_CS_NONE               0
-#define FD_MC3P_CS_TRIPLE_SHUNT       1
-#define FD_MC3P_CS_DOUBLE_SHUNT       2
-#define FD_MC3P_CS_SINGLE_SHUNT       3
-#define FD_MC3P_CS_INLINE             4
-#define FD_MC3P_CS                    FD_MC3P_CS_TRIPLE_SHUNT
-//Motor control tasking frequency
-#define FD_XMC3P_TICKFREQ              4000
-#define FD_XMC3P_TICKPERIOD_US          (1000000/FD_XMC3P_TICKFREQ)
-#define FD_MC3P_ADCRES                 12
-//#define FD_MC3P_VREFEXT                2.495f
-#define FD_MC3P_HIN_ACTIVE            1
-#define FD_MC3P_LIN_ACTIVE            0
-
-#define FD_MC3P_UH_PIN         LL_GPIO_PIN_8
-#define FD_MC3P_UH_PORT        GPIOA
-#define FD_MC3P_UL_PIN         LL_GPIO_PIN_13
-#define FD_MC3P_UL_PORT        GPIOB
-#define FD_MC3P_VH_PIN         LL_GPIO_PIN_9
-#define FD_MC3P_VH_PORT        GPIOA
-#define FD_MC3P_VL_PIN         LL_GPIO_PIN_14
-#define FD_MC3P_VL_PORT        GPIOB
-#define FD_MC3P_WH_PIN         LL_GPIO_PIN_10
-#define FD_MC3P_WH_PORT        GPIOA
-#define FD_MC3P_WL_PIN         LL_GPIO_PIN_15
-#define FD_MC3P_WL_PORT        GPIOB
-
-#define FD_MC3P_VSBUS_PIN               LL_GPIO_PIN_0
-#define FD_MC3P_VSBUS_PORT              GPIOA
-#define FD_MC3P_VSBUS_ADC_CHANNEL       LL_ADC_CHANNEL_0   // PA1 - ADC1_IN2
-#define FD_MC3P_VSU_PIN                 LL_GPIO_PIN_1
-#define FD_MC3P_VSU_PORT                GPIOA
-#define FD_MC3P_VSU_ADC_CHANNEL         LL_ADC_CHANNEL_1   // PA1 - ADC1_IN2
-#define FD_MC3P_VSV_PIN                 LL_GPIO_PIN_2
-#define FD_MC3P_VSV_PORT                GPIOA
-#define FD_MC3P_VSV_ADC_CHANNEL         LL_ADC_CHANNEL_2   // PA4 - ADC1_IN3
-#define FD_MC3P_VSW_PIN                 LL_GPIO_PIN_3
-#define FD_MC3P_VSW_PORT                GPIOA
-#define FD_MC3P_VSW_ADC_CHANNEL         LL_ADC_CHANNEL_3   // PA5 - ADC1_IN3
-
-#if (FD_MC3P_CS == FD_MC3P_CS_TRIPLE_SHUNT || FD_MC3P_CS == FD_MC3P_CS_DOUBLE_SHUNT || FD_MC3P_CS == FD_MC3P_CS_INLINE)
-    // Three shunt resistors - one per phase , (for double shunt and inline comment out unnused sensor)
-    #define FD_MC3P_CSU_PIN            4
-    #define FD_MC3P_CSU_PORT           GPIOA
-    #define FD_MC3P_CSU_ADC_CHANNEL    LL_ADC_CHANNEL_4   // PA3 - ADC1_IN4
-    #define FD_MC3P_CSV_PIN            5
-    #define FD_MC3P_CSV_PORT           GPIOA
-    #define FD_MC3P_CSV_ADC_CHANNEL    LL_ADC_CHANNEL_5   // PA4 - ADC1_IN5
-    #define FD_MC3P_CSW_PIN            6
-    #define FD_MC3P_CSW_PORT           GPIOA
-    #define FD_MC3P_CSW_ADC_CHANNEL    LL_ADC_CHANNEL_6   // PA5 - ADC1_IN6
-    
-#elif (FD_MC3P_CS == FD_MC3P_CS_SINGLE_SHUNT)
-    // Single shunt resistor on DC bus
-    #define FD_MC3P_CSBUS_PIN            3
-    #define FD_MC3P_CSBUS_PORT           GPIOA
-    #define FD_MC3P_CSBUS_ADC_CHANNEL    LL_ADC_CHANNEL_5   // PA3 - ADC1_IN4
-
-#endif
-
-#define FD_MC3P_BG_CHANNELS 0
-#if FD_MC3P_BG_CHANNELS > 0
-    #define FD_MC3P_BG1_PIN
-    #define FD_MC3P_BG1_PORT
-    #define FD_MC3P_BG1_ADC_CHANNEL
-    #define FD_MC3P_BG1_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 1
-    #define FD_MC3P_BG2_PIN
-    #define FD_MC3P_BG2_PORT
-    #define FD_MC3P_BG2_ADC_CHANNEL
-    #define FD_MC3P_BG2_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 2
-    #define FD_MC3P_BG1_PIN
-    #define FD_MC3P_BG1_PORT
-    #define FD_MC3P_BG1_ADC_CHANNEL
-    #define FD_MC3P_BG1_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 3
-    #define FD_MC3P_BG2_PIN
-    #define FD_MC3P_BG2_PORT
-    #define FD_MC3P_BG2_ADC_CHANNEL
-    #define FD_MC3P_BG2_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 4
-    #define FD_MC3P_BG1_PIN
-    #define FD_MC3P_BG1_PORT
-    #define FD_MC3P_BG1_ADC_CHANNEL
-    #define FD_MC3P_BG1_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 5
-    #define FD_MC3P_BG2_PIN
-    #define FD_MC3P_BG2_PORT
-    #define FD_MC3P_BG2_ADC_CHANNEL
-    #define FD_MC3P_BG2_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 6
-    #define FD_MC3P_BG2_PIN
-    #define FD_MC3P_BG2_PORT
-    #define FD_MC3P_BG2_ADC_CHANNEL
-    #define FD_MC3P_BG2_RANK
-#endif
-#if FD_MC3P_BG_CHANNELS > 7
-    #define FD_MC3P_BG2_PIN
-    #define FD_MC3P_BG2_PORT
-    #define FD_MC3P_BG2_ADC_CHANNEL
-    #define FD_MC3P_BG2_RANK
-#endif
-
-#define FD_MC3P_OFFSET_CALIBRATION_SAMPLES 128
 
 /** @name Hall Sensor Configuration */
 //================================================
@@ -203,25 +62,6 @@
 
 
 
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-/** @name DMA & NVIC Configuration */
-//================================================
-//DMA CONFIGURATION
-//================================================
-//NEVER FORGET 
-//THAT YOU EVER CHANGE THESE VALUES FOR DMA YOU STILL HAVE TO CHANGE IMPLEMENTATION AND IRQ APPROPIATELY
-#define UART1_DMA_TX_STREAM             LL_DMA_STREAM_7
-#define UART1_DMA_RX_STREAM             LL_DMA_STREAM_5
-#define UART1_DMA_INSTANCE              DMA2
-#define UART1_DMA_CHANNEL               LL_DMA_CHANNEL_4
-#define MC3P_DMA_BACKGROUND_STREAM      LL_DMA_STREAM_0
-#define MC3P_DMA_INSTANCE               DMA2
-#define MC3P_DMA_CHANNEL                LL_DMA_CHANNEL_0
-//================================================
-// NVIC CONFIGURATION
-//================================================
-#define UART1_NVIC_PRIORITY 4
 
 
 #endif//fd_driver_conf.h

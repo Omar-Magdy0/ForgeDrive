@@ -43,6 +43,7 @@ Makefile
 *.csv
 
 # Python venv
+venv/
 tools/env
 .continue
 #imgui ini files

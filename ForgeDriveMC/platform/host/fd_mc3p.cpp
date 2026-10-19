@@ -13,7 +13,6 @@ extern float vtime;
 unsigned int sil_pwm_timer;
 unsigned int sil_to_pwm_freq = 1;
 
-float fd_mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel) { return 0.0; }
 #define SSAT(val, bits) \
     ({ \
         int32_t _v = (int32_t)(val); \
@@ -23,11 +22,12 @@ float fd_mc3p_adc_read_single(fd_mc3p_handle_t *h, uint32_t channel) { return 0.
         if (_v < _min) _v = _min; \
         (int32_t)_v; \
     })
-
+fd_mc3p_phase_state_t MC3P1_phase_state[3];
+fd_mc3p_handle_t MC3P1;
 
 void postScanMethod()
 {
-    fd_mc3p_sync_postScanCallback();
+    fd_mc3p_MC3P1_sync_postScanCallback();
     sil_input.load_torque = (dummy_load.K * sil.state.omega + dummy_load.B) * sil.state.omega + dummy_load.Tc;
     for(int i = 0; i < sil_to_pwm_freq; i++) {
         sil.step(sil_input);
@@ -36,6 +36,7 @@ void postScanMethod()
         silLogger.log(sil, sil_input);
     }
 }
+
 
 static void dPsim_dTheta_Sine(double theta_e, double dPsi_dTheta[3])
 {
@@ -52,7 +53,7 @@ static void dPsim_dTheta_Trapezoidal(double theta_e, double dPsi_dTheta[3])
     dPsi_dTheta[2] = - amplitude * Sil::trapezoidal_wave(theta_e + 2*M_PI/3);
 }
 
-void fd_mc3p_init(fd_mc3p_handle_t *h)
+void fd_mc3p_MC3P1_init(fd_mc3p_handle_t *h)
 {
     sil_input.dt = 1.0f / h->config.pwm_Hz / sil_to_pwm_freq;
     sil_input.load_torque = 0.00;
@@ -83,10 +84,15 @@ void fd_mc3p_init(fd_mc3p_handle_t *h)
     h->dtc_comp_q15 = (int16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
     #endif
     sil_pwm_timer = register_timer(&timer_manager, postScanMethod, (uint64_t)(1e9/h->config.pwm_Hz));
-    register_timer(&timer_manager, fd_mc3p_tickerCallback, (uint64_t)(1e9/FD_XMC3P_TICKFREQ));
+    register_timer(&timer_manager, fd_mc3p_tickerCallback, (uint64_t)(1e9/FD_MC3P_TICKFREQ));
 }
 
-void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h)
+void pv_mc3p_MC3P1_sector_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
+{
+    
+}
+
+void fd_mc3p_MC3P1_reconfigure_pwm(fd_mc3p_handle_t *h)
 {
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
     h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
@@ -109,12 +115,9 @@ void fd_mc3p_reconfigure_pwm(fd_mc3p_handle_t *h)
     configure_timer_timestep(&timer_manager, sil_pwm_timer, (uint64_t)(1e9/h->config.pwm_Hz));
 }
 
-void fd_mc3p_bg_startConv(fd_mc3p_handle_t *h){}
-uint8_t fd_mc3p_bg_channels(fd_mc3p_handle_t *h){return 0;}
-uint8_t fd_mc3p_read_bg(fd_mc3p_handle_t *h, float* scanData){return 0;}
-uint8_t fd_mc3p_bg_isReady(fd_mc3p_handle_t *h){return 0;}
+void fd_mc3p_MC3P1_bg_startConv(fd_mc3p_handle_t *h){}
 
-void fd_mc3p_read_sync(fd_mc3p_handle_t *h, void* data)
+void fd_mc3p_MC3P1_read_sync(fd_mc3p_handle_t *h, void* data)
 {    
     uint8_t is_svm = IS_SVM_SECTOR(h->sector_last);
     uint8_t is_trap = IS_TRAP_SECTOR(h->sector_last);
@@ -187,18 +190,17 @@ do                                            \
     }
 }
 
-void fd_mc3p_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
+void fd_mc3p_MC3P1_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
 {
     sil_input.drive[0] = (state_u != FD_MC3P_PHASE_FLOAT)? 1 : 0;
     sil_input.drive[1] = (state_v != FD_MC3P_PHASE_FLOAT)? 1 : 0;
     sil_input.drive[2] = (state_w != FD_MC3P_PHASE_FLOAT)? 1 : 0;
-    h->phase_state[0] = state_u;
-    h->phase_state[1] = state_v;
-    h->phase_state[2] = state_w;
+    MC3P1_phase_state[0] = state_u;
+    MC3P1_phase_state[1] = state_v;
+    MC3P1_phase_state[2] = state_w;
 }
 
-// ===== KEY CHANGE: Send duty cycles to SIL =====
-void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15)
+void fd_mc3p_MC3P1_write_phase_duty(fd_mc3p_handle_t *h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15)
 {
     duty_u_q15 = (uint32_t)SATURATE(duty_u_q15, h->duty_min_q15, h->duty_max_q15);
     duty_v_q15 = (uint32_t)SATURATE(duty_v_q15, h->duty_min_q15, h->duty_max_q15);
@@ -206,149 +208,13 @@ void fd_mc3p_write_phase_duty(fd_mc3p_handle_t *h, int16_t duty_u_q15, int16_t d
     float duty[3] = {((float)duty_u_q15/INT16_MAX), ((float)duty_v_q15/INT16_MAX), ((float)duty_w_q15/INT16_MAX)};
     for(int i = 0; i < 3; i++)
     {
-        if(h->phase_state[i] == FD_MC3P_PHASE_L_ON)
+        if(MC3P1_phase_state[i] == FD_MC3P_PHASE_L_ON)
         {
             duty[i] = 0;
-        }else if (h->phase_state[i] == FD_MC3P_PHASE_H_ON)
+        }else if (MC3P1_phase_state[i] == FD_MC3P_PHASE_H_ON)
         {
             duty[i] = 1;
         }
         sil_input.duty[i] = duty[i];
-    }
-}
-
-void fd_mc3p_write_float(fd_mc3p_handle_t *h)
-{
-    fd_mc3p_write_phase_state(h, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_FLOAT);
-    fd_mc3p_write_phase_duty(h, 0, 0, 0);
-    h->sector_last = FD_MC3P_SECTOR_FLOAT;
-}
-
-
-typedef struct {
-    fd_mc3p_phase_state_t phase_state[3]; // A,B,C: COMP, L_ON, FLOAT
-} mc3p_trap_sector_map_t;
-
-static const mc3p_trap_sector_map_t trap_table[6] = {
-    [FD_MC3P_SECTOR_TRAP1 - 1] = { {FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_FLOAT}},
-    [FD_MC3P_SECTOR_TRAP2 - 1] = { {FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_L_ON}},
-    [FD_MC3P_SECTOR_TRAP3 - 1] = { {FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_L_ON}},
-    [FD_MC3P_SECTOR_TRAP4 - 1] = { {FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_FLOAT}},
-    [FD_MC3P_SECTOR_TRAP5 - 1] = { {FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_COMP}},
-    [FD_MC3P_SECTOR_TRAP6 - 1] = { {FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_COMP}},
-};
-
-void fd_mc3p_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15)
-{
-    if(!IS_TRAP_SECTOR(h->sector_last))
-    {
-        h->mode        = FD_MC3P_MODE_TRAP;
-    }
-    if(sector < FD_MC3P_SECTOR_TRAP1 || sector > FD_MC3P_SECTOR_TRAP6)
-        return;
-
-    const mc3p_trap_sector_map_t *map = &trap_table[sector - 1];
-
-    // Only update phase state & ADC if sector changed
-    if(h->sector_last != sector)
-    {
-        fd_mc3p_write_phase_state(h, map->phase_state[0], map->phase_state[1], map->phase_state[2]);
-        h->sector_last = sector;
-    }   
-    #ifdef FD_MC3P_DTC_ACTIVE
-    h->dutyu_q15 = SSAT((int32_t)duty_q15 + ((h->dtc_state & (1<<3))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    h->dutyv_q15 = h->dutyu_q15;
-    h->dutyw_q15 = h->dutyu_q15;
-    #else
-    h->dutyu_q15 = duty_q15;
-    h->dutyv_q15 = h->dutyu_q15;
-    h->dutyw_q15 = h->dutyu_q15;
-    #endif 
-    fd_mc3p_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
-}
-
-void fd_mc3p_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15)
-{
-    int32_t vmax, vmin, voff;
-    if(!IS_SVM_SECTOR(h->sector_last))
-    {
-        fd_mc3p_write_phase_state(h, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP);
-        h->mode        = FD_MC3P_MODE_SVM;
-    }
-    int32_t dutyu_q15, dutyv_q15, dutyw_q15;
-    /* αβ → phase (normalized Q15) */
-    dutyu_q15 = alpha_q15;
-
-    dutyv_q15 = (-(int32_t)Q15_HALF * alpha_q15
-         + (int32_t)Q15_SQRT3_BY_2 * beta_q15) >> 15;
-
-    dutyw_q15 = (-(int32_t)Q15_HALF * alpha_q15
-         - (int32_t)Q15_SQRT3_BY_2 * beta_q15) >> 15;
-
-    uint8_t b0 = (dutyu_q15 >= 0);
-    uint8_t b1 = (dutyv_q15 >= 0);
-    uint8_t b2 = (dutyw_q15 >= 0);
-
-    // 3-bit code
-    uint8_t code = (b2 << 2) | (b1 << 1) | b0;
-    fd_mc3p_sector_t sector;
-    switch(code)
-    {
-        case 0b001: sector = FD_MC3P_SECTOR_SVM1; break;
-        case 0b011: sector = FD_MC3P_SECTOR_SVM2; break;
-        case 0b010: sector = FD_MC3P_SECTOR_SVM3; break;
-        case 0b110: sector = FD_MC3P_SECTOR_SVM4; break;
-        case 0b100: sector = FD_MC3P_SECTOR_SVM5; break;
-        case 0b101: sector = FD_MC3P_SECTOR_SVM6; break;
-        default: sector = FD_MC3P_SECTOR_FLOAT; break; // should not happen
-    }
-    
-    /* SVPWM zero-sequence injection */
-    vmax = dutyu_q15;
-    if (dutyv_q15 > vmax) vmax = dutyv_q15;
-    if (dutyw_q15 > vmax) vmax = dutyw_q15;
-
-    vmin = dutyu_q15;
-    if (dutyv_q15 < vmin) vmin = dutyv_q15;
-    if (dutyw_q15 < vmin) vmin = dutyw_q15;
-
-    voff = (vmax + vmin) >> 1;
-
-    dutyu_q15 = (dutyu_q15 - voff) + Q15_HALF;
-    dutyv_q15 = (dutyv_q15 - voff) + Q15_HALF;
-    dutyw_q15 = (dutyw_q15 - voff) + Q15_HALF;
-    #ifdef FD_MC3P_DTC_ACTIVE
-    h->dutyu_q15 = SSAT(dutyu_q15 + ((h->dtc_state & (1<<0))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    h->dutyv_q15 = SSAT(dutyv_q15 + ((h->dtc_state & (1<<1))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    h->dutyw_q15 = SSAT(dutyw_q15 + ((h->dtc_state & (1<<2))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    #else
-    h->dutyu_q15 = dutyu_q15;
-    h->dutyv_q15 = dutyv_q15;
-    h->dutyw_q15 = dutyw_q15;
-    #endif
-    fd_mc3p_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
-    h->sector_last = sector;
-}
-
-void fd_mc3p_set_gain(fd_mc3p_handle_t *h,  fd_mc3p_sync_t s, float gain)
-{
-    float scale = (s >= FD_MC3P_CSU && s <= FD_MC3P_CSW)? FD_MC3P_CS_SCALE : FD_MC3P_VS_SCALE;
-    h->sync_scale_q31[s][0] = ((gain * h->adc_to_uV * (INT32_MAX) + 0.5)/(1000000.0 * scale));
-}
-void fd_mc3p_set_sync_scale(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS][2])
-{
-    for(uint8_t i = FD_MC3P_VSBUS; i < MC3P_SYNC_CHANNELS; i++)
-    {
-        //Gains
-        fd_mc3p_set_gain(h, (fd_mc3p_sync_t)i, scales[i][0]);
-        //Offsets
-        if(i >= FD_MC3P_VSBUS || i <= FD_MC3P_VSW)
-        {
-            h->sync_scale_q31[i][1] = FD_MC3P_FLOAT_TO_VS(scales[i][1]);
-        }
-        else if(i >= FD_MC3P_CSV || i <= FD_MC3P_CSW)
-        {
-            h->sync_scale_q31[i][1] = FD_MC3P_FLOAT_TO_CS(scales[i][1]);
-        }
     }
 }

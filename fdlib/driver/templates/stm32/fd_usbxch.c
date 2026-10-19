@@ -1,7 +1,7 @@
 /**
  * @file    fd_usbxch.c
  * @author  Carol Nasser
- * @brief   USB Vendor Class Bulk Exchange Driver for STM32F1.
+ * @brief   USB Vendor Class Bulk Exchange Driver for STM32F4.
  * @details Implements a dual-bulk-pair (2×IN + 2×OUT) USB transfer driver
  *          using the STM32 USB Device library (LL + HAL PCD layer). Data is
  *          buffered through `fd_ring_t` ring buffers and transferred
@@ -17,12 +17,9 @@
  */
 
 #include "fd_usbxch.h"    
-#include "stm32f1xx_ll_rcc.h"
-#include "stm32f1xx_ll_gpio.h"
 #include <string.h>
 #include "usb_device.h"
-
-#ifdef FD_USBXCH_ENABLED
+#include "usbd_xch.h"
 
 /* ---------------------------------------------------------------------------
  * External references – these symbols are defined by the STM32Cube USB device
@@ -44,6 +41,7 @@
  * Internal forward declarations
  * --------------------------------------------------------------------------- */
 static void usbxch_start_tx(fd_usbxch_handle_t *h);
+static USBD_XCH_HandleTypeDef s_usbxch;
 /* ---------------------------------------------------------------------------
  * Handle singleton for callback dispatch
  * ---------------------------------------------------------------------------
@@ -57,22 +55,27 @@ static void usbxch_start_tx(fd_usbxch_handle_t *h);
  * Public API
  * =========================================================================== */
 
-void fd_usbxch_init(fd_usbxch_handle_t *h)
+{% for inst in usbxch.instances %}
+uint8_t {{inst.name}}_tx_buf[{{inst.tx_bufsize}}];
+uint8_t {{inst.name}}_rx_buf[{{inst.rx_bufsize}}];
+fd_usbxch_handle_t {{inst.name}};
+
+void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h)
 {
     /* --- Clear the handle --- */
     memset(h, 0, sizeof(*h));
     /* --- Initialise ring buffers --- */
-    fd_ring_init(&h->tx, h->tx_storage, sizeof(h->tx_storage));
-    fd_ring_init(&h->rx, h->rx_storage, sizeof(h->rx_storage));
-    h->usbxch.ctx = h;
-    hUsbDeviceFS.pClassData = (void*)&h->usbxch;
+    fd_ring_init(&h->tx, {{inst.name}}_tx_buf, sizeof({{inst.name}}_tx_buf));
+    fd_ring_init(&h->rx, {{inst.name}}_rx_buf, sizeof({{inst.name}}_rx_buf));
+    s_usbxch.ctx = h;
+    hUsbDeviceFS.pClassData = (void*)&s_usbxch;
     MX_USB_DEVICE_Init();
 }
-
+{% endfor %}
 /* ---------------------------------------------------------------------------
  * Write
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_write_impl(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
 {
     void *w1, *w2;
     uint16_t c1, c2;
@@ -80,7 +83,6 @@ uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t le
         memcpy(w1, data, c1);
         if(w2)memcpy(w2, data + c1, c2);
         fd_ring_write_commit(&h->tx, length);
-    } else {
         return length;
     }
     return 0;
@@ -89,7 +91,7 @@ uint32_t fd_usbxch_write(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t le
 /* ---------------------------------------------------------------------------
  * Write available (space left in tx buffer)
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_write_available(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_write_available_impl(fd_usbxch_handle_t *h)
 {
     return (uint32_t)fd_ring_free(&h->tx);
 }
@@ -97,7 +99,7 @@ uint32_t fd_usbxch_write_available(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Flush – trigger an IN transfer immediately if data is pending
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_flush(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_flush_impl(fd_usbxch_handle_t *h)
 {
     if (h->flags & USBXCH_FLAG_TX_BUSY)
         return 1; /* already in progress */
@@ -110,7 +112,7 @@ uint32_t fd_usbxch_flush(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Clear – drain all ring buffers and reset stats
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_clear(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_clear_impl(fd_usbxch_handle_t *h)
 {
     /* Drain TX: reset head/tail to empty */
     h->tx.head = h->tx.tail = 0;
@@ -121,7 +123,7 @@ uint32_t fd_usbxch_clear(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Read from OUT endpoint 1
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_read_impl(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
 {
     void *r1, *r2;
     uint16_t c1, c2;
@@ -147,7 +149,7 @@ uint32_t fd_usbxch_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
 /* ---------------------------------------------------------------------------
  * Read available (occupied bytes in RX ring)
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_read_available(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_read_available_impl(fd_usbxch_handle_t *h)
 {
     uint16_t occ = fd_ring_size(&h->rx);
     return occ;
@@ -156,7 +158,7 @@ uint32_t fd_usbxch_read_available(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Connected status – true when VBUS present and SET_CONFIGURATION received
  * --------------------------------------------------------------------------- */
-bool fd_usbxch_connected(fd_usbxch_handle_t *h)
+bool fd_usbxch_connected_impl(fd_usbxch_handle_t *h)
 {
     return (h->flags & USBXCH_FLAG_CONFIGURED) != 0;
 }
@@ -164,7 +166,7 @@ bool fd_usbxch_connected(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Update – periodic housekeeping (call from main/super-loop)
  * --------------------------------------------------------------------------- */
-void fd_usbxch_update(fd_usbxch_handle_t *h)
+void fd_usbxch_update_impl(fd_usbxch_handle_t *h)
 {
     /* Start IN transfer for EP1 if data is pending */
     if (!(h->flags & USBXCH_FLAG_TX_BUSY) && fd_ring_size(&h->tx) > 0)
@@ -189,17 +191,17 @@ static void usbxch_start_tx(fd_usbxch_handle_t *h)
     tx       = &h->tx;
     busy_flag = USBXCH_FLAG_TX_BUSY;
 
-    void *r1, *r2;
+    void *w1, *w2;
     uint16_t c1, c2;
     if (h->flags & busy_flag) {
         return;
     }
 
-    if (!fd_ring_read_reserve(tx, &r1, &c1, &r2, &c2)) {
+    if (!fd_ring_read_reserve(tx, &w1, &c1, &w2, &c2)) {
         /* Nothing to send */
         return;
     }
-    USBD_XCH_Transmit(&hUsbDeviceFS, r1, c1);
+    USBD_XCH_Transmit(&hUsbDeviceFS, w1, c1);
     h->tx_to_release = c1;
     h->flags |= busy_flag;
 }
@@ -208,12 +210,12 @@ static void usbxch_start_tx(fd_usbxch_handle_t *h)
 void USBD_XCH_GetRxStorage(void *ctx, uint8_t **ptr, uint16_t *size)
 {
     fd_usbxch_handle_t *h = ctx;
-    void *r2;
-    uint16_t c2;
+    void *r1, *r2;
+    uint16_t c1, c2;
     uint16_t fs = fd_ring_free(&h->rx);
-    fd_ring_write_reserve(&h->rx, fs, &h->r1, &h->c1, &r2, &c2);
-    *ptr = h->r1;
-    *size = h->c1;
+    fd_ring_write_reserve(&h->rx, fs, &r1, &c1, &r2, &c2);
+    *ptr = r1;
+    *size = c1;
 }
 
 void USBD_XCH_RxComplete(void *ctx, uint8_t *rx_buf, uint16_t size)
@@ -237,5 +239,3 @@ void USBD_XCH_TxComplete(void *ctx)
     USBD_XCH_Transmit(&hUsbDeviceFS, r1, c1);
     h->tx_to_release = c1;
 }
-
-#endif /* FD_USBXCH_ENABLED */

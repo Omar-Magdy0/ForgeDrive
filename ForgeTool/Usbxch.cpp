@@ -304,7 +304,7 @@ bool Usbxch::connect(const std::string &serial_number, uint16_t vid, uint16_t pi
     arm_rx();
 
     event_running_.store(true, std::memory_order_release);
-    event_thread_ = std::thread(&Usbxch::event_loop, this);
+    event_thread_ = std::thread(USB1::event_loop, this);
     if(onConnect)onConnect(callback_ctx);
     return true;
 }
