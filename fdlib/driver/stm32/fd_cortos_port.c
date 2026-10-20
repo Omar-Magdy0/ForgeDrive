@@ -1,6 +1,12 @@
 #include "cortos.h"
-#include "stm32f1xx.h"
+#include "fd_drv.h"
 #include "cortos_conf.h"
+
+#if defined(FD_FAMILY_STM32F4)
+#include "stm32f4xx.h"
+#elif defined(FD_FAMILY_STM32F1)
+#include "stm32f1xx.h"
+#endif
 
 uint32_t CORTOS_PortProfTick_rate_hz(){return SystemCoreClock;} 
 void CORTOS_PortTickerInit(){SysTick_Config(SystemCoreClock / cortosTICK_RATE_HZ);}

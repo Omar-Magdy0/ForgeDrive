@@ -2,6 +2,9 @@
 import argparse
 import importlib
 import importlib.util
+import shutil
+import traceback
+import json
 import re
 import sys
 from pathlib import Path
@@ -9,169 +12,112 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 
 
+DRIVER_EXTENSIONS = (".c", ".h", ".cpp")
+DRIVER_CORE = ("drv", "adc")
+DRIVER_HOST_EXT = ("SILServer", "TCPClient")
+MANIFEST_NAME = ".fd_generated_files"
 GEN_DIR = Path(__file__).resolve().parent
 DRIVER_ROOT = GEN_DIR.parent
-SHARED_TEMPLATE_DIR = DRIVER_ROOT / "templates"
+SHARED_HEADER_DIR = DRIVER_ROOT
 
-# Configuration section -> output template names.
-
-def resolve_template_family(platform_name):
-    if platform_name.startswith("stm32f"):
-        return "stm32"
-
-    return platform_name
-
-def generate_drivers(config, output_dir, env):
-    generated = {}
-
-    # 1. Generate individual peripheral/component drivers
-    for driver_name, driver_config in config.items():
-        if driver_name == "platform":
-            continue
-
-        if not isinstance(driver_config, dict):
-            continue
-
-        if not driver_config.get("enabled", True):
-            continue
-
-        prefix = f"fd_{driver_name}"
-
-        for extension in (".c", ".h", ".c.j2", ".h.j2", ".cpp", ".hpp", ".cpp.j2", ".hpp.j2"):
-            filename = prefix + extension
-
-            try:
-                template = env.get_template(filename)
-            except TemplateNotFound:
-                continue
-
-            generated[filename] = template.render(**config)
-
-    # 2. Generate core/shared files (e.g., fd_drv.c and fd_drv.h)
-    core_files = ["fd_drv.c", "fd_drv.cpp", "fd_drv.h", "fd_adc.cpp", "fd_adc.h", "fd_drv.c.j2", "fd_drv.h.j2"]
-    # Optional
-    if "cortos_port" in config:
-        core_files.append("cortos_port.c")
-    for filename in core_files:
-        try:
-            template = env.get_template(filename)
-            # Strip the .j2 extension if present so the output file name is correct
-            out_filename = filename[:-3] if filename.endswith(".j2") else filename
-            generated[out_filename] = template.render(**config)
-        except TemplateNotFound:
-            continue
-
-    # Write all successfully rendered files.
-    for filename, rendered in generated.items():
-        output_path =  output_dir / filename
-        output_path.write_text(rendered, encoding="utf-8")
-        print(f"Generated: {filename}")
-
-    return set(generated)
+context = {}
 
 
-def remove_stale_files(active_files, output_dir):
-    previous_files = set()
-    manifest_path = output_dir/".fd_generated_files"
-    if manifest_path.is_file():
-        previous_files = {
-            line.strip()
-            for line in manifest_path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        }
+def resolve_drivers():
+    for name in context["config"]:
+        if name not in context["drivers"]:
+            context["drivers"].append(name)
 
-    # Delete only files previously recorded as generator-owned.
-    for filename in previous_files - active_files:
-        # Prevent paths in the manifest from escaping DRIVER_ROOT.
-        if Path(filename).name != filename:
-            raise ValueError(
-                f"Invalid filename in generated-file manifest: {filename}"
-            )
+def generate_drivers():
+    temp_dir= context["output_path"]/"temp"
+    context["generated"] = set()
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        for name in context["drivers"]:
+            for ext in DRIVER_EXTENSIONS:
+                filename = f"fd_{name}{ext}"
+                try:
+                    template = context["env"].get_template(filename)
+                except TemplateNotFound:
+                    continue
+                content = template.render(**context["config"], device=context["device"])
+                (temp_dir/ filename).write_text(content, encoding="utf-8")
+                context["generated"].add(filename)
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    # if we get here generation succeeded, we can clear anything in output path, and replace them with what is in temp
+    output_dir = context["output_path"]
+    for item in output_dir.iterdir():
+        if item != temp_dir:
+            if item.is_dir():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
 
-        output_path = DRIVER_ROOT / filename
-
-        if output_path.is_file():
-            output_path.unlink()
-            print(f"Removed stale generated file: {filename}")
-
-    manifest_path.write_text(
-        "".join(f"{filename}\n" for filename in sorted(active_files)),
+    for item in temp_dir.iterdir():
+        shutil.move(str(item), str(output_dir / item.name))
+    shutil.rmtree(temp_dir)
+        
+def generate_manifest():
+    manifest = {
+        "device": context["device"],
+        "generated_files": sorted(context["generated"]),
+    }
+    print(manifest)
+    path = context["output_path"] / MANIFEST_NAME
+    path.write_text(
+        json.dumps(manifest, indent=4) + "\n",
         encoding="utf-8",
     )
 
+def resolve_device():
+    device_lower = context["device"]["name"].lower().strip()
+    # Check if it's an STM32 device
+    context["drivers"] = []
+    context["drivers"].extend(DRIVER_CORE)
+    if device_lower.startswith("stm32"):
+        match = re.match(r"^stm32([a-z0-9]{2})", device_lower)
+        context["device"]["platform"] = f"stm32"
+        if match:
+            context["device"]["family"] = f"stm32{match.group(1)}"
+        else: raise Exception(f"device family not found")
 
-def load_config(config_path_str):
-    path = Path(config_path_str)
+    elif device_lower.startswith("host"):
+        # Fallback or generic handling for other microcontrollers/host, etc
+        context["device"]["platform"] = device_lower
+        context["device"]["family"] = device_lower
+        context["drivers"].extend(DRIVER_HOST_EXT)
+    else: raise Exception(f"Platform Not supported")
 
-    if not path.suffix and "/" not in config_path_str and "\\" not in config_path_str:
-        try:
-            mod = importlib.import_module(config_path_str)
-            return mod.config
-        except ModuleNotFoundError as exc:
-            if exc.name != config_path_str:
-                raise
-        except AttributeError as exc:
-            raise AttributeError(
-                f"Configuration module '{config_path_str}' "
-                "must define a 'config' dictionary."
-            ) from exc
+def load_config():
+    path = context["config_path"]
 
-    if not path.is_absolute():
-        path = (Path.cwd() / path).resolve()
+    if path.is_file():
+        spec = importlib.util.spec_from_file_location("fd_config", path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Cannot load config: {path}")
 
-    if not path.is_file():
-        raise FileNotFoundError(f"Configuration file not found: {path}")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    else:
+        mod = importlib.import_module(context["config_path"])
 
-    spec = importlib.util.spec_from_file_location(
-        "fd_custom_driver_config", path
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load configuration file: {path}")
+    config = getattr(mod, "config", None)
+    if not isinstance(config, dict):
+        raise TypeError("Configuration must define a 'config' dictionary.")
 
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-
-    if not hasattr(mod, "config"):
-        raise AttributeError(
-            f"Configuration file '{path.name}' must define a 'config' dictionary."
-        )
-
-    return mod.config
+    context["config"] = config
 
 
-def resolve_platform(platform):
-
-    platform_dir = DRIVER_ROOT / platform
-    if not platform_dir.is_dir():
-        raise FileNotFoundError(f"Platform directory not found: {platform_dir}")
-
-    return platform, platform_dir
-
-def make_environment(platform_name, platform_dir):
-    family_name = resolve_template_family(platform_name)
-
+def make_environment():
     search_dirs = [
-        platform_dir / "templates",          # Exact platform overrides
-        SHARED_TEMPLATE_DIR / platform_name, # Exact platform shared templates
-        SHARED_TEMPLATE_DIR / family_name,   # Family-shared templates
-        platform_dir,                        # Exact platform fallback
-        SHARED_TEMPLATE_DIR,                 # Global fallback
+        DRIVER_ROOT / context["device"]["platform"] / context["device"]["family"],
+        DRIVER_ROOT / context["device"]["platform"],
+        DRIVER_ROOT,
     ]
-
-    search_dirs = [
-        str(path) for path in search_dirs
-        if path.is_dir()
-    ]
-
-    if not search_dirs:
-        raise FileNotFoundError("No template directories found.")
-
-    print("Template search paths:")
-    for path in search_dirs:
-        print(f"  {path}")
-
-    return Environment(
-        loader=FileSystemLoader(search_dirs),
+    context["env"] = Environment(
+        loader=FileSystemLoader([str(p) for p in search_dirs]),
         undefined=StrictUndefined,
         keep_trailing_newline=True,
         trim_blocks=True,
@@ -179,13 +125,10 @@ def make_environment(platform_name, platform_dir):
     )
 
 
-def validate_config(config, platform_dir):
-    if not isinstance(config, dict):
-        raise ValueError("Configuration must be a dictionary.")
-
+def validate_config():
     # TODO: common schema validation and platform-specific validation.
     # Platform validator is expected at platform_dir / "gen" / "validate.py".
-
+    pass
 
 def main():
     parser = argparse.ArgumentParser(
@@ -212,19 +155,22 @@ def main():
     args = parser.parse_args()
 
     try:
-        config = load_config(args.config_file)
-        platform_name, platform_dir = resolve_platform(args.device)
-        validate_config(config, platform_dir)
+        context["config_path"] =  Path(args.config_file).resolve()
+        context["output_path"] = Path(args.output).resolve()
+        context["device"] = { "name": args.device }
+        resolve_device()
+        load_config()
+        resolve_drivers()
+        validate_config()
+        make_environment()
+        generate_drivers()
+        generate_manifest()
 
-        output_dir = args.output.resolve() # Converts to an absolute path cleanly
-        output_dir.mkdir(parents=True, exist_ok=True) # Ensures the folder exists
-        env = make_environment(platform_name, platform_dir)
-        active_files = generate_drivers(config, output_dir, env)
-        remove_stale_files(active_files, output_dir)
 
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+        traceback.print_exc()
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":

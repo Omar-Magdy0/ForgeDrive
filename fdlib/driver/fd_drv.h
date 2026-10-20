@@ -6,6 +6,11 @@
 extern "C"{
 #endif
 
+#define FD_DEVICE_{{device.name | upper}}
+#define FD_PLATFORM_{{device.platform | upper}}
+#define FD_FAMILY_{{device.family | upper}}
+
+
 typedef struct {
     int16_t adc_to_uV;
 } fd_drv_t;

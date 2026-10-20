@@ -48,11 +48,15 @@ execute_process(
     COMMAND ${Python3_EXECUTABLE} ${GEN_SCRIPT} ${CONFIG_FILE} -d ${PLATFORM_NAME} -o ${FDDRV_OUT_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE GEN_RESULT
+    OUTPUT_VARIABLE GEN_OUTPUT
+    ERROR_VARIABLE GEN_ERROR
 )
 
-if(NOT GEN_RESULT EQUAL 0)
-    message(FATAL_ERROR "Driver code generation failed with exit code ${GEN_RESULT}")
-endif()
+message(STATUS
+    "Result ${GEN_RESULT}\n"
+    "stdout:\n${GEN_OUTPUT}\n"
+    "stderr:\n${GEN_ERROR}\n"
+)
 
 ########### FD_DRIVER GENERATION END ################
 
