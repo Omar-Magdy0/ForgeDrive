@@ -35,6 +35,7 @@ extern "C"
 
 #include <stdbool.h>
 #include "fd_drv.h"
+#include <math.h>
 
     typedef enum
     {
@@ -97,13 +98,12 @@ extern "C"
     } mc3p_trap_sector_map_t;
     
     const mc3p_trap_sector_map_t trap_table[6] = {
-        [FD_MC3P_SECTOR_TRAP1 - 1] = { {FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_FLOAT}},
-        [FD_MC3P_SECTOR_TRAP2 - 1] = { {FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_L_ON}},
-        [FD_MC3P_SECTOR_TRAP3 - 1] = { {FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_L_ON}},
-        [FD_MC3P_SECTOR_TRAP4 - 1] = { {FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_FLOAT}},
-        [FD_MC3P_SECTOR_TRAP5 - 1] = { {FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_COMP}},
-        [FD_MC3P_SECTOR_TRAP6 - 1] = { {FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_L_ON, FD_MC3P_PHASE_COMP}},
+    {{ mc3p.trap_table }}
     };
+
+    {% if mc3p.dtc is defined %}
+    #define FD_MC3P_DTC_ACTIVE
+    {% endif %}
     /**
      * @brief Mapping for synchronized ADC measurements.
      */
@@ -144,13 +144,11 @@ extern "C"
         int16_t dutyu_q15;
         int16_t dutyv_q15;
         int16_t dutyw_q15;
-        int32_t sync_scale_q31[MC3P_SYNC_CHANNELS_MAX][2];
+        int32_t sync_scale[MC3P_SYNC_CHANNELS_MAX][2];
         uint16_t bg_data[MC3P_BG_CHANNELS_MAX];
         uint8_t bg_channels;
-        uint8_t sync_rank_scale[4];
+        int32_t rank_scale[4][2];
         bool offset_calibration;
-        volatile uint8_t offset_calibration_remaining_samples;
-        volatile uint16_t offset_calibration_sum[4];
         uint16_t dtc_comp_q15;
         uint8_t dtc_state;
     } fd_mc3p_handle_t;
@@ -177,13 +175,13 @@ extern "C"
 #define FD_MC3P_CS_TO_FLOAT(cs) ((float)(((int64_t)(cs) * FD_MC3P_CS_SCALE) >> 31))
 #define FD_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / FD_MC3P_VS_SCALE) * INT32_MAX))
 #define FD_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / FD_MC3P_CS_SCALE) * INT32_MAX))
-#define FD_MC3P_TICKFREQ {{mc3p.tick.freq}}
-#define FD_MC3P_TICKPERIOD_US 1/FD_MC3P_TICKFREQ
 #define FD_MC3P_VS_SCALE {{mc3p.vs_scale}}
 #define FD_MC3P_CS_SCALE {{mc3p.cs_scale}}
 
 {% for inst in mc3p.instances %}
 void pv_mc3p_{{inst.name}}_sector_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
+void pv_mc3p_{{inst.name}}_hw_init(fd_mc3p_handle_t *h);
+void pv_mc3p_{{inst.name}}_offset_calibration(fd_mc3p_handle_t *h);
 static inline fd_mc3p_mode_t fd_mc3p_sector_to_mode(fd_mc3p_sector_t sector)
 {
     if (sector >= FD_MC3P_SECTOR_TRAP1 &&
@@ -196,7 +194,20 @@ static inline fd_mc3p_mode_t fd_mc3p_sector_to_mode(fd_mc3p_sector_t sector)
 
     return FD_MC3P_MODE_NONE;
 }
-void fd_mc3p_{{inst.name}}_init(fd_mc3p_handle_t *h);
+static inline void fd_mc3p_{{inst.name}}_init(fd_mc3p_handle_t *h)
+{
+    h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
+    h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
+    //compute deadtme compensation
+    #ifdef FD_MC3P_DTC_ACTIVE
+    h->dtc_comp_q15 = (uint16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
+    #endif
+    
+    h->sector_last = FD_MC3P_SECTOR_FLOAT;
+    h->mode        = FD_MC3P_MODE_NONE;
+    pv_mc3p_{{inst.name}}_hw_init(h);
+    if(h->offset_calibration)pv_mc3p_{{inst.name}}_offset_calibration(h);
+}
 void fd_mc3p_{{inst.name}}_reconfigure_pwm(fd_mc3p_handle_t *h);
 void fd_mc3p_{{inst.name}}_bg_startConv(fd_mc3p_handle_t *h);
 void fd_mc3p_{{inst.name}}_read_sync(fd_mc3p_handle_t *h, void *scanData);
@@ -220,13 +231,12 @@ static inline void fd_mc3p_{{inst.name}}_write_trap(fd_mc3p_handle_t *h, fd_mc3p
     }
     #ifdef FD_MC3P_DTC_ACTIVE
     h->dutyu_q15 = __SSAT((int32_t)duty_q15 + ((h->dtc_state & (1<<3))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    h->dutyv_q15 = h->dutyu_q15;
-    h->dutyw_q15 = h->dutyu_q15;
     #else
     h->dutyu_q15 = duty_q15;
+    #endif
+
     h->dutyv_q15 = h->dutyu_q15;
     h->dutyw_q15 = h->dutyu_q15;
-    #endif
     fd_mc3p_{{inst.name}}_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
 }
 static inline void fd_mc3p_{{inst.name}}_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15) 
@@ -295,28 +305,13 @@ __attribute__((weak)) void fd_mc3p_{{inst.name}}_bg_postScanCallback(void);
 extern fd_mc3p_handle_t {{inst.name}};
 {% endfor %}
 
-/** @brief Weak callback for system ticker. */
-__attribute__((weak)) void fd_mc3p_tickerCallback(void);
 inline void fd_mc3p_set_sync_scale_impl(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS_MAX][2])
 {
     for (uint8_t i = 0; i < MC3P_SYNC_CHANNELS_MAX; i++)
     {
-        float scale = (i >= FD_MC3P_CSU && i <= FD_MC3P_CSW)
-                    ? FD_MC3P_CS_SCALE
-                    : FD_MC3P_VS_SCALE;
-
-        h->sync_scale_q31[i][0] =
-            (scales[i][0] * fd_drv.adc_to_uV * INT32_MAX + 0.5f)
-            / (1000000.0f * scale);
-
-        if (i >= FD_MC3P_VSBUS && i <= FD_MC3P_VSW)
-        {
-            h->sync_scale_q31[i][1] = FD_MC3P_FLOAT_TO_VS(scales[i][1]);
-        }
-        else if (i >= FD_MC3P_CSV && i <= FD_MC3P_CSW)
-        {
-            h->sync_scale_q31[i][1] = FD_MC3P_FLOAT_TO_CS(scales[i][1]);
-        }
+        float scale = (i >= FD_MC3P_CSU && i <= FD_MC3P_CSW)? FD_MC3P_CS_SCALE : FD_MC3P_VS_SCALE;
+        h->sync_scale[i][0] = roundf((DRV.adc_to_V * INT32_MAX)/(scales[i][0] * scale));
+        h->sync_scale[i][1] = roundf((scales[i][1])/DRV.adc_to_V);
     }
 }
 // ==========================================

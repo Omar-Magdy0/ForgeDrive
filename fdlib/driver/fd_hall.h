@@ -9,7 +9,6 @@
 #ifndef TIM2_UTIL_H
 #define TIM2_UTIL_H
 #include <stdint.h>
-#include "fd_driver_conf.h"
 #include <math.h>
 
 /** @brief Initializes the Hall sensor interface. */

@@ -1,5 +1,4 @@
 #pragma once
-#include "fd_driver_conf.h"
 #include "fd_hall.h"
 #include "PmsmControlTypes.h"
 #include "math/math.h"

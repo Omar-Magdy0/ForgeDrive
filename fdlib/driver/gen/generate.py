@@ -8,7 +8,8 @@ import json
 import re
 import sys
 from pathlib import Path
-
+from drv import drv
+from pprint import pprint
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 
 
@@ -21,28 +22,65 @@ DRIVER_ROOT = GEN_DIR.parent
 SHARED_HEADER_DIR = DRIVER_ROOT
 
 context = {}
-
+context["gen"] = {}
+context["gen_sDir"] = []
+context["error"] = []
+context["warning"] = []
+context["generated"] = []
 
 def resolve_drivers():
     for name in context["config"]:
         if name not in context["drivers"]:
             context["drivers"].append(name)
+    for driver in context["drivers"]:
+        for ext in DRIVER_EXTENSIONS:
+            filename = f"fd_{driver}{ext}"
+            context["gen"][filename]=None
 
 def generate_drivers():
+    ## ERRORS AND WARNINGS
+    for warning in context.get("warning", []):
+        print(f"WARNING: {warning}")
+    if context.get("error"):
+        print("\nDriver generation failed:")
+        for error in context["error"]:
+            print(f"ERROR: {error}")
+        return
     temp_dir= context["output_path"]/"temp"
     context["generated"] = set()
     temp_dir.mkdir(parents=True, exist_ok=True)
     try:
-        for name in context["drivers"]:
-            for ext in DRIVER_EXTENSIONS:
-                filename = f"fd_{name}{ext}"
-                try:
-                    template = context["env"].get_template(filename)
-                except TemplateNotFound:
-                    continue
-                content = template.render(**context["config"], device=context["device"])
-                (temp_dir/ filename).write_text(content, encoding="utf-8")
-                context["generated"].add(filename)
+        drv(context)
+        context["gen_sDir"].extend([
+            DRIVER_ROOT / context["device"]["platform"] / context["device"]["family"],
+            DRIVER_ROOT / context["device"]["platform"],
+            DRIVER_ROOT,
+        ])
+        gen_file = DRIVER_ROOT / context["device"]["platform"] / "gen" / "gen.py"
+        spec = importlib.util.spec_from_file_location(f"{context["device"]["platform"]}_gen", gen_file, )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Cannot load platform generator: {gen_file}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.setup(context)
+        context["env"] = Environment(
+            loader=FileSystemLoader([str(p) for p in context["gen_sDir"]]),
+            undefined=StrictUndefined,
+            keep_trailing_newline=True,
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        print(context["gen"])
+        for filename, output_name in context["gen"].items():
+            output_path = temp_dir / (output_name or filename)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                template = context["env"].get_template(filename)
+            except TemplateNotFound:
+                continue
+            content = template.render(**context["config"], device=context["device"])
+            output_path.write_text(content, encoding="utf-8")
+            context["generated"].add(str(output_path))
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
@@ -63,8 +101,11 @@ def generate_manifest():
     manifest = {
         "device": context["device"],
         "generated_files": sorted(context["generated"]),
+        "error": context["error"],
+        "warning": context["warning"]
     }
-    print(manifest)
+    for i, err in enumerate(context["error"]):
+        print(f"ERROR_{i} : {err}\n")
     path = context["output_path"] / MANIFEST_NAME
     path.write_text(
         json.dumps(manifest, indent=4) + "\n",
@@ -110,20 +151,6 @@ def load_config():
     context["config"] = config
 
 
-def make_environment():
-    search_dirs = [
-        DRIVER_ROOT / context["device"]["platform"] / context["device"]["family"],
-        DRIVER_ROOT / context["device"]["platform"],
-        DRIVER_ROOT,
-    ]
-    context["env"] = Environment(
-        loader=FileSystemLoader([str(p) for p in search_dirs]),
-        undefined=StrictUndefined,
-        keep_trailing_newline=True,
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-
 
 def validate_config():
     # TODO: common schema validation and platform-specific validation.
@@ -161,8 +188,6 @@ def main():
         resolve_device()
         load_config()
         resolve_drivers()
-        validate_config()
-        make_environment()
         generate_drivers()
         generate_manifest()
 

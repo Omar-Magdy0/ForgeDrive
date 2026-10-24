@@ -76,7 +76,7 @@ void PmsmControlCore::pwmLoop()
 {
     if (control.mc_mode == MCMode::None)
         return;
-    uint32_t start = fd_prof_tick();
+    uint32_t start = fd_drv_tick();
     fd_mc3p_read_sync(MC3P1, &mc3p_sync_meas);
     switch (control.mc_mode)
     {
@@ -90,7 +90,7 @@ void PmsmControlCore::pwmLoop()
         break;
     }
     pTicks = pTicks + 1;
-    volatile uint32_t elapsed = fd_prof_tock(start);
+    volatile uint32_t elapsed = fd_drv_tock(start);
 }
 
 void PmsmControlCore::setControlMode(MCMode mc_mode)

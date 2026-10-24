@@ -1,7 +1,6 @@
 
 #include "arm_math.h"
 #include "fd_mc3p.h"
-#include "fd_driver_conf.h"
 #include "fd_hall.h"
 #include "fd_drv.h"
 #include "PosDriver.h"
@@ -13,7 +12,7 @@
 #include "PmsmControlConf.h"
 
 #define READ_VOLATILE(x) (*(volatile typeof(x) *)&(x))
-
+#define FD_MC3P_TICKPERIOD_US 1000
 #ifdef FD_HALL1_ENABLED
 #define HALL_ENABLED
 #endif

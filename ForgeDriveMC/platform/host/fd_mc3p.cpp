@@ -1,27 +1,22 @@
 #include "fd_mc3p.h"
 #include "platform.h"
-#include "fd_driver_conf.h"
 #include "sil.h"
 #include "silgui.h"
 #include "fd_hall.h"
 
-#define SATURATE(v , min , max)(( v > max)?max: ((v < min)?0:v))
-#define Q15_HALF        16384   // 0.5 × 32768
-#define Q15_SQRT3_BY_2  28378   // 0.8660254 × 32768
 
 extern float vtime;
 unsigned int sil_pwm_timer;
 unsigned int sil_to_pwm_freq = 1;
 
-#define SSAT(val, bits) \
-    ({ \
-        int32_t _v = (int32_t)(val); \
-        int32_t _max = (1 << ((bits) - 1)) - 1; \
-        int32_t _min = -(1 << ((bits) - 1)); \
-        if (_v > _max) _v = _max; \
-        if (_v < _min) _v = _min; \
-        (int32_t)_v; \
-    })
+
+#define FD_MC3P_TICKFREQ 1000
+#define SIL_DEFAULT_VCC 36.0f
+#define SIL_MAX_TIMESTEP (1.0/20000.0)
+// Number of SIL steps to run for each PWM update 
+//(for better resolution in the scope plots, better simulation quality and for marginally low time constants)
+
+
 fd_mc3p_phase_state_t MC3P1_phase_state[3];
 fd_mc3p_handle_t MC3P1;
 
@@ -53,7 +48,7 @@ static void dPsim_dTheta_Trapezoidal(double theta_e, double dPsi_dTheta[3])
     dPsi_dTheta[2] = - amplitude * Sil::trapezoidal_wave(theta_e + 2*M_PI/3);
 }
 
-void fd_mc3p_MC3P1_init(fd_mc3p_handle_t *h)
+void pv_mc3p_MC3P1_hw_init(fd_mc3p_handle_t *h)
 {
     sil_input.dt = 1.0f / h->config.pwm_Hz / sil_to_pwm_freq;
     sil_input.load_torque = 0.00;
@@ -84,13 +79,18 @@ void fd_mc3p_MC3P1_init(fd_mc3p_handle_t *h)
     h->dtc_comp_q15 = (int16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
     #endif
     sil_pwm_timer = register_timer(&timer_manager, postScanMethod, (uint64_t)(1e9/h->config.pwm_Hz));
-    register_timer(&timer_manager, fd_mc3p_tickerCallback, (uint64_t)(1e9/FD_MC3P_TICKFREQ));
 }
 
 void pv_mc3p_MC3P1_sector_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
     
 }
+
+void pv_mc3p_MC3P1_offset_calibration(fd_mc3p_handle_t *h)
+{
+
+}
+
 
 void fd_mc3p_MC3P1_reconfigure_pwm(fd_mc3p_handle_t *h)
 {

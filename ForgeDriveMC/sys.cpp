@@ -4,7 +4,7 @@ void Sys::init()
 {
     platform_init();
     fd_usbxch_init(USB1);
-    fd_core_init(&core);
+    fd_drv_init(&core);
     // enable motor control function
 
     // Control modes configuration

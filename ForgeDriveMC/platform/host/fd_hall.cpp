@@ -1,10 +1,18 @@
 #include "fd_hall.h"
-#include "fd_driver_conf.h"
-
 
 #define CLK_FREQ 1000000  // 1 MHz = 1us resolution
 #define CLK_TO_US(clk) ((clk) * 1000000ULL / CLK_FREQ)
 #define US_TO_CLK(us)(us * (CLK_FREQ / 1000000))
+
+#define SIL_HALL_OFFSET 0
+static const uint8_t SIL_HALL_TABLE_PI_3[6] = {
+    ((1 << 2) | (1 << 1) | (0 << 0)), // 110
+    ((0 << 2) | (1 << 1) | (0 << 0)), // 010
+    ((0 << 2) | (1 << 1) | (1 << 0)), // 011
+    ((0 << 2) | (0 << 1) | (1 << 0)), // 001
+    ((1 << 2) | (0 << 1) | (1 << 0)), // 101
+    ((1 << 2) | (0 << 1) | (0 << 0))  // 100
+};
 
 // shared between hall1 and comdelay modules
 void(*commutation_callback)();

@@ -1,16 +1,27 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 
 # Select target platform
-set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
-set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
-set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
+set(DEVICE "STM32F401xC" CACHE STRING "Target MCU or platform")
+string(TOLOWER "${DEVICE}" DEVICE_NAME_LOWER)
+if(DEVICE_NAME_LOWER MATCHES "^host")
+    set(PLATFORM_NAME "host")
+elseif(DEVICE_NAME_LOWER MATCHES "^stm32")
+    set(PLATFORM_NAME "stm32")
+elseif(DEVICE_NAME_LOWER MATCHES "^c2000")
+    set(PLATFORM_NAME "c2000")
+else()
+    message(FATAL_ERROR "Unknown device: ${DEVICE}")
+endif()
 
-####platform specific settings
-# SET TOOLCHAIN BEFORE PROJECT
-include(platform/${PLATFORM_NAME}/platform.cmake)
-project(ForgeDriveMC LANGUAGES C CXX ASM)
+message(STATUS "Target device: ${DEVICE}")
+message(STATUS "Target platform: ${PLATFORM_NAME}")
+
+set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
+set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
+set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
+set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
 
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
@@ -26,7 +37,7 @@ endif()
 set(Python3_EXECUTABLE "${CMAKE_SOURCE_DIR}/../venv/bin/python3")
 set(GEN_SCRIPT "${FDLIB_DIR}/driver/gen/generate.py")
 set(CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_conf.py")
-set(FDDRV_OUT_DIR "${CMAKE_BINARY_DIR}/generated")
+set(FDDRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_gen")
 
 # Optional: Glob templates or dependencies inside fdlib or local directory for auto-reconfiguration
 file(GLOB_RECURSE TEMPLATE_FILES 
@@ -43,9 +54,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 )
 
 # Run your exact generator command at configure time
-message(STATUS "Running driver generator for platform: ${PLATFORM_NAME}...")
 execute_process(
-    COMMAND ${Python3_EXECUTABLE} ${GEN_SCRIPT} ${CONFIG_FILE} -d ${PLATFORM_NAME} -o ${FDDRV_OUT_DIR}
+    COMMAND ${Python3_EXECUTABLE} ${GEN_SCRIPT} ${CONFIG_FILE} -d ${DEVICE} -o ${FDDRV_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE GEN_RESULT
     OUTPUT_VARIABLE GEN_OUTPUT
@@ -60,12 +70,24 @@ message(STATUS
 
 ########### FD_DRIVER GENERATION END ################
 
+
+####platform specific settings
+# SET TOOLCHAIN BEFORE PROJECT
+if(PLATFORM_NAME STREQUAL "host")
+    set(CMAKE_C_COMPILER gcc)
+    set(CMAKE_CXX_COMPILER g++)
+    set(CMAKE_ASM_COMPILER gcc)
+else()
+    set(CMAKE_TOOLCHAIN_FILE "${FDDRV_DIR}/toolchain.cmake")
+endif()
+
+project(ForgeDriveMC LANGUAGES C CXX ASM)
+
+add_subdirectory("${FDDRV_DIR}")
+add_subdirectory("platform/${PLATFORM_NAME}")
 # Setup cmake module path and compiler settings
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 message("Build type: " ${CMAKE_BUILD_TYPE})
-
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
 
 # Set C++ standard
 set(CMAKE_C_STANDARD 11)
@@ -85,29 +107,18 @@ include_directories(
     ${CMAKE_SOURCE_DIR}
     ${FDLIB_DIR}
     ${FDLIB_DIR}/middleware
-    ${FDLIB_DIR}/middleware/cortos
-    ${FDDRV_OUT_DIR}
+    ${FDDRV_DIR}
     ${PMSMCONTROL_DIR}
+    ${CMSIS_DSP_DIR}/Include
+    ${CMSIS_CORE_DIR}/Include
 )
-
-
 # Link with platform EARLY to get include paths
-add_subdirectory(platform/${PLATFORM_NAME})
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
-
-message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
-
-# Add platform includes to global include path
-include_directories(${PLATFORM_INCLUDES})
+add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp)
 
 file(GLOB_RECURSE MIDDLEWARE_SRC    
     ${FDLIB_DIR}/middleware/*.cpp
     ${FDLIB_DIR}/middleware/*.c
-)
-
-file(GLOB_RECURSE FDDRV_SRC    
-    ${FDDRV_OUT_DIR}/*.cpp
-    ${FDDRV_OUT_DIR}/*.c
 )
 
 set(APPLICATION_SRC
@@ -128,15 +139,12 @@ file(GLOB_RECURSE CORE_SRC
 
 
 # Create executable
-add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC} ${FDDRV_SRC})
-
-# Add eld sources directly to the executable to ensure strong IRQ handlers
-# override weak startup symbols (avoids linker archive symbol resolution issues)
-target_sources(${PROJECT_NAME} PRIVATE ${PLATFORM_SOURCE})
+add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${PLATFORM_INTERFACE}
-    ${PLATFORM_LIB}
+    fd_drv
+    CMSISDSP
+    PLATFORM
     ${TOOLCHAIN_LINK_LIBRARIES}
     etl::etl
 )

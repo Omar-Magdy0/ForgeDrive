@@ -2,8 +2,7 @@
 #define USBXCH
 #include <stdint.h>
 #include <stdbool.h>
-#include "fd/fd_ring.h"
-#include "fd_driver_conf.h"
+#include "fd_ring.h"
 
 
 #ifdef __cplusplus
