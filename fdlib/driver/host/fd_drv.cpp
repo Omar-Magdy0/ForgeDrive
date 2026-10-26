@@ -5,13 +5,10 @@
 pthread_mutex_t fd_atomic_mutex;
 fd_drv_t DRV;
 
-void fd_drv_init(fd_drv_t *h)
-{
+void fd_drv_init(fd_drv_t *h){}
 
-}
-
-__attribute__((weak)) uint32_t fd_drv_tick(void){};
-__attribute__((weak)) uint32_t fd_drv_tock(uint32_t start){};
+__attribute__((weak)) void fd_dwt_init(){};
+__attribute__((weak)) uint32_t fd_dwt_tick(void){};
 /* Static Inline Implementation */
 
 /**

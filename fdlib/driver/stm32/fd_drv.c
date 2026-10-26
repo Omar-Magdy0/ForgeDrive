@@ -7,7 +7,6 @@
 #include "stm32{{device.family}}xx_ll_rcc.h"
 #include "System.h"
 
-// TODO: Add IRQ binding system to the DRV, rather in source IRQ definition and conflict, code gen resolves IRQ bind
 #if defined(DWT) && defined(DWT_CTRL_CYCCNTENA_Msk) && \
     defined(CoreDebug_DEMCR_TRCENA_Msk)
 #define FD_DWT_CYCCNT_SUPPORTED 1
@@ -15,7 +14,9 @@
 #define FD_DWT_CYCCNT_SUPPORTED 0 
 #endif
 
-static inline void dwt_init(void)
+fd_drv_t DRV;
+
+void fd_dwt_init(void)
 {
     #if FD_DWT_CYCCNT_SUPPORTED
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -24,19 +25,12 @@ static inline void dwt_init(void)
     #endif
 }
 
-fd_drv_t DRV;
-
-#if FD_DWT_CYCCNT_SUPPORTED
-uint32_t fd_drv_tick(void)
+uint32_t fd_dwt_tick(void)
 {
+    #if FD_DWT_CYCCNT_SUPPORTED
     return DWT->CYCCNT;
+    #endif
 }
-
-uint32_t fd_drv_tock(uint32_t start)
-{
-    return (DWT->CYCCNT - start);
-}
-#endif
 
 uint32_t fd_atomic_start(void)
 {
@@ -61,7 +55,8 @@ void fd_drv_init(fd_drv_t *h)
     __HAL_RCC_SYSCFG_CLK_ENABLE();
     __HAL_RCC_PWR_CLK_ENABLE();
     NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-    dwt_init();
+    SystemPeriphClock_Init();
+    SystemNVIC_Init();
     if (h != NULL)
     {
         h->adc_to_V = (3.3/4095.0);

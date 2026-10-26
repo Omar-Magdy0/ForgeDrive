@@ -12,13 +12,12 @@ from drv import drv
 from pprint import pprint
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 
-
+FDGEN_RE = re.compile(r"^[ \t]*__FDGEN__(\w+)\s*\(([^()\n]*)\)[ \t]*;?[ \t]*(?:\r?\n|$)", re.MULTILINE)
 DRIVER_EXTENSIONS = (".c", ".h", ".cpp")
-DRIVER_CORE = ("drv", "adc")
-DRIVER_HOST_EXT = ("SILServer", "TCPClient")
-MANIFEST_NAME = ".fd_generated_files"
+MANIFEST_NAME = ".fd_manifest"
 GEN_DIR = Path(__file__).resolve().parent
 DRIVER_ROOT = GEN_DIR.parent
+CMSIS_DIR = DRIVER_ROOT.parent.parent/"thirdparty/CMSIS"
 SHARED_HEADER_DIR = DRIVER_ROOT
 
 context = {}
@@ -27,6 +26,7 @@ context["gen_sDir"] = []
 context["error"] = []
 context["warning"] = []
 context["generated"] = []
+context["cmsis_dir"] = CMSIS_DIR
 
 def resolve_drivers():
     for name in context["config"]:
@@ -70,7 +70,6 @@ def generate_drivers():
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        print(context["gen"])
         for filename, output_name in context["gen"].items():
             output_path = temp_dir / (output_name or filename)
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -81,6 +80,7 @@ def generate_drivers():
             content = template.render(**context["config"], device=context["device"])
             output_path.write_text(content, encoding="utf-8")
             context["generated"].add(str(output_path))
+        module.fdgen(context)
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
@@ -115,8 +115,7 @@ def generate_manifest():
 def resolve_device():
     device_lower = context["device"]["name"].lower().strip()
     # Check if it's an STM32 device
-    context["drivers"] = []
-    context["drivers"].extend(DRIVER_CORE)
+    context["drivers"] = ["drv"]
     if device_lower.startswith("stm32"):
         match = re.match(r"^stm32([a-z0-9]{2})", device_lower)
         context["device"]["platform"] = f"stm32"
@@ -128,7 +127,6 @@ def resolve_device():
         # Fallback or generic handling for other microcontrollers/host, etc
         context["device"]["platform"] = device_lower
         context["device"]["family"] = device_lower
-        context["drivers"].extend(DRIVER_HOST_EXT)
     else: raise Exception(f"Platform Not supported")
 
 def load_config():

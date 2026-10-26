@@ -1,14 +1,14 @@
-#pragma once
+#include "System.h"
+#include "stm32{{device.family}}xx_ll_rcc.h"
+#include "stm32{{device.family}}xx_ll_system.h"
+#include "stm32{{device.family}}xx_ll_pwr.h"
+#include "stm32{{device.family}}xx_ll_utils.h"
 
 
-#include "stm32f4xx_ll_rcc.h"
-#include "stm32f4xx_ll_system.h"
-#include "stm32f4xx_ll_pwr.h"
-#include "stm32f4xx_ll_utils.h"
 
-__attribute__((weak)) void Error_Handler(void);
 
-static inline void SystemClock_Config()
+__attribute__((weak)) void Error_Handler(void){while(1);}
+__attribute__((weak)) void SystemClock_Config()
 {
     LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
     while (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)

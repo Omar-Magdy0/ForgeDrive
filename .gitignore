@@ -42,7 +42,7 @@ CMakeCache.txt
 Makefile
 fd_driver_gen/
 *.csv
-
+__pycache__/
 # Python venv
 venv/
 tools/env

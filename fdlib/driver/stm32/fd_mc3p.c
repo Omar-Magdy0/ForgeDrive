@@ -3,15 +3,13 @@
 #include "fd_adc.h"
 #include <string.h>
 #include "fd_drv.h"
-#include "stm32f4xx_ll_adc.h"
-#include "stm32f4xx_ll_tim.h"
-#include "stm32f4xx_ll_rcc.h"
-#include "stm32f4xx_hal_rcc.h"
-#include "stm32f4xx_ll_tim.h"
-#include "stm32f4xx_ll_bus.h"
-#include "stm32f4xx_ll_gpio.h"
-#include "stm32f4xx_ll_dma.h"
-#include "stm32f4xx.h"
+#include "System.h"
+#include "stm32{{device.family}}xx_ll_adc.h"
+#include "stm32{{device.family}}xx_ll_tim.h"
+#include "stm32{{device.family}}xx_ll_bus.h"
+#include "stm32{{device.family}}xx_ll_gpio.h"
+#include "stm32{{device.family}}xx_ll_dma.h"
+#include "stm32{{device.family}}xx.h"
 
 //============================================================
 //TODO:Single Shunt current sensing implementation
@@ -90,23 +88,24 @@ void {{inst.name}}_gpio_init()
     //Initialize all MC3P instance Gpio here
     {% for pwmSignal in ["uh","vh","wh","ul","vl","wl"] %}
     PWM_GpioInit( GPIO{{inst.tim[pwmSignal].port}}, LL_GPIO_PIN_{{inst.tim[pwmSignal].pin}}, {{inst.tim[pwmSignal].active}});
+    __FDGEN__CLK_EN(GPIO{{inst.tim[pwmSignal].port}})
     {% endfor %}
     //Initialize adc pins (inj channels)
     {% for name, ch in inst.adc.inj.items() %}
     {% if ch.port is defined and ch.pin is defined %}
     ADC_GpioInit( GPIO{{ch.port}}, LL_GPIO_PIN_{{ch.pin}});
+    __FDGEN__CLK_EN(GPIO{{ch.port}})
     {% endif %}
     {% endfor %}
     {% for name, ch in inst.adc.bg.items() %}
     {% if ch.port is defined and ch.pin is defined %}
-    ADC_GpioInit( GPIO{{ch.port}}, LL_GPIO_PIN_{{ch.pin}});
+    __FDGEN__CLK_EN(GPIO{{ch.port}})
     {% endif %}
     {% endfor %}
 }
 static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
     //ENABLE Peripheral CLOCK
     TIM_TypeDef * const tim = TIM{{inst.tim.num}};
-    __HAL_RCC_TIM{{inst.tim.num}}_CLK_ENABLE();
     //===================================================== 
     // BASIC TIMER CONFIGURATION
     //=====================================================
@@ -114,7 +113,7 @@ static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
     {
         .Prescaler = 0,
         .CounterMode = LL_TIM_COUNTERMODE_CENTER_UP,
-        .Autoreload = __LL_TIM_CALC_ARR(HAL_RCC_GetPCLK2Freq(), 1, h->config.pwm_Hz),
+        .Autoreload = __LL_TIM_CALC_ARR(get_periph_bus_clk(tim), 1, h->config.pwm_Hz),
         .ClockDivision = LL_TIM_CLOCKDIVISION_DIV1,
         .RepetitionCounter = 0
     };
@@ -128,7 +127,7 @@ static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
         .OSSRState = LL_TIM_OSSR_ENABLE,
         .OSSIState = LL_TIM_OSSI_DISABLE,
         .LockLevel = LL_TIM_LOCKLEVEL_OFF,
-        .DeadTime = (uint8_t)(__LL_TIM_CALC_DEADTIME(HAL_RCC_GetPCLK2Freq(), LL_TIM_GetClockDivision(tim), h->config.deadtime_nS)),
+        .DeadTime = (uint8_t)(__LL_TIM_CALC_DEADTIME(get_periph_bus_clk(tim), LL_TIM_GetClockDivision(tim), h->config.deadtime_nS)),
         .BreakState = LL_TIM_BREAK_DISABLE,
         .BreakPolarity = LL_TIM_BREAK_POLARITY_HIGH,
         .AutomaticOutput = LL_TIM_AUTOMATICOUTPUT_DISABLE
@@ -179,13 +178,10 @@ static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
 void {{inst.name}}_dma_int_init(fd_mc3p_handle_t *h)
 {
     // Enable DMA clock
-    __HAL_RCC_DMA{{inst.dma["bg"].num}}_CLK_ENABLE();
     DMA_TypeDef *bg_dma = DMA{{inst.dma["bg"].num}};
-    uint32_t bg_dma_irq = DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}_IRQn;
-    uint32_t adc_irq = ADC_IRQn;
     uint32_t bg_stream = LL_DMA_STREAM_{{inst.dma["bg"].stream}};
-    uint32_t bg_prio = LL_DMA_PRIORITY_{{inst.dma["bg"].prio | upper}};
     uint32_t bg_channel = LL_DMA_CHANNEL_{{inst.dma["bg"].channel}};
+     uint32_t bg_prio = LL_DMA_PRIORITY_{{inst.dma["bg"].prio | upper}};
     // =================================================================
     // DMA for Regular Scan (Slow Monitoring Channels)
     // =================================================================
@@ -194,7 +190,7 @@ void {{inst.name}}_dma_int_init(fd_mc3p_handle_t *h)
     
     // Configure DMA parameters for ADC regular conversions
     LL_DMA_SetDataTransferDirection(bg_dma, bg_stream, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-    LL_DMA_SetStreamPriorityLevel(bg_dma, bg_stream, LL_DMA_PRIORITY_MEDIUM);
+    LL_DMA_SetStreamPriorityLevel(bg_dma, bg_stream, bg_prio);
     LL_DMA_SetMode(bg_dma, bg_stream, LL_DMA_MODE_CIRCULAR);
     LL_DMA_SetPeriphIncMode(bg_dma, bg_stream, LL_DMA_PERIPH_NOINCREMENT);
     LL_DMA_SetMemoryIncMode(bg_dma, bg_stream, LL_DMA_MEMORY_INCREMENT);
@@ -216,25 +212,13 @@ void {{inst.name}}_dma_int_init(fd_mc3p_handle_t *h)
     
     // Enable DMA stream
     LL_DMA_EnableStream(bg_dma, bg_stream);
-
-
-    // Regular scan DMA interrupt - use LL macros for portability
-    NVIC_SetPriority(bg_dma_irq, bg_prio);  // Medium priority for slow monitoring
-    NVIC_EnableIRQ(bg_dma_irq);
-
-    // ADC Injected End of Conversion (JEOC) interrupt - Higher priority for time-critical measurements
-    NVIC_SetPriority(adc_irq, 0);           // Higher priority than DMA for PWM-synchronized measurements
-    NVIC_EnableIRQ(adc_irq);
     
     // Enable JEOS (Injected End Of Sequence) interrupt in ADC
     LL_ADC_EnableIT_JEOS(ADC{{inst.adc.num}});
 }
 void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
 {
-    __HAL_RCC_ADC{{inst.adc.num}}_CLK_ENABLE();
-    
     ADC_TypeDef *adc = ADC{{ inst.adc.num }};
-    TIM_TypeDef *tim = TIM{{ inst.tim.num }};
     if (!adc_common_initialized)
     {
         LL_ADC_CommonInitTypeDef adcCommonInitStruct = {
@@ -358,6 +342,7 @@ void {{inst.name}}_trap_sector(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 }
 void {{inst.name}}_svm_sector(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
+    TIM_TypeDef * const tim = TIM{{inst.tim.num}};
     ADC_TypeDef *adc = ADC{{ inst.adc.num }};
     {% if mc3p.current_sensing.topology == "three_shunt" %}
     {% elif mc3p.current_sensing.topology == "two_shunt" %}
@@ -450,8 +435,8 @@ void pv_mc3p_{{inst.name}}_offset_calibration(fd_mc3p_handle_t *h)
 void fd_mc3p_{{inst.name}}_reconfigure_pwm(fd_mc3p_handle_t *h)
 {
     TIM_TypeDef *tim = TIM{{inst.tim.num}};
-    LL_TIM_SetAutoReload(tim, __LL_TIM_CALC_ARR(HAL_RCC_GetPCLK2Freq(), 1, h->config.pwm_Hz));
-    LL_TIM_OC_SetDeadTime(tim, (uint8_t)(__LL_TIM_CALC_DEADTIME(HAL_RCC_GetPCLK2Freq(), LL_TIM_GetClockDivision(tim), h->config.deadtime_nS)));
+    LL_TIM_SetAutoReload(tim, __LL_TIM_CALC_ARR(get_periph_bus_clk(tim), 1, h->config.pwm_Hz));
+    LL_TIM_OC_SetDeadTime(tim, (uint8_t)(__LL_TIM_CALC_DEADTIME(get_periph_bus_clk(tim), LL_TIM_GetClockDivision(tim), h->config.deadtime_nS)));
     //GET TIMER MAX MAX VALUE TO BE USED FOR DUTY CALCULATION
     h->timer_max_q15 = LL_TIM_GetAutoReload(tim);
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
@@ -588,39 +573,41 @@ void fd_mc3p_{{inst.name}}_bg_startConv(fd_mc3p_handle_t *h)
 __attribute__((weak)) void fd_mc3p_{{inst.name}}_sync_postScanCallback(void){}
 __attribute__((weak)) void fd_mc3p_{{inst.name}}_bg_postScanCallback(void){}
 fd_mc3p_handle_t {{inst.name}};
-{% endfor %}
-//=============================== IRQ Handlers ===============================
 
-{% for inst in mc3p.instances %}
-void TIM{{inst.tim.num}}_UP_TIM{{10 if inst.tim.num == 1 else 13}}_IRQHandler(void)
+void {{inst.name}}_bg_dma_irqhandler()
 {
-    TIM_TypeDef *tim = TIM{{inst.tim.num}};
-    if (LL_TIM_IsActiveFlag_UPDATE(tim)) {
-        LL_TIM_ClearFlag_UPDATE(tim);
-    }
-}
-{% if inst.adc.bg | length > 0 %}
-void DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}_IRQHandler(void)
-{   
     DMA_TypeDef *bg_dma = DMA{{inst.dma["bg"].num}};
     if (LL_DMA_IsActiveFlag_TC{{inst.dma["bg"].stream}}(bg_dma)) {
         LL_DMA_ClearFlag_TC{{inst.dma["bg"].stream}}(bg_dma);
         fd_mc3p_{{inst.name}}_bg_postScanCallback();
     }
 }
-{% endif %}
-{% endfor %}
-
-void ADC_IRQHandler(void)
+void {{inst.name}}_adc_irqhandler()
 {
-    {% for adc_num in [1, 2, 3] %}
-    {% for inst in mc3p.instances %}
-    {% if inst.adc.num == adc_num %}
-    if (LL_ADC_IsActiveFlag_JEOS(ADC{{ adc_num }})) {
-        LL_ADC_ClearFlag_JEOS(ADC{{ adc_num }});
+    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    if (LL_ADC_IsActiveFlag_JEOS(adc)) {
+        LL_ADC_ClearFlag_JEOS(adc);
         fd_mc3p_{{ inst.name }}_sync_postScanCallback();
     }
-    {% endif %}
-    {% endfor %}
-    {% endfor %}
 }
+void {{inst.name}}_tim_up_irqhandler()
+{
+    TIM_TypeDef *tim = TIM{{inst.tim.num}};
+    if (LL_TIM_IsActiveFlag_UPDATE(tim)) {
+        LL_TIM_ClearFlag_UPDATE(tim);
+    }
+}
+
+__FDGEN__CLK_EN(TIM{{inst.tim.num}})
+__FDGEN__CLK_EN(DMA{{inst.dma["bg"].num}})
+__FDGEN__CLK_EN(ADC1)
+
+__FDGEN__IRQ_EN(TIM{{inst.tim.num}}_UP, 1)
+__FDGEN__IRQ_EN(ADC, 0)
+__FDGEN__IRQ_EN(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, 5)
+__FDGEN__IRQ_BIND(TIM{{inst.tim.num}}_UP, {{inst.name}}_tim_up_irqhandler)
+__FDGEN__IRQ_BIND(ADC,{{inst.name}}_adc_irqhandler)
+__FDGEN__IRQ_BIND(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, {{inst.name}}_bg_dma_irqhandler)
+
+{% endfor %}
+
