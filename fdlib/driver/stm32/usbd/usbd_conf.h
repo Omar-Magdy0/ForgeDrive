@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx.h"
+#include "stm32{{device.family}}xx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

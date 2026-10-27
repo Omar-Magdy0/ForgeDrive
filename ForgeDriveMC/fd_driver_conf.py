@@ -1,4 +1,26 @@
 config = {
+    "usb": {
+        "vid": 0xFFFF,
+        "pid": 0x0001,
+        "langid_string": 0x0409,
+
+        "manufacturer_string": "ForgeDrive",
+
+        "product": {
+            "hs": "ForgeDriveMC",
+            "fs": "ForgeDriveMC",
+        },
+
+        "configuration": {
+            "hs": "Default Configuration",
+            "fs": "Default Configuration",
+        },
+
+        "interface": {
+            "hs": "PMSM Drive",
+            "fs": "PMSM Drive",
+        },
+    },
     "usbxch": {
         "instances": [
             {
@@ -10,6 +32,17 @@ config = {
     },
     "hall": {
 
+    },
+    "tim": {
+        "instances": [
+            {
+                "name": "TIMxMC",
+                "num": 10,
+                "irq": {
+                    "tim": {"prio": 2}
+                }
+            }
+        ]
     },
     "mc3p": {
         # Shared subsystem configuration tied specifically to mc3p
@@ -54,6 +87,12 @@ config = {
                         "channel": 0,
                         "prio": "medium"
                     }
+                },
+                "irq": {
+                    "sync": {"prio": 0},
+                    "tim": {"prio": 1},
+                    "bkin": {"prio": 0},
+                    "bg": {"prio": 5}
                 }
             }
             

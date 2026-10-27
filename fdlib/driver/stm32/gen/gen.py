@@ -37,9 +37,14 @@ def resolve_periph_clock(name, macros, seen=None):
             return bus
     return None
 
-
 def irq_match(ctx, irq, loc="<unknown>"):
-    matches = [name for name in ctx["device"]["irq"] if irq in name]
+    irqs = ctx["device"]["irq"]
+
+    # Prefer an exact match.
+    if irq in irqs:
+        return irq
+    # Fall back to substring matching.
+    matches = [name for name in irqs if irq in name]
 
     if not matches:
         ctx.setdefault("error", []).append(
@@ -105,25 +110,13 @@ def emit_system(ctx):
     ##Now lets spit out IRQ handlers
         # IRQ HANDLERS
     bindings = device.get("irq_bind", {})
-    irq_handlers = {}
+    methods = {method for handlers in bindings.values() for method in handlers}
 
-    for irq, methods in bindings.items():
-        resolved = irq_match(ctx, irq)
-        if resolved is None:
-            continue
-        irq_handlers.setdefault(resolved, []).extend(methods)
-
-    # Declare all attached methods before defining IRQ handlers
-    methods = dict.fromkeys(
-        method
-        for handlers in irq_handlers.values()
-        for method in handlers
-    )
     for method in methods:
         code.append(f"\nextern void {method}(void);")
 
     # Emit one handler per resolved IRQ vector
-    for irq, handlers in irq_handlers.items():
+    for irq, handlers in bindings.items():
         code.append(f"\n\nvoid {irq}_IRQHandler(void)\n{{\n")
         for method in handlers:
             code.append(f"    {method}();\n")
@@ -199,7 +192,7 @@ def setup(ctx):
         "fd_adc.h": None,
         "System.c": None,
         "toolchain.cmake": None,
-        "usbd/usbd_conf.c": "usbd/usbd_conf.c",
+        f"stm32{device["family"]}/usbd_conf.c": "usbd/usbd_conf.c",
         "usbd/usbd_conf.h": "usbd/usbd_conf.h",
         "usbd/usbd_desc.c": "usbd/usbd_desc.c",
         "usbd/usbd_desc.h": "usbd/usbd_desc.h",

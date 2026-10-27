@@ -25,16 +25,20 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define USBD_VID                      0xFFFF
-#define USBD_PID                      0x0001
-#define USBD_LANGID_STRING            0x0409
-#define USBD_MANUFACTURER_STRING      "ForgeDrive" 
-#define USBD_PRODUCT_HS_STRING        "ForgeDriveMC" 
-#define USBD_PRODUCT_FS_STRING        "ForgeDriveMC"
-#define USBD_CONFIGURATION_HS_STRING  "Default Configuration" 
-#define USBD_INTERFACE_HS_STRING      "PMSM Drive" 
-#define USBD_CONFIGURATION_FS_STRING  "Default Configuration"
-#define USBD_INTERFACE_FS_STRING      "PMSM Drive"
+#define USBD_VID                      0x{{ "%04X"|format(usb.vid) }}
+#define USBD_PID                      0x{{ "%04X"|format(usb.pid) }}
+#define USBD_LANGID_STRING            0x{{ "%04X"|format(usb.langid_string) }}
+
+#define USBD_MANUFACTURER_STRING      "{{ usb.manufacturer_string }}"
+
+#define USBD_PRODUCT_HS_STRING        "{{ usb.product.hs }}"
+#define USBD_PRODUCT_FS_STRING        "{{ usb.product.fs }}"
+
+#define USBD_CONFIGURATION_HS_STRING  "{{ usb.configuration.hs }}"
+#define USBD_CONFIGURATION_FS_STRING  "{{ usb.configuration.fs }}"
+
+#define USBD_INTERFACE_HS_STRING      "{{ usb.interface.hs }}"
+#define USBD_INTERFACE_FS_STRING      "{{ usb.interface.fs }}"
 
 /* Private macro -------------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/

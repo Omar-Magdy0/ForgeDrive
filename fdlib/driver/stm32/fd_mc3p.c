@@ -14,7 +14,7 @@
 //============================================================
 //TODO:Single Shunt current sensing implementation
 /// Instance templated code with jinja2 codegen
-
+//TODO: add break feature, BKIN as a core feature
 
 #define CC1E_MASK       (TIM_CCER_CC1E)
 #define CC2E_MASK       (TIM_CCER_CC2E)
@@ -602,9 +602,9 @@ __FDGEN__CLK_EN(TIM{{inst.tim.num}})
 __FDGEN__CLK_EN(DMA{{inst.dma["bg"].num}})
 __FDGEN__CLK_EN(ADC1)
 
-__FDGEN__IRQ_EN(TIM{{inst.tim.num}}_UP, 1)
-__FDGEN__IRQ_EN(ADC, 0)
-__FDGEN__IRQ_EN(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, 5)
+__FDGEN__IRQ_EN(TIM{{inst.tim.num}}_UP, {{inst.irq["tim"].prio}})
+__FDGEN__IRQ_EN(ADC, {{inst.irq["sync"].prio}})
+__FDGEN__IRQ_EN(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, {{inst.irq["bg"].prio}})
 __FDGEN__IRQ_BIND(TIM{{inst.tim.num}}_UP, {{inst.name}}_tim_up_irqhandler)
 __FDGEN__IRQ_BIND(ADC,{{inst.name}}_adc_irqhandler)
 __FDGEN__IRQ_BIND(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, {{inst.name}}_bg_dma_irqhandler)

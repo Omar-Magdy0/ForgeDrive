@@ -17,8 +17,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_ll_gpio.h"
-#include "stm32f4xx_hal_rcc.h"
+#include "stm32{{device.family}}xx_ll_gpio.h"
+#include "stm32{{device.family}}xx_hal_rcc.h"
 #include "usbd_xch.h"
 
 /* Private macro -------------------------------------------------------------*/
@@ -437,7 +437,11 @@ void USBD_static_free(void *p)
 {
 }
 
-void OTG_FS_IRQHandler(void)
+#include "fd_drv.h"
+{% if device.family in ["f4"]%}
+void usbxch_handle()
 {
     HAL_PCD_IRQHandler(&hpcd);
 }
+__FDGEN__IRQ_BIND( OTG_FS , usbxch_handle);
+{% endif %}

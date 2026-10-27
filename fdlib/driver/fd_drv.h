@@ -14,6 +14,8 @@ extern "C"{
 #define __FDGEN__IRQ_EN(irq_name, prio)
 #define __FDGEN__CLK_EN(periph)
 
+#define FD_ERR_INVALID_ARG 1
+#define FD_ERR_RANGE 1
 
 typedef struct {
     float adc_to_V;
@@ -28,7 +30,6 @@ typedef uint16_t fd_pin_t;
 uint32_t fd_atomic_start(void);
 void fd_atomic_end(uint32_t primask);
 void fd_delay(uint32_t delay_ms);
-
 void fd_dwt_init(void);
 uint32_t fd_dwt_tick(void);
 

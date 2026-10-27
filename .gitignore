@@ -43,6 +43,7 @@ Makefile
 fd_driver_gen/
 *.csv
 __pycache__/
+*.pyc
 # Python venv
 venv/
 tools/env

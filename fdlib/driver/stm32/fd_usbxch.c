@@ -31,6 +31,7 @@
  * =========================================================================== */
 static USBD_HandleTypeDef hUsbDeviceFS;
 static void usbxch_start_tx(fd_usbxch_handle_t *h);
+extern PCD_HandleTypeDef hpcd;
 static USBD_XCH_HandleTypeDef s_usbxch;
 
 {% for inst in usbxch.instances %}
@@ -120,9 +121,12 @@ uint32_t fd_usbxch_flush_impl(fd_usbxch_handle_t *h)
  * --------------------------------------------------------------------------- */
 uint32_t fd_usbxch_clear_impl(fd_usbxch_handle_t *h)
 {
-    /* Drain TX: reset head/tail to empty */
+    /* Drain TX: reset head/tail to empty and clear any stale transfer state */
     h->tx.head = h->tx.tail = 0;
     h->rx.head = h->rx.tail = 0;
+    h->tx_to_release = 0;
+    h->rx_to_release = 0;
+    h->flags &= ~USBXCH_FLAG_TX_BUSY;
     return 0;
 }
 
@@ -207,7 +211,10 @@ static void usbxch_start_tx(fd_usbxch_handle_t *h)
         /* Nothing to send */
         return;
     }
-    USBD_XCH_Transmit(&hUsbDeviceFS, w1, c1);
+    if (USBD_XCH_Transmit(&hUsbDeviceFS, w1, c1) != USBD_OK) {
+        h->flags &= ~busy_flag;
+        return;
+    }
     h->tx_to_release = c1;
     h->flags |= busy_flag;
 }
@@ -219,7 +226,19 @@ void USBD_XCH_GetRxStorage(void *ctx, uint8_t **ptr, uint16_t *size)
     void *r1, *r2;
     uint16_t c1, c2;
     uint16_t fs = fd_ring_free(&h->rx);
-    fd_ring_write_reserve(&h->rx, fs, &r1, &c1, &r2, &c2);
+
+    if (fs == 0U) {
+        *ptr = NULL;
+        *size = 0U;
+        return;
+    }
+
+    if (!fd_ring_write_reserve(&h->rx, fs, &r1, &c1, &r2, &c2)) {
+        *ptr = NULL;
+        *size = 0U;
+        return;
+    }
+
     *ptr = r1;
     *size = c1;
 }
@@ -239,9 +258,15 @@ void USBD_XCH_TxComplete(void *ctx)
     uint16_t c1, c2;
     if (!fd_ring_read_reserve(&h->tx, &r1, &c1, &r2, &c2)) {
         /* Nothing to send */
-        h->flags &= ~USBXCH_FLAG_TX_BUSY; //clear busy flag and return, nothing to send
+        h->flags &= ~USBXCH_FLAG_TX_BUSY;
         return;
     }
-    USBD_XCH_Transmit(&hUsbDeviceFS, r1, c1);
+    if (USBD_XCH_Transmit(&hUsbDeviceFS, r1, c1) != USBD_OK) {
+        h->flags &= ~USBXCH_FLAG_TX_BUSY;
+        return;
+    }
     h->tx_to_release = c1;
+    h->flags |= USBXCH_FLAG_TX_BUSY;
 }
+
+
