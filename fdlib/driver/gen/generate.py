@@ -23,6 +23,7 @@ SHARED_HEADER_DIR = DRIVER_ROOT
 context = {}
 context["gen"] = {}
 context["gen_sDir"] = []
+context["drivers"] = ["drv"]
 context["error"] = []
 context["warning"] = []
 context["generated"] = []
@@ -38,21 +39,13 @@ def resolve_drivers():
             context["gen"][filename]=None
 
 def generate_drivers():
-    ## ERRORS AND WARNINGS
-    for warning in context.get("warning", []):
-        print(f"WARNING: {warning}")
-    if context.get("error"):
-        print("\nDriver generation failed:")
-        for error in context["error"]:
-            print(f"ERROR: {error}")
-        return
     temp_dir= context["output_path"]/"temp"
+    context["temp_dir"] = temp_dir
     context["generated"] = set()
     temp_dir.mkdir(parents=True, exist_ok=True)
     try:
         drv(context)
         context["gen_sDir"].extend([
-            DRIVER_ROOT / context["device"]["platform"] / context["device"]["family"],
             DRIVER_ROOT / context["device"]["platform"],
             DRIVER_ROOT,
         ])
@@ -70,6 +63,7 @@ def generate_drivers():
             trim_blocks=True,
             lstrip_blocks=True,
         )
+        module.env_macros(context)
         for filename, output_name in context["gen"].items():
             output_path = temp_dir / (output_name or filename)
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -105,7 +99,7 @@ def generate_manifest():
         "warning": context["warning"]
     }
     for i, err in enumerate(context["error"]):
-        print(f"ERROR_{i} : {err}\n")
+        print(f"ERROR_{i} : {err}")
     path = context["output_path"] / MANIFEST_NAME
     path.write_text(
         json.dumps(manifest, indent=4) + "\n",
@@ -113,21 +107,24 @@ def generate_manifest():
     )
 
 def resolve_device():
-    device_lower = context["device"]["name"].lower().strip()
-    # Check if it's an STM32 device
-    context["drivers"] = ["drv"]
-    if device_lower.startswith("stm32"):
-        match = re.match(r"^stm32([a-z0-9]{2})", device_lower)
-        context["device"]["platform"] = f"stm32"
-        if match:
-            context["device"]["family"] = f"stm32{match.group(1)}"
-        else: raise Exception(f"device family not found")
+    device = context["device"]
+    name = device["name"].lower().strip()
 
-    elif device_lower.startswith("host"):
-        # Fallback or generic handling for other microcontrollers/host, etc
-        context["device"]["platform"] = device_lower
-        context["device"]["family"] = device_lower
-    else: raise Exception(f"Platform Not supported")
+    if name.startswith("stm32"):
+        platform = "stm32"
+    elif name.startswith("host"):
+        platform = name
+    else:
+        raise Exception("Platform not supported")
+
+    device["platform"] = platform
+    device_file = DRIVER_ROOT / platform / "gen" / "device.py"
+    spec = importlib.util.spec_from_file_location(f"{platform}_gen", device_file)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load platform generator: {device_file}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.device_meta(context)
 
 def load_config():
     path = context["config_path"]
@@ -148,12 +145,6 @@ def load_config():
 
     context["config"] = config
 
-
-
-def validate_config():
-    # TODO: common schema validation and platform-specific validation.
-    # Platform validator is expected at platform_dir / "gen" / "validate.py".
-    pass
 
 def main():
     parser = argparse.ArgumentParser(

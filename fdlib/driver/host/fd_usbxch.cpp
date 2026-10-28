@@ -5,7 +5,7 @@
 
 #define SILSERVER_PORT_USBXCH 5001
 
-{% for inst in usbxch.instances %}
+{% set inst = usbxch %}
 fd_usbxch_handle_t {{inst.name}};
 void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h)
 {
@@ -19,7 +19,6 @@ void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h)
         std::cout << "[SIL Server] USBXCH PORT INITIALIZED" << std::endl;
     }
 }
-{% endfor %}
 
 uint32_t fd_usbxch_write_impl(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
 {

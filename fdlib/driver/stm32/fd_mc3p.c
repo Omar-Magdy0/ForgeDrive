@@ -44,24 +44,6 @@ typedef struct {
     int8_t sign;
 } inj_rank_t;
 
-#define ADC_GpioInit(port, pin)do{\
-    LL_GPIO_InitTypeDef GPIO_InitStruct = {0};\
-    GPIO_InitStruct.Pin = pin;\
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;\
-    LL_GPIO_Init(port, &GPIO_InitStruct);\
-}while(0)
-
-#define PWM_GpioInit(port, pin, active)do{\
-    LL_GPIO_InitTypeDef GPIO_InitStruct = {0};\
-    GPIO_InitStruct.Pin = pin;\
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;\
-    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;\
-    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;\
-    GPIO_InitStruct.Pull = active?LL_GPIO_PULL_DOWN : LL_GPIO_PULL_UP;\
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_1;\
-    LL_GPIO_Init(port, &GPIO_InitStruct);\
-}while(0)
-
 
 #define COPY_SCALE_SIGNED(dst, src, sign)do { \
     h->rank_scale[dst][0] = (sign == -1)? -h->sync_scale[src][0] : h->sync_scale[src][0]; \
@@ -70,42 +52,31 @@ typedef struct {
 #define COPY_SCALE(dst, src)  COPY_SCALE_SIGNED(dst, src, 1)
 
 {% for inst in mc3p.instances %}
+{% if inst.analog.bg | length > 0 %}
+{% set bg_dma = dma_parse(inst.dma["bg"], device.dma_arch) %}
+{% set use_bg = true %}
+{% set bg_length = inst.analog.bg | length %}
+{% endif %}
+
+
 
 static inj_rank_t {{inst.name}}_trapVs_table[6] = 
 {
     {% for entry in inst.trapVs_vector %}
-    { LL_ADC_CHANNEL_{{ entry.channel }}, FD_MC3P_VS{{ entry.phase | upper }}, {{entry.sign}}  },
+    { LL_ADC_CHANNEL_{{ entry.ch }}, FD_MC3P_VS{{ entry.phase | upper }}, {{entry.sign}}  },
     {% endfor %}
 };
 static inj_rank_t {{inst.name}}_trapCs_table[6] = 
 {
     {% for entry in inst.trapCs_vector %}
-    { LL_ADC_CHANNEL_{{ entry.channel }}, FD_MC3P_CS{{ entry.phase | upper }}, {{entry.sign}} }, 
+    { LL_ADC_CHANNEL_{{ entry.ch }}, FD_MC3P_CS{{ entry.phase | upper }}, {{entry.sign}} }, 
     {% endfor %}
 };
-void {{inst.name}}_gpio_init()
-{     
-    //Initialize all MC3P instance Gpio here
-    {% for pwmSignal in ["uh","vh","wh","ul","vl","wl"] %}
-    PWM_GpioInit( GPIO{{inst.tim[pwmSignal].port}}, LL_GPIO_PIN_{{inst.tim[pwmSignal].pin}}, {{inst.tim[pwmSignal].active}});
-    __FDGEN__CLK_EN(GPIO{{inst.tim[pwmSignal].port}})
-    {% endfor %}
-    //Initialize adc pins (inj channels)
-    {% for name, ch in inst.adc.inj.items() %}
-    {% if ch.port is defined and ch.pin is defined %}
-    ADC_GpioInit( GPIO{{ch.port}}, LL_GPIO_PIN_{{ch.pin}});
-    __FDGEN__CLK_EN(GPIO{{ch.port}})
-    {% endif %}
-    {% endfor %}
-    {% for name, ch in inst.adc.bg.items() %}
-    {% if ch.port is defined and ch.pin is defined %}
-    __FDGEN__CLK_EN(GPIO{{ch.port}})
-    {% endif %}
-    {% endfor %}
-}
+
 static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
     //ENABLE Peripheral CLOCK
-    TIM_TypeDef * const tim = TIM{{inst.tim.num}};
+    __FDGEN__CLK_EN(TIM{{inst.pwm.tim}})
+    TIM_TypeDef * const tim = TIM{{inst.pwm.tim}};
     //===================================================== 
     // BASIC TIMER CONFIGURATION
     //=====================================================
@@ -143,13 +114,13 @@ static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
         .OCState = LL_TIM_OCSTATE_ENABLE,
         .OCNState = LL_TIM_OCSTATE_DISABLE,
         .CompareValue = 0,
-        .OCPolarity = {{ inst.tim[ch + "h"].active }} ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
-        .OCNPolarity = {{ inst.tim[ch + "l"].active }} ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
-        .OCIdleState = {{ inst.tim[ch + "h"].active }} ? LL_TIM_OCIDLESTATE_LOW : LL_TIM_OCIDLESTATE_HIGH,
-        .OCNIdleState = {{ inst.tim[ch + "l"].active }} ? LL_TIM_OCIDLESTATE_LOW : LL_TIM_OCIDLESTATE_HIGH
+        .OCPolarity = {{ inst.pwm[ch + "h"][0] }} ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
+        .OCNPolarity = {{ inst.pwm[ch + "l"][0] }} ? LL_TIM_OCPOLARITY_HIGH : LL_TIM_OCPOLARITY_LOW,
+        .OCIdleState = {{ inst.pwm[ch + "h"][0] }} ? LL_TIM_OCIDLESTATE_LOW : LL_TIM_OCIDLESTATE_HIGH,
+        .OCNIdleState = {{ inst.pwm[ch + "l"][0] }} ? LL_TIM_OCIDLESTATE_LOW : LL_TIM_OCIDLESTATE_HIGH
     };
-    LL_TIM_OC_Init(tim, LL_TIM_CHANNEL_CH{{inst.tim[ch + "h"].ch}}, &{{ch}}_tim_OCInit);
-    LL_TIM_OC_EnablePreload(tim, LL_TIM_CHANNEL_CH{{inst.tim[ch + "h"].ch}});
+    LL_TIM_OC_Init(tim, LL_TIM_CHANNEL_CH{{inst.pwm[ch + "h"][1]}}, &{{ch}}_tim_OCInit);
+    LL_TIM_OC_EnablePreload(tim, LL_TIM_CHANNEL_CH{{inst.pwm[ch + "h"][1]}});
     {% endfor %}
     LL_TIM_CC_EnablePreload(tim);
 
@@ -177,17 +148,17 @@ static void {{inst.name}}_tim_init(fd_mc3p_handle_t *h){
 }
 void {{inst.name}}_dma_int_init(fd_mc3p_handle_t *h)
 {
+    {% if use_bg %}
     // Enable DMA clock
-    DMA_TypeDef *bg_dma = DMA{{inst.dma["bg"].num}};
-    uint32_t bg_stream = LL_DMA_STREAM_{{inst.dma["bg"].stream}};
-    uint32_t bg_channel = LL_DMA_CHANNEL_{{inst.dma["bg"].channel}};
-     uint32_t bg_prio = LL_DMA_PRIORITY_{{inst.dma["bg"].prio | upper}};
+    __FDGEN__CLK_EN({{bg_dma.dma}});
+    DMA_TypeDef *bg_dma = {{bg_dma.dma}};
+    uint32_t bg_stream = {{bg_dma.stream}};
+    uint32_t bg_channel = {{bg_dma.channel}};
+     uint32_t bg_prio = {{bg_dma.prio}};
     // =================================================================
     // DMA for Regular Scan (Slow Monitoring Channels)
     // =================================================================
-    
     LL_DMA_SetChannelSelection(bg_dma, bg_stream, bg_channel);
-    
     // Configure DMA parameters for ADC regular conversions
     LL_DMA_SetDataTransferDirection(bg_dma, bg_stream, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
     LL_DMA_SetStreamPriorityLevel(bg_dma, bg_stream, bg_prio);
@@ -197,28 +168,30 @@ void {{inst.name}}_dma_int_init(fd_mc3p_handle_t *h)
     LL_DMA_SetPeriphSize(bg_dma, bg_stream, LL_DMA_PDATAALIGN_HALFWORD);
     LL_DMA_SetMemorySize(bg_dma, bg_stream, LL_DMA_MDATAALIGN_HALFWORD);
     LL_DMA_DisableFifoMode(bg_dma, bg_stream);
-    
     // Set peripheral address (ADC data register)
-    LL_DMA_SetPeriphAddress(bg_dma, bg_stream, (uint32_t)&(ADC{{inst.adc.num}}->DR));
-    
+    LL_DMA_SetPeriphAddress(bg_dma, bg_stream, (uint32_t)&(ADC{{inst.analog.adc}}->DR));
     // Set memory address (double buffer start)
     LL_DMA_SetMemoryAddress(bg_dma, bg_stream, (uint32_t)h->bg_data[0]);
-    
     // Set data length (total samples across both buffers)
-    LL_DMA_SetDataLength(bg_dma, bg_stream, h->bg_channels);
-
+    LL_DMA_SetDataLength(bg_dma, bg_stream, {{bg_length}});
     // Enable DMA transfer complete and half transfer interrupts
     LL_DMA_EnableIT_TC(bg_dma, bg_stream);
-    
     // Enable DMA stream
     LL_DMA_EnableStream(bg_dma, bg_stream);
-    
     // Enable JEOS (Injected End Of Sequence) interrupt in ADC
-    LL_ADC_EnableIT_JEOS(ADC{{inst.adc.num}});
+    LL_ADC_EnableIT_JEOS(ADC{{inst.analog.adc}});
+    __FDGEN__IRQ_EN({{bg_dma.irq_name}}, {{inst.irq["bg"]}});
+    __FDGEN__IRQ_BIND({{bg_dma.irq_name}}, {{inst.name}}_bg_dma_irqhandler);
+    {% endif %}
+    __FDGEN__IRQ_EN(TIM{{inst.pwm.tim}}_UP, {{inst.irq["tim"]}});
+    __FDGEN__IRQ_EN(ADC, {{inst.irq["sync"]}});
+    __FDGEN__IRQ_BIND(TIM{{inst.pwm.tim}}_UP, {{inst.name}}_tim_up_irqhandler);
+    __FDGEN__IRQ_BIND(ADC,{{inst.name}}_adc_irqhandler);
 }
 void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
 {
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    __FDGEN__CLK_EN(ADC{{ inst.analog.adc }})
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     if (!adc_common_initialized)
     {
         LL_ADC_CommonInitTypeDef adcCommonInitStruct = {
@@ -231,7 +204,6 @@ void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
         };
         LL_ADC_CommonInit(__LL_ADC_COMMON_INSTANCE(adc), &adcCommonInitStruct);
     }
-
     LL_ADC_InitTypeDef adcInitStruct = {
         .Resolution = LL_ADC_RESOLUTION_12B,
         .DataAlignment = LL_ADC_DATA_ALIGN_RIGHT,
@@ -250,12 +222,12 @@ void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
     adc_calibrate();
     
     //bg sequencer and rank config
-    {% if inst.adc.bg | length > 0 %}
+    {% if use_bg %}
 
     /* Configure regular ADC sequence */
     LL_ADC_REG_InitTypeDef adcRegInitStruct = {
         .TriggerSource = LL_ADC_REG_TRIG_SOFTWARE,
-        .SequencerLength = LL_ADC_REG_SEQ_SCAN_ENABLE_{{ inst.adc.bg | length }}RANKS,
+        .SequencerLength = LL_ADC_REG_SEQ_SCAN_ENABLE_{{ inst.analog.bg | length }}RANKS,
         .SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE,
         .ContinuousMode = LL_ADC_REG_CONV_CONTINUOUS,
         .DMATransfer = LL_ADC_REG_DMA_TRANSFER_UNLIMITED
@@ -264,9 +236,9 @@ void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
     LL_ADC_REG_Init(adc, &adcRegInitStruct);
 
     /* Configure channel ranks and sampling times */
-    {% for signal, config in inst.adc.bg.items() %} 
-    LL_ADC_REG_SetSequencerRanks(adc, LL_ADC_REG_RANK_{{ loop.index }}, LL_ADC_CHANNEL_{{ config.channel }});
-    LL_ADC_SetChannelSamplingTime(adc, LL_ADC_CHANNEL_{{ config.channel }}, LL_ADC_SAMPLINGTIME_{{ config.sampling_cycles | default("56") }}CYCLES );
+    {% for signal, config in inst.analog.bg.items() %} 
+    LL_ADC_REG_SetSequencerRanks(adc, LL_ADC_REG_RANK_{{ loop.index }}, LL_ADC_CHANNEL_{{ config[0] }});
+    LL_ADC_SetChannelSamplingTime(adc, LL_ADC_CHANNEL_{{ config[0] }}, LL_ADC_SAMPLINGTIME_{{ config[1] | default("56") }}CYCLES );
     {% endfor %}
 
     {% endif %}
@@ -280,8 +252,8 @@ void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
     };                                                      
 
     // Set sampling times for all PWM Scan channels (injected group)
-    {% for signal, config in inst.adc.inj.items()  %}
-    LL_ADC_SetChannelSamplingTime(adc, LL_ADC_CHANNEL_{{ config.channel }},  LL_ADC_SAMPLINGTIME_{{ config.sampling_cycles | default("56") }}CYCLES );
+    {% for signal, config in inst.analog.inj.items()  %}
+    LL_ADC_SetChannelSamplingTime(adc, LL_ADC_CHANNEL_{{ config[0] }},  LL_ADC_SAMPLINGTIME_{{ config[1] | default("56") }}CYCLES );
     {% endfor %}
 
     LL_ADC_INJ_Init(adc, &adcInjInitStruct);
@@ -292,7 +264,6 @@ void {{inst.name}}_adc_init(fd_mc3p_handle_t *h)
 }
 void pv_mc3p_{{inst.name}}_hw_init(fd_mc3p_handle_t *h)
 {
-    {{inst.name}}_gpio_init();
     {{inst.name}}_tim_init(h);
     {{inst.name}}_dma_int_init(h);
     {{inst.name}}_adc_init(h);
@@ -302,33 +273,33 @@ void pv_mc3p_{{inst.name}}_hw_init(fd_mc3p_handle_t *h)
 void {{inst.name}}_svm_mode(fd_mc3p_handle_t *h)
 {
     //do needed pwm and adc updates
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     fd_mc3p_{{inst.name}}_write_phase_state(h, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP);
     LL_ADC_INJ_SetSequencerLength(adc, LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS);
-    LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_1, {{inst.adc.inj["vsbus"].channel}});
+    LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_1, {{inst.analog.inj["vsbus"][0]}});
     COPY_SCALE(0, FD_MC3P_VSBUS);
     //enable all current sensors
-    {% for phase, adc in inst.adc.inj.items() if phase.startswith("cs")%} 
-        LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_{{ loop.index + 1 }}, LL_ADC_CHANNEL_{{ adc.channel }});
+    {% for phase, ch in inst.analog.inj.items() if phase.startswith("cs")%} 
+        LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_{{ loop.index + 1 }}, LL_ADC_CHANNEL_{{ ch[0] }});
         COPY_SCALE({{ loop.index }}, FD_MC3P_CS{{ phase[2:] | upper }});
     {% endfor %}
 }
 void {{inst.name}}_trap_mode(fd_mc3p_handle_t *h)
 {
     //do needed pwm and adc updates
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     LL_ADC_INJ_SetSequencerLength(adc, LL_ADC_INJ_SEQ_SCAN_ENABLE_4RANKS);
-    LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_1, {{inst.adc.inj["vsbus"].channel}});
+    LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_1, {{inst.analog.inj["vsbus"][0]}});
     COPY_SCALE(0, FD_MC3P_VSBUS);
     {% if mc3p.current_sensing.topology == "single_shunt" %}
-    LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_3, {{inst.adc.inj["csbus"].channel}});
+    LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_3, {{inst.analog.inj["csbus"][0]}});
     COPY_SCALE_SIGNED(2, FD_MC3P_CSBUS, -1);
     {% endif %}
 }
 void {{inst.name}}_trap_sector(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
     //do needed pwm and adc updates
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     const inj_rank_t *trapCs_map = &{{inst.name}}_trapCs_table[sector - 1];
     const inj_rank_t *trapVs_map = &{{inst.name}}_trapVs_table[sector - 1];
     const mc3p_trap_sector_map_t *pwm_map = &trap_table[sector - 1];
@@ -342,8 +313,8 @@ void {{inst.name}}_trap_sector(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 }
 void {{inst.name}}_svm_sector(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
-    TIM_TypeDef * const tim = TIM{{inst.tim.num}};
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    TIM_TypeDef * const tim = TIM{{inst.pwm.tim}};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     {% if mc3p.current_sensing.topology == "three_shunt" %}
     {% elif mc3p.current_sensing.topology == "two_shunt" %}
     {% elif mc3p.current_sensing.topology == "two_inline" %}
@@ -398,7 +369,7 @@ void pv_mc3p_{{inst.name}}_offset_calibration(fd_mc3p_handle_t *h)
     //Hardware Specific code
     //Disable the JEOS IRQ temporarily and timer triggering, we will be doing SW triggering for now, this is a blocking method
     // Save the ADC configuration that this routine will modify.
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     const uint32_t saved_jsqr = adc->JSQR;
     const uint32_t saved_cr1  = adc->CR1;
     const uint32_t saved_cr2  = adc->CR2;
@@ -406,8 +377,8 @@ void pv_mc3p_{{inst.name}}_offset_calibration(fd_mc3p_handle_t *h)
     LL_ADC_INJ_StopConversionExtTrig(adc);
     LL_ADC_INJ_SetTriggerSource(adc, LL_ADC_INJ_TRIG_SOFTWARE);
     LL_ADC_INJ_SetSequencerLength(adc, LL_ADC_INJ_SEQ_SCAN_ENABLE_{{ inst.cs_found | length }}RANKS);
-    {% for phase, adc in inst.adc.inj.items() if phase.startswith("cs")%} 
-        LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_{{ loop.index }}, LL_ADC_CHANNEL_{{ adc.channel }});
+    {% for phase, ch in inst.analog.inj.items() if phase.startswith("cs")%} 
+        LL_ADC_INJ_SetSequencerRanks(adc, LL_ADC_INJ_RANK_{{ loop.index }}, LL_ADC_CHANNEL_{{ ch[0] }});
     {% endfor %}
 
     //Start conversion in software
@@ -416,11 +387,11 @@ void pv_mc3p_{{inst.name}}_offset_calibration(fd_mc3p_handle_t *h)
         LL_ADC_INJ_StartConversionSWStart(adc);
         //Read here and accumulate
         while (!LL_ADC_IsActiveFlag_JEOS(adc)){}
-        {% for phase, adc in inst.adc.inj.items() if phase.startswith("cs")%} 
+        {% for phase, adc in inst.analog.inj.items() if phase.startswith("cs")%} 
             calibration_sum[{{loop.index0}}] += LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_{{ loop.index}});
         {% endfor %}
     }
-    {% for phase, adc in inst.adc.inj.items() if phase.startswith("cs")%} 
+    {% for phase, adc in inst.analog.inj.items() if phase.startswith("cs")%} 
         h->sync_scale[FD_MC3P_CS{{phase[2:] | upper}}][1] = (calibration_sum[{{loop.index0}}]>>calibration_samples_log2);
     {% endfor %}
 
@@ -434,7 +405,7 @@ void pv_mc3p_{{inst.name}}_offset_calibration(fd_mc3p_handle_t *h)
 }
 void fd_mc3p_{{inst.name}}_reconfigure_pwm(fd_mc3p_handle_t *h)
 {
-    TIM_TypeDef *tim = TIM{{inst.tim.num}};
+    TIM_TypeDef *tim = TIM{{inst.pwm.tim}};
     LL_TIM_SetAutoReload(tim, __LL_TIM_CALC_ARR(get_periph_bus_clk(tim), 1, h->config.pwm_Hz));
     LL_TIM_OC_SetDeadTime(tim, (uint8_t)(__LL_TIM_CALC_DEADTIME(get_periph_bus_clk(tim), LL_TIM_GetClockDivision(tim), h->config.deadtime_nS)));
     //GET TIMER MAX MAX VALUE TO BE USED FOR DUTY CALCULATION
@@ -448,7 +419,7 @@ void fd_mc3p_{{inst.name}}_reconfigure_pwm(fd_mc3p_handle_t *h)
 }
 void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
 {
-    TIM_TypeDef *tim = TIM{{inst.tim.num}};
+    TIM_TypeDef *tim = TIM{{inst.pwm.tim}};
     uint32_t ccer_shadow = tim->CCER;
     uint32_t ccmr1_shadow = tim->CCMR1;
     uint32_t ccmr2_shadow = tim->CCMR2;
@@ -457,7 +428,7 @@ void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_
     ccmr2_shadow &= ~OC3M_MASK;  // Clear OC3M bits
 
     {% for ch in ["u", "v", "w"] %}
-    {% if inst.tim[ch+"h"].ch == 1 %}
+    {% if inst.pwm[ch+"h"][1] == 1 %}
     switch(state_{{ch}})
     {//Channel 1 operations
         case(FD_MC3P_PHASE_FLOAT)  :   {ccmr1_shadow |= OC1M_INACTIVE; ccer_shadow  &= ~(CC1E_MASK); break;}
@@ -471,7 +442,7 @@ void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_
     {% endfor %}
 
     {% for ch in ["u", "v", "w"] %}
-    {% if inst.tim[ch+"h"].ch == 2 %}
+    {% if inst.pwm[ch+"h"][1] == 2 %}
     switch(state_{{ch}})
     {//Channel 2 operations
         case(FD_MC3P_PHASE_FLOAT)  :   {ccmr1_shadow |= OC2M_INACTIVE; ccer_shadow  &= ~(CC2E_MASK); break;}
@@ -485,7 +456,7 @@ void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_
     {% endfor %}
 
     {% for ch in ["u", "v", "w"] %}
-    {% if inst.tim[ch+"h"].ch == 3 %}
+    {% if inst.pwm[ch+"h"][1] == 3 %}
     switch(state_{{ch}})
     {//Channel 3 operations
         case(FD_MC3P_PHASE_FLOAT)  :   {ccmr2_shadow |= OC3M_INACTIVE; ccer_shadow  &= ~(CC3E_MASK); break;}
@@ -505,17 +476,17 @@ void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_
 }
 void fd_mc3p_{{inst.name}}_write_phase_duty(fd_mc3p_handle_t *h, int16_t dutyu_q15, int16_t dutyv_q15, int16_t dutyw_q15)
 {
-    TIM_TypeDef *tim = TIM{{inst.tim.num}};
+    TIM_TypeDef *tim = TIM{{inst.pwm.tim}};
     uint32_t compare_u = ((uint32_t)SATURATE(dutyu_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
     uint32_t compare_v = ((uint32_t)SATURATE(dutyv_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
     uint32_t compare_w = ((uint32_t)SATURATE(dutyw_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
-    tim->CCR{{inst.tim["uh"].ch}} = compare_u;
-    tim->CCR{{inst.tim["vh"].ch}} = compare_v;
-    tim->CCR{{inst.tim["wh"].ch}} = compare_w;
+    tim->CCR{{inst.pwm["uh"][1]}} = compare_u;
+    tim->CCR{{inst.pwm["vh"][1]}} = compare_v;
+    tim->CCR{{inst.pwm["wh"][1]}} = compare_w;
 }
 void fd_mc3p_{{inst.name}}_read_sync(fd_mc3p_handle_t *h, void *data)
 {
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
 #define DTC_UPDATE_POLARITY(current, bit)         \
     do                                            \
     {                                             \
@@ -537,7 +508,7 @@ void fd_mc3p_{{inst.name}}_read_sync(fd_mc3p_handle_t *h, void *data)
         fd_mc3p_svm_data_t *svm = (fd_mc3p_svm_data_t *)data;
         //Read Current Sensors in the same order we put the rank
         {% if mc3p.current_sensing.topology in ["three_shunt","two_shunt","two_inline"] %}
-        {% for phase, adc in inst.adc.inj.items() if phase.startswith("cs")%} 
+        {% for phase, adc in inst.analog.inj.items() if phase.startswith("cs")%} 
         svm->c{{ phase[2:] }}_q31 = h->rank_scale[{{loop.index}}][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_{{ loop.index + 1 }}) - h->rank_scale[{{ loop.index }}][1]);
         {% endfor %}
         //Infer the third phase current from the 2x measured current for double measurements
@@ -566,7 +537,7 @@ void fd_mc3p_{{inst.name}}_read_sync(fd_mc3p_handle_t *h, void *data)
 }
 void fd_mc3p_{{inst.name}}_bg_startConv(fd_mc3p_handle_t *h)
 {
-    LL_ADC_REG_StartConversionSWStart(ADC{{inst.adc.num}});
+    LL_ADC_REG_StartConversionSWStart(ADC{{inst.analog.adc}});
 }
 
 //Create static instances here of fd mc3p
@@ -576,15 +547,15 @@ fd_mc3p_handle_t {{inst.name}};
 
 void {{inst.name}}_bg_dma_irqhandler()
 {
-    DMA_TypeDef *bg_dma = DMA{{inst.dma["bg"].num}};
-    if (LL_DMA_IsActiveFlag_TC{{inst.dma["bg"].stream}}(bg_dma)) {
-        LL_DMA_ClearFlag_TC{{inst.dma["bg"].stream}}(bg_dma);
+    DMA_TypeDef *bg_dma = {{bg_dma.dma}};
+    if (LL_DMA_IsActiveFlag_TC{{bg_dma.irq_flag_num}}(bg_dma)) {
+        LL_DMA_ClearFlag_TC{{bg_dma.irq_flag_num}}(bg_dma);
         fd_mc3p_{{inst.name}}_bg_postScanCallback();
     }
 }
 void {{inst.name}}_adc_irqhandler()
 {
-    ADC_TypeDef *adc = ADC{{ inst.adc.num }};
+    ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     if (LL_ADC_IsActiveFlag_JEOS(adc)) {
         LL_ADC_ClearFlag_JEOS(adc);
         fd_mc3p_{{ inst.name }}_sync_postScanCallback();
@@ -592,22 +563,11 @@ void {{inst.name}}_adc_irqhandler()
 }
 void {{inst.name}}_tim_up_irqhandler()
 {
-    TIM_TypeDef *tim = TIM{{inst.tim.num}};
+    TIM_TypeDef *tim = TIM{{inst.pwm.tim}};
     if (LL_TIM_IsActiveFlag_UPDATE(tim)) {
         LL_TIM_ClearFlag_UPDATE(tim);
     }
 }
-
-__FDGEN__CLK_EN(TIM{{inst.tim.num}})
-__FDGEN__CLK_EN(DMA{{inst.dma["bg"].num}})
-__FDGEN__CLK_EN(ADC1)
-
-__FDGEN__IRQ_EN(TIM{{inst.tim.num}}_UP, {{inst.irq["tim"].prio}})
-__FDGEN__IRQ_EN(ADC, {{inst.irq["sync"].prio}})
-__FDGEN__IRQ_EN(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, {{inst.irq["bg"].prio}})
-__FDGEN__IRQ_BIND(TIM{{inst.tim.num}}_UP, {{inst.name}}_tim_up_irqhandler)
-__FDGEN__IRQ_BIND(ADC,{{inst.name}}_adc_irqhandler)
-__FDGEN__IRQ_BIND(DMA{{inst.dma["bg"].num}}_Stream{{inst.dma["bg"].stream}}, {{inst.name}}_bg_dma_irqhandler)
 
 {% endfor %}
 

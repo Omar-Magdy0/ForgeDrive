@@ -4,24 +4,12 @@ set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 
 # Select target platform
 set(DEVICE "STM32F401xC" CACHE STRING "Target MCU or platform")
-string(TOLOWER "${DEVICE}" DEVICE_NAME_LOWER)
-if(DEVICE_NAME_LOWER MATCHES "^host")
-    set(PLATFORM_NAME "host")
-elseif(DEVICE_NAME_LOWER MATCHES "^stm32")
-    set(PLATFORM_NAME "stm32")
-elseif(DEVICE_NAME_LOWER MATCHES "^c2000")
-    set(PLATFORM_NAME "c2000")
-else()
-    message(FATAL_ERROR "Unknown device: ${DEVICE}")
-endif()
-
-message(STATUS "Target device: ${DEVICE}")
-message(STATUS "Target platform: ${PLATFORM_NAME}")
 
 set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
 set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
+set(FREERTOS_DIR "${THIRDPARTY_DIR}/FreeRTOS/FreeRTOS-Kernel")
 
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
@@ -45,7 +33,6 @@ file(GLOB_RECURSE TEMPLATE_FILES
     "${FDLIB_DIR}/driver/*.h"
     "${FDLIB_DIR}/driver/*.j2"
 )
-
 # Tell CMake to re-configure if the generator script, config, or templates change
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
     "${GEN_SCRIPT}"
@@ -73,18 +60,23 @@ message(STATUS
 
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT
-if(PLATFORM_NAME STREQUAL "host")
-    set(CMAKE_C_COMPILER gcc)
-    set(CMAKE_CXX_COMPILER g++)
-    set(CMAKE_ASM_COMPILER gcc)
-else()
-    set(CMAKE_TOOLCHAIN_FILE "${FDDRV_DIR}/toolchain.cmake")
-endif()
 
+set(CMAKE_TOOLCHAIN_FILE "${FDDRV_DIR}/toolchain.cmake")
+include(${FDDRV_DIR}/device.cmake)
+message(STATUS "Target device: ${DEVICE_NAME}")
+message(STATUS "Target platform: ${DEVICE_PLATFORM}")
 project(ForgeDriveMC LANGUAGES C CXX ASM)
-
+add_library(fd_freertos STATIC
+    ${FREERTOS_DIR}/tasks.c
+    ${FREERTOS_DIR}/queue.c
+    ${FREERTOS_DIR}/list.c
+)
+target_include_directories(fd_freertos PUBLIC
+    ${FREERTOS_DIR}/include
+)
+add_compile_definitions($<$<CONFIG:Debug>:FD_DEBUG>)
 add_subdirectory("${FDDRV_DIR}")
-add_subdirectory("platform/${PLATFORM_NAME}")
+add_subdirectory("platform/${DEVICE_PLATFORM}")
 # Setup cmake module path and compiler settings
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -131,56 +123,28 @@ set(APPLICATION_SRC
     ${CMAKE_SOURCE_DIR}/sys.cpp
 )
 
-
 file(GLOB_RECURSE CORE_SRC
     ${FDLIB_DIR}/fd/*.cpp
     ${FDLIB_DIR}/fd/*.c
 )
 
+target_link_libraries(fd_freertos PUBLIC fd_drv)
 
-# Create executable
 add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
-
+include(${FDDRV_DIR}/post_build.cmake OPTIONAL)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     fd_drv
+    fd_freertos
     CMSISDSP
     PLATFORM
-    ${TOOLCHAIN_LINK_LIBRARIES}
     etl::etl
 )
 
 # BUILD Platform Tied TEST CODE
-if(PLATFORM_NAME STREQUAL "host")
+if(DEVICE_PLATFORM STREQUAL "host")
     target_compile_definitions(${PROJECT_NAME} PRIVATE
-        PLATFORM_HOST
         ETL_THROW_EXCEPTIONS
         ETL_VERBOSE_ERRORS
         ETL_CHECK_PUSH_POP
     )
-endif()
-
-
-
-if(NOT PLATFORM_NAME STREQUAL "host")
-# ADD THIS: Show size automatically after every build
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "=== Memory Usage ==="
-    COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${PROJECT_NAME}>
-    COMMENT "Displaying memory usage"
-)
-
-# Size target for checking memory usage
-add_custom_target(size
-    DEPENDS ${PROJECT_NAME}
-    COMMAND ${CMAKE_COMMAND} -E echo "=== Detailed Memory Analysis ==="
-    COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${PROJECT_NAME}>
-)
-
-# Convert output to hex and binary
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.hex
-)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.bin
-)
 endif()

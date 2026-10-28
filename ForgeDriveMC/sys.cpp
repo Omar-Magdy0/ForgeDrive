@@ -2,11 +2,11 @@
 
 void Sys::init()
 {
+    fd_drv_init(&core); //Driver initialization
     platform_init();
     fd_usbxch_init(USB1);
-    fd_drv_init(&core);
-    // enable motor control function
 
+    // enable motor control function
     // Control modes configuration
     // Open loop startup sequence
     constexpr uint16_t time[PmsmControl::olstup_tb_size()] = {0, 1000, 3000, 5000, 7000, 9000};
@@ -67,6 +67,9 @@ void Sys::init()
             {etl::span<daq::Channel>(&channels[6], 3), str}};
 
     daq_session.registerStreams(streams);
+
+    //FreeRtos initialization
+    
     while (true)
     {
         fd_usbxch_update(USB1);

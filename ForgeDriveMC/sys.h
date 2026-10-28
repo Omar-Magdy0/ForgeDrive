@@ -10,6 +10,7 @@
 #include <stdio.h>
 //=======================================================
 #include "fd_drv.h"
+#include "FreeRTOS.h"
 #include "DAQSessionAPP.h"
 
 

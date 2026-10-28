@@ -1,101 +1,106 @@
+# GPIO (port, pin, mode, pull, speed)
+# PWM (active, channel) (with negative denoting complementary)
+# Analog channels (channel, sample_cycles)
+
+
 config = {
     "usb": {
         "vid": 0xFFFF,
         "pid": 0x0001,
         "langid_string": 0x0409,
-
+        "class": "usbxch",
         "manufacturer_string": "ForgeDrive",
-
-        "product": {
-            "hs": "ForgeDriveMC",
-            "fs": "ForgeDriveMC",
+        "product": "ForgeDriveMC",
+        "configuration": "Default Configuration",
+        "interface": "PMSM Drive",
+        "gpio": {
+            "dp": ("A", 11, "AF10_PP", None, "very_high"),
+            "dm": ("A", 12, "AF10_PP", None, "very_high")
         },
-
-        "configuration": {
-            "hs": "Default Configuration",
-            "fs": "Default Configuration",
-        },
-
-        "interface": {
-            "hs": "PMSM Drive",
-            "fs": "PMSM Drive",
+        "irq": {
+            "usb": 6
         },
     },
+    "remap": {},
     "usbxch": {
-        "instances": [
-            {
-                "name": "USB1",
-                "tx_bufsize" : 4096,
-                "rx_bufsize" : 256
-            }
-        ]
+        "name": "USB1",
+        "tx_bufsize" : 4096,
+        "rx_bufsize" : 256,
     },
     "hall": {
 
     },
-    "tim": {
+    "timer": {
         "instances": [
             {
-                "name": "TIMxMC",
-                "num": 10,
+                "name": "TIMERxMC",
+                "tim": 10,
                 "irq": {
-                    "tim": {"prio": 2}
-                }
+                    "tim": 2
+                },
             }
         ]
     },
     "mc3p": {
-        # Shared subsystem configuration tied specifically to mc3p
         "vs_scale" : 60,
         "cs_scale": 50,
         "current_sensing": {
             "topology": "two_inline",
             "calibration_samples_log2": 10
         },
-        # List of physical motor instances using this subsystem
         "instances": [
             {
                 "name": "MC3P1",
-                "tim": {
-                    "num": 1,
-                    "vh": {"port": "A", "pin": 8, "active": 1, "ch": 1},
-                    "wh": {"port": "A", "pin": 9, "active": 1, "ch": 2},
-                    "uh": {"port": "A", "pin": 10, "active": 1, "ch": 3},
-                    "vl": {"port": "B", "pin": 13, "active": 1},
-                    "wl": {"port": "B", "pin": 14, "active": 1},
-                    "ul": {"port": "B", "pin": 15, "active": 1}
+                "pwm": {
+                    "tim": 1,
+                    "vh": (1, 1),
+                    "wh": (1, 2),
+                    "uh": (1, 3),
+                    "vl": (1,-1),
+                    "wl": (1,-2),
+                    "ul": (1,-3),
                 },
-                "adc": {
-                    "num": 1,
+                "analog": {
+                    "adc": 1,
                     "inj": {
-                        "vsbus": {"port": "A", "pin": 0, "channel": 0, "sampling_cycles": 15},
-                        "vsu":   {"port": "A", "pin": 1, "channel": 1, "sampling_cycles": 15},
-                        "vsv":   {"port": "A", "pin": 2, "channel": 2, "sampling_cycles": 15},
-                        "vsw":   {"port": "A", "pin": 3, "channel": 3, "sampling_cycles": 15},
-                        "csw":   {"port": "A", "pin": 4, "channel": 4, "sampling_cycles": 15},
-                        "csu":   {"port": "A", "pin": 5, "channel": 6, "sampling_cycles": 15},
+                        "vsbus": (0, 15),
+                        "vsu":   (1, 15),
+                        "vsv":   (2, 15),
+                        "vsw":   (3, 15),
+                        "csw":   (4, 15),
+                        "csu":   (6, 15),
                     },
                     "bg": {
-                        "temp": {"channel": 18, "sampling_cycles": 56},
-                        "pot":  {"channel": 18, "sampling_cycles": 56}
+                        "temp": (18, 56),
+                        "pot":  (18, 56)
                     }
                 },
                 "dma": {
-                    "bg": {
-                        "num": 2,
-                        "stream": 0,
-                        "channel": 0,
-                        "prio": "medium"
-                    }
+                    "bg": ("DMA1_STREAM0_CH1","medium")
                 },
                 "irq": {
-                    "sync": {"prio": 0},
-                    "tim": {"prio": 1},
-                    "bkin": {"prio": 0},
-                    "bg": {"prio": 5}
-                }
+                    "sync": 0,
+                    "tim": 1,
+                    "bkin": 0,
+                    "bg": 5
+                },
+                "gpio": {
+                    "vh": ("A", 8, "AF1_PP", None, "low"),
+                    "wh": ("A", 9, "AF1_PP", None, "low"),
+                    "uh": ("A", 10, "AF1_PP", None, "low"),
+                    "vl": ("B", 13, "AF1_PP", None, "low"),
+                    "wl": ("B", 14, "AF1_PP", None, "low"),
+                    "ul": ("B", 15, "AF1_PP", None, "low"),
+                    "vsbus": ("A", 0, "AN", None, "low"),
+                    "vsu": ("A", 1, "AN", None, "low"),
+                    "vsv": ("A", 2, "AN", None, "low"),
+                    "vsw": ("A", 3, "AN", None, "low"),
+                    "csw": ("A", 4, "AN", None, "low"),
+                    "csu": ("A", 5, "AN", None, "low"),
+                    "temp": ("A", 6, "AN", None, "low"),
+                    "pot":  ("A", 7, "AN", None, "low"),
+                },
             }
-            
         ]
     }
 }

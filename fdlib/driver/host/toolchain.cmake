@@ -1,1 +1,3 @@
-set(CMAKE_TOOLCHAIN_FILE "${THIRDPARTY_DIR}/linux/native-gcc.cmake")
+set(CMAKE_C_COMPILER gcc)
+set(CMAKE_CXX_COMPILER g++)
+set(CMAKE_ASM_COMPILER gcc)

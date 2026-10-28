@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from c_parse import parse_header
-from generate import FDGEN_RE
+from generate import FDGEN_RE, DRIVER_ROOT
 
 platform_dir = Path(__file__).resolve().parent.parent
 BUS_ROOTS = {
@@ -22,6 +22,89 @@ BUS_PSC_GETTER = {
     "APB1": ("LL_RCC_GetAPB1Prescaler", "LL_RCC_APB1_DIV_1"),
     "APB2": ("LL_RCC_GetAPB2Prescaler", "LL_RCC_APB2_DIV_1"),
 }
+GPIO_MODE = {
+    "AF": "LL_GPIO_MODE_ALTERNATE",
+    "IN": "LL_GPIO_MODE_INPUT",
+    "OUT": "LL_GPIO_MODE_OUTPUT",
+    "AN": "LL_GPIO_MODE_ANALOG"
+}
+OUTPUT_TYPE = {
+    None: "LL_GPIO_OUTPUT_PUSHPULL",
+    "PP": "LL_GPIO_OUTPUT_PUSHPULL",
+    "OD": "LL_GPIO_OUTPUT_OPENDRAIN"
+}
+PULL_TYPE = {
+    None: "LL_GPIO_PULL_NO",
+    "PU": "LL_GPIO_PULL_UP",
+    "PD": "LL_GPIO_PULL_DOWN"
+}
+DMA_RE = {
+    "stream": re.compile(
+        r"DMA(?P<dma>\d+)_STREAM(?P<stream>\d+)_CH(?P<channel>\d+)"
+    ),
+    "channel": re.compile(
+        r"DMA(?P<dma>\d+)_CH(?P<channel>\d+)"
+    ),
+}
+
+def dma_parse(cfg, arch):
+    name, priority = cfg
+    match = DMA_RE[arch].fullmatch(name)
+
+    if match is None:
+        raise ValueError(f"Invalid {arch} DMA identifier: {name}")
+
+    fields = match.groupdict()
+    if(arch == "stream"):
+        irq_name =  f"DMA{fields['dma']}_Stream{fields['stream']}"
+    else:
+        irq_name = f"DMA{fields['dma']}_Channel{fields['channel']}"
+        
+    return {
+        "irq_name": irq_name,
+        "dma": f"DMA{fields['dma']}",
+        "irq_flag_num": fields.get("stream") if fields.get("stream") is not None else fields['channel'],
+        "stream": f"LL_DMA_STREAM_{fields['stream']}" if fields.get("stream") is not None else None,
+        "channel": f"LL_DMA_CHANNEL_{fields['channel']}",
+        "prio": f"LL_DMA_PRIORITY_{priority.upper()}",
+    }
+
+def gpio_init(pin_config):
+    port, pin, mode_expr,  pull, speed = pin_config
+    # Resolve portable values into STM32 LL expressions.
+    parts = mode_expr.split("_", mode_expr.count("_"))
+    mode = parts[0]
+    af = None
+    if mode.startswith("AF"):
+        af = int(mode[2:])
+        mode = mode[:2]
+    spec = parts[1:]
+    type = None
+    if len(spec) > 1:
+        type = spec[0]
+
+    port_expr = f"GPIO{port}"
+    pin_expr = f"LL_GPIO_PIN_{pin}"
+    speed_expr = f"LL_GPIO_SPEED_FREQ_{(speed or 'low').upper()}"
+    mode_expr = GPIO_MODE[mode]
+    output_expr = OUTPUT_TYPE[type]
+    pull_expr = PULL_TYPE[pull]
+    af_expr = f"LL_GPIO_AF_{af}"
+
+    return f"""
+    {{
+        __FDGEN__CLK_EN({port_expr})
+        LL_GPIO_InitTypeDef GPIO_InitStruct = {{0}};
+        GPIO_InitStruct.Pin = {pin_expr};
+        GPIO_InitStruct.Mode = {mode_expr};
+        GPIO_InitStruct.Speed = {speed_expr};
+        GPIO_InitStruct.OutputType = {output_expr};
+        GPIO_InitStruct.Pull = {pull_expr};
+        {f"GPIO_InitStruct.Alternate = {af_expr};" if af is not None else ""}
+        LL_GPIO_Init({port_expr}, &GPIO_InitStruct);
+    }}
+    """
+
 PERIPH_EXCLUDE = {"FLASH", "FLASH_R"}
 def resolve_periph_clock(name, macros, seen=None):
     seen = set() if seen is None else seen
@@ -124,8 +207,17 @@ def emit_system(ctx):
 
     with open(system_c, "a", encoding="utf-8") as f:
         f.write("".join(code))
-    pass
 
+    code = []
+    for key,value in device.items():
+        code.append(f"set(DEVICE_{key.upper()} \"{str(value).upper()}\")\n")
+    output_path = ctx["temp_dir"]/"device.cmake"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("a", encoding="utf-8") as f:
+        f.writelines(code)
+    ctx["generated"].add(str(output_path))
+    
+        
 def fdgen_macro(ctx):
     handlers = {
         "CLK_EN": clk_en,
@@ -149,8 +241,27 @@ def fdgen_macro(ctx):
             args = [arg.strip() for arg in raw_args.split(",")]
             handler(ctx, loc, *args)
 
+def pre_macro(ctx):
+    generated = [Path(p) for p in ctx["generated"]]
+    system_c = next((p for p in generated if p.name == "System.c"), None)
+    system_h = next((p for p in generated if p.name == "System.h"), None)
+    if system_c is None or system_h is None:
+        ctx.setdefault("error", []).append(
+            "FDGEN: System.c or System.h not found in generated files"
+        )
+        return
+    code = []
+    device = ctx["device"]
+    code.append("\nvoid SystemGPIO_Init(void)\n{\n")
+    for name, data in device["gpio"].items():
+        code.append(f"// GPIO {name}  Owner: {data['owner']}\n")
+        code.append("   " + gpio_init(data['config']).strip() + "\n")
+    code.append("}\n")
+    with open(system_c, "a", encoding="utf-8") as f:
+        f.write("".join(code))
 
 def fdgen(ctx):
+    pre_macro(ctx)
     fdgen_macro(ctx)
     emit_system(ctx)
 
@@ -158,15 +269,8 @@ def setup(ctx):
     #add the cmake file needed
     #get the product code, flash/ density and so on letters and variants and add them to device dictionary
     device = ctx["device"]
-    match = re.fullmatch(r"STM32([A-Z])(\d)(\d{2})([A-Z])([A-Z0-9]+)", device["name"], re.I)
-    if not match:
-        ctx.setdefault("error", []).append(f"Unsupported STM32 device name: {device['name']}")
-        return
-
-    letter, series, product, pin_code, density = match.groups()
-    print(platform_dir)
     #parse CMSIS headers for device information
-    ctx["device_def"] = parse_header(ctx["cmsis_dir"]/f"Device/ST/STM32F4xx/Include/stm32f{series}{product}x{density}.h") 
+    ctx["device_def"] = parse_header(ctx["cmsis_dir"]/f"Device/ST/STM32{device["family"].upper()}xx/Include/stm32{device["family"][0]}{device["product"]}x{device["density_code"]}.h") 
     #now we have device definitions... Awesome, we can get most information such as IRQ handler names, peripheral instances, clock buses and much more
     ctx["device"]["irq"] = [
         name.removesuffix("_IRQn")
@@ -183,7 +287,9 @@ def setup(ctx):
     ]
     ctx["device"]["bus_clk_getter"] = BUS_CLK_GETTER
     ctx["device"]["bus_psc_getter"] = BUS_PSC_GETTER
-    device.update(family=f"{letter}{series}", product=f"{series}{product}", pin_code=pin_code, density_code=density)
+    
+    #path and search additions
+    ctx["gen_sDir"].append(f"{DRIVER_ROOT}/{ctx["device"]["platform"]}/stm32{(ctx["device"]["family"]).lower()}")
     ctx.setdefault("gen", {}).update({
         "CMakeLists.txt": None,
         "stm32f4xx_hal_conf.h": None,
@@ -191,9 +297,22 @@ def setup(ctx):
         "fd_adc.c": None,
         "fd_adc.h": None,
         "System.c": None,
+        "post_build.cmake": None,
         "toolchain.cmake": None,
-        f"stm32{device["family"]}/usbd_conf.c": "usbd/usbd_conf.c",
+        "usbd/usbd_conf.c": "usbd/usbd_conf.c",
         "usbd/usbd_conf.h": "usbd/usbd_conf.h",
         "usbd/usbd_desc.c": "usbd/usbd_desc.c",
         "usbd/usbd_desc.h": "usbd/usbd_desc.h",
     })
+    if "usb" in ctx["config"]:
+        ctx["gen"].update({
+            "usbd/usbd_conf.c": "usbd/usbd_conf.c",
+            "usbd/usbd_conf.h": "usbd/usbd_conf.h",
+            "usbd/usbd_desc.c": "usbd/usbd_desc.c",
+            "usbd/usbd_desc.h": "usbd/usbd_desc.h",
+        })
+
+def env_macros(ctx):
+    env = ctx["env"]
+    env.globals["dma_parse"] = dma_parse
+    pass

@@ -21,10 +21,29 @@ def mc3p(ctx):
 
     ## validation , adding errors/warnings
     for inst in conf["instances"]:
+        #gpio linkage
+        pwm_gpio = []
+        for name, val in inst["pwm"].items():
+            if(name in ("tim")): continue
+            gpio = inst["gpio"].get(name)
+            if gpio is not None:
+                pwm_gpio.append(inst["gpio"][name])
+            else:
+                ctx["error"].append(f"[MC3P] gpio for pwm signal {name} not found")
+        inst["pwm_gpio"] = pwm_gpio
+
+        analog_gpio = []
+        for name, val in inst["analog"].items():
+            if(name in ("adc")): continue
+            gpio = inst["gpio"].get(name)
+            if gpio is not None:
+                analog_gpio.append(inst["gpio"][name])
+        inst["analog_gpio"] = analog_gpio
+
         if conf["current_sensing"]["topology"] in ["two_shunt","two_inline"]:
             inst["cs_found"] = {
                 phase[2]
-                for phase in inst["adc"]["inj"]
+                for phase in inst["analog"]["inj"]
                 if phase.startswith("cs") and len(phase) == 3
             }
             inst["cs_missing"] = set(phase_names) - inst["cs_found"]
@@ -44,7 +63,7 @@ def mc3p(ctx):
         inst["trapVs_vector"] = [
             {
                 "phase": phase_names[phases.index("FLOAT")].upper(),
-                "channel": inst["adc"]["inj"]["vs" + phase_names[phases.index("FLOAT")]]["channel"],
+                "ch": inst["analog"]["inj"]["vs" + phase_names[phases.index("FLOAT")]][0],
                 "sign": 1
             }
             for phases in conf["trap_sectors"]
@@ -54,7 +73,7 @@ def mc3p(ctx):
             inst["trapCs_vector"] = [
                 {
                     "phase": phase_names[phases.index("L_ON")].upper(),
-                    "channel": inst["adc"]["inj"]["cs" + phase_names[phases.index("L_ON")]]["channel"],
+                    "ch": inst["analog"]["inj"]["cs" + phase_names[phases.index("L_ON")]][0],
                     "sign": -1
                 }
                 for phases in conf["trap_sectors"]
@@ -71,7 +90,7 @@ def mc3p(ctx):
                     if phase in inst["cs_found"]:
                         selected = {
                             "phase": phase.upper(),
-                            "channel": inst["adc"]["inj"]["cs" + phase]["channel"],
+                            "ch": inst["analog"]["inj"]["cs" + phase][0],
                             "sign": sign
                         }
                         break
@@ -84,10 +103,78 @@ def mc3p(ctx):
                 inst["trapCs_vector"].append(selected)
         elif conf["current_sensing"]["topology"] == "inline":
             pass
-            
-    
+
+from pprint import pprint    
+def gpio(ctx):
+    conf = ctx["config"]
+    device = ctx["device"]
+    gpios = {}
+
+    def collect(node, path=()):
+        if not isinstance(node, dict):
+            return
+
+        for key, value in node.items():
+            if key == "gpio" and isinstance(value, dict):
+                owner = ".".join(path)
+                for sig, config in value.items():
+                    name = str(config[0])+str(config[1])
+                    owner_sig = f"{owner}.{sig}"
+                    if name not in gpios:
+                        gpios[name] = {}
+                    else:
+                        ctx["error"].append(
+                            f"[GPIO] : multiple drivers sharing GPIO {name}: "
+                            f"{owner_sig} conflicts with {gpios[name]['owner']}"
+                        )
+                        continue
+                    gpios[name]["config"] = config
+                    gpios[name]["owner"] = owner_sig
+            elif isinstance(value, dict):
+                collect(value, path + (key,))
+            elif isinstance(value, list):
+                for i, item in enumerate(value):
+                    collect(item, path + (f"{key}[{i}]",))
+    collect(conf)
+    device["gpio"] = gpios
+
+
+def dma(ctx):
+    conf = ctx["config"]
+    device = ctx["device"]
+    dma = {}
+
+    def collect(node, path=()):
+        if not isinstance(node, dict):
+            return
+
+        for key, value in node.items():
+            if key == "dma" and isinstance(value, dict):
+                owner = ".".join(path)
+                for sig, config in value.items():
+                    name = str(config[0])
+                    owner_sig = f"{owner}.{sig}"
+                    if name not in dma:
+                        dma[name] = {}
+                    else:
+                        ctx["error"].append(
+                            f"[DMA] : multiple drivers sharing DMA {name}: "
+                            f"{owner_sig} conflicts with {dma[name]['owner']}"
+                        )
+                        continue
+                    dma[name]["config"] = config[1]
+                    dma[name]["owner"] = owner_sig
+            elif isinstance(value, dict):
+                collect(value, path + (key,))
+            elif isinstance(value, list):
+                for i, item in enumerate(value):
+                    collect(item, path + (f"{key}[{i}]",))
+    collect(conf)
+    device["dma"] = dma
 
 def drv(ctx):
+    gpio(ctx)
+    dma(ctx)
     mc3p(ctx)
     conf = ctx["config"]["mc3p"]
     

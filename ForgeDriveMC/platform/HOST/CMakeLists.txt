@@ -45,12 +45,19 @@ file(GLOB platform_src
 )
 
 find_package(Threads REQUIRED)
-
-
 find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C CXX)
+
+target_sources(fd_freertos PRIVATE
+    ${FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/port.c
+)
+
+target_include_directories(fd_freertos PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/freertos
+    ${FREERTOS_DIR}/portable/ThirdParty/GCC/Posix
+)
 
 add_library(PLATFORM STATIC)
 target_sources(PLATFORM PRIVATE

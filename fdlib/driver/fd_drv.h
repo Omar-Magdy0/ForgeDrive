@@ -6,9 +6,11 @@
 extern "C"{
 #endif
 
+
 #define FD_DEVICE_{{device.name | upper}}
 #define FD_PLATFORM_{{device.platform | upper}}
 #define FD_FAMILY_{{device.family | upper}}
+#define FD_DEVICE_CPUCORE_{{device.cpu_core | upper}}
 
 #define __FDGEN__IRQ_BIND(irq_name, handler)
 #define __FDGEN__IRQ_EN(irq_name, prio)

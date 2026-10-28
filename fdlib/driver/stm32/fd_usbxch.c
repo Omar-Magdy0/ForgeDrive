@@ -34,7 +34,7 @@ static void usbxch_start_tx(fd_usbxch_handle_t *h);
 extern PCD_HandleTypeDef hpcd;
 static USBD_XCH_HandleTypeDef s_usbxch;
 
-{% for inst in usbxch.instances %}
+{% set inst = usbxch %}
 /* ---------------------------------------------------------------------------
  * Internal forward declarations
  * --------------------------------------------------------------------------- */
@@ -78,7 +78,7 @@ void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h)
     hUsbDeviceFS.pClassData = (void*)&s_usbxch;
     {{inst.name}}_device_init();
 }
-{% endfor %}
+
 /* ---------------------------------------------------------------------------
  * Write
  * --------------------------------------------------------------------------- */

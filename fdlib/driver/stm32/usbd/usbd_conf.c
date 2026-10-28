@@ -36,31 +36,23 @@ PCD_HandleTypeDef hpcd;
  * @param  hpcd: PCD handle
  * @retval None
  */
+
+#include "fd_drv.h"
+{% if device.family in ["f4"]%}
+void usbxch_handle()
+{
+    HAL_PCD_IRQHandler(&hpcd);
+}
+__FDGEN__CLK_EN(SYSCFG)
+__FDGEN__CLK_EN(USB_OTG_FS)
+__FDGEN__IRQ_EN( OTG_FS, {{usb.irq["usb"]}})
+__FDGEN__IRQ_BIND( OTG_FS , usbxch_handle);
+
+{% endif %}
+
 void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
 {
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* Enable GPIOA clock */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  /* Configure USB DM (PA11) and DP (PA12) */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_11 | LL_GPIO_PIN_12;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_10; // USB OTG FS on STM32F4
-
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* Enable USB FS Clock */
-  __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
-
-  /* Enable SYSCFG Clock */
-  __HAL_RCC_SYSCFG_CLK_ENABLE();
-
-  HAL_NVIC_SetPriority(OTG_FS_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
 }
 
 /**
@@ -70,11 +62,6 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
  */
 void HAL_PCD_MspDeInit(PCD_HandleTypeDef *hpcd)
 {
-  /* Disable USB FS Clock */
-  __HAL_RCC_USB_OTG_FS_CLK_DISABLE();
-
-  /* Disable SYSCFG Clock */
-  __HAL_RCC_SYSCFG_CLK_DISABLE();
 }
 
 /*******************************************************************************
@@ -437,11 +424,3 @@ void USBD_static_free(void *p)
 {
 }
 
-#include "fd_drv.h"
-{% if device.family in ["f4"]%}
-void usbxch_handle()
-{
-    HAL_PCD_IRQHandler(&hpcd);
-}
-__FDGEN__IRQ_BIND( OTG_FS , usbxch_handle);
-{% endif %}

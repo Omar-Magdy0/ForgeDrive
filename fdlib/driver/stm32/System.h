@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
-
 #include "stm32{{device.family}}xx_ll_rcc.h"
+
+
 static inline uint32_t get_periph_bus_clk(const void *periph)
 {
     {% for p in device.periph %}
@@ -17,7 +18,12 @@ static inline uint32_t get_periph_bus_clk(const void *periph)
     {% endfor %}
     return 0U;
 }
+
+
+#define FD_CPU_CLK SystemCoreClock
+
 void Error_Handler(void);
 void SystemClock_Config();
 void SystemPeriphClock_Init();
 void SystemNVIC_Init();
+void SystemGPIO_Init();

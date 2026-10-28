@@ -34,7 +34,7 @@ typedef struct {
 
 /* ---- Public API ---- */
 
-{% for inst in usbxch.instances %}
+{% set inst = usbxch %}
 void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h);
 uint32_t fd_usbxch_write_impl(fd_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
 uint32_t fd_usbxch_write_available_impl(fd_usbxch_handle_t *h);
@@ -45,7 +45,7 @@ uint32_t fd_usbxch_read_available_impl(fd_usbxch_handle_t *h);
 bool fd_usbxch_connected_impl(fd_usbxch_handle_t *h);
 void fd_usbxch_update_impl(fd_usbxch_handle_t *h);
 extern fd_usbxch_handle_t {{inst.name}};
-{% endfor %}
+
 
 // ==========================================
 // UNIFIED COMPILE-TIME DISPATCH MACROS

@@ -31,14 +31,14 @@
 
 #define USBD_MANUFACTURER_STRING      "{{ usb.manufacturer_string }}"
 
-#define USBD_PRODUCT_HS_STRING        "{{ usb.product.hs }}"
-#define USBD_PRODUCT_FS_STRING        "{{ usb.product.fs }}"
+#define USBD_PRODUCT_HS_STRING        "{{ usb.product }}"
+#define USBD_PRODUCT_FS_STRING        "{{ usb.product }}"
 
-#define USBD_CONFIGURATION_HS_STRING  "{{ usb.configuration.hs }}"
-#define USBD_CONFIGURATION_FS_STRING  "{{ usb.configuration.fs }}"
+#define USBD_CONFIGURATION_HS_STRING  "{{ usb.configuration }}"
+#define USBD_CONFIGURATION_FS_STRING  "{{ usb.configuration }}"
 
-#define USBD_INTERFACE_HS_STRING      "{{ usb.interface.hs }}"
-#define USBD_INTERFACE_FS_STRING      "{{ usb.interface.fs }}"
+#define USBD_INTERFACE_HS_STRING      "{{ usb.interface }}"
+#define USBD_INTERFACE_FS_STRING      "{{ usb.interface }}"
 
 /* Private macro -------------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/

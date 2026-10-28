@@ -1,8 +1,10 @@
 #include "System.h"
+#include "fd_drv.h"
 #include "stm32{{device.family}}xx_ll_rcc.h"
 #include "stm32{{device.family}}xx_ll_system.h"
 #include "stm32{{device.family}}xx_ll_pwr.h"
 #include "stm32{{device.family}}xx_ll_utils.h"
+#include "stm32{{device.family}}xx_ll_gpio.h"
 
 
 

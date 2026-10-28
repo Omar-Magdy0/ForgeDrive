@@ -57,6 +57,7 @@ void fd_drv_init(fd_drv_t *h)
     NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
     SystemPeriphClock_Init();
     SystemNVIC_Init();
+    SystemGPIO_Init();
     if (h != NULL)
     {
         h->adc_to_V = (3.3/4095.0);
