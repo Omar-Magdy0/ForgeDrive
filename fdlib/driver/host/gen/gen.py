@@ -23,6 +23,7 @@ def setup(ctx):
         "toolchain.cmake": None,
         "System.h": None,
         "System.cpp": None,
+        "fd_SILTick.h": None,
         "fd_SILServer.h": None,
         "fd_TCPClient.h": None,
     })

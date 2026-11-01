@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 #include <implot.h>
-
+#include "silgui.h"
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <GLFW/glfw3.h>
@@ -17,90 +17,6 @@
 #endif
 
 
-
-#include <stdint.h>
-#include <pthread.h>
-#include <time.h>
-#include <unistd.h>
-#include "silgui.h"
-
-volatile uint64_t virtual_tick = 0;
-float vtime = 0;
-vtimer_manager_t timer_manager;
-
-// get monotonic time in ns
-static inline uint64_t now_ns(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
-}
-
-// register a timer (frequency in Hz)
-unsigned int register_timer(vtimer_manager_t* mgr, timer_callback_t cb, uint64_t timestep_ns) {
-    if (mgr->timer_index >= HOST_TIMERS) return false;
-    unsigned int idx = mgr->timer_index;
-    vtimer_t* t = &mgr->timers[mgr->timer_index++];
-    t->periodic_time_ns = (timestep_ns);
-    t->last_time_ns = now_ns();
-    t->cb = cb;
-    if(timestep_ns < mgr->min_timestep_ns)
-    {
-        mgr->min_timestep_ns = timestep_ns;
-    }
-    return idx;
-}
-
-bool configure_timer_timestep(vtimer_manager_t* mgr, unsigned int idx ,uint64_t timestep_ns)
-{
-    if(idx > mgr->timer_index)return false;
-    vtimer_t* t = &mgr->timers[idx];
-    t->periodic_time_ns = (timestep_ns);
-    if(timestep_ns < mgr->min_timestep_ns)
-    {
-        mgr->min_timestep_ns = timestep_ns;
-    }
-    return true;
-}
-
-struct SIM{
-    uint64_t time_ns;
-};
-inline SIM sim;
-
-void tick(uint64_t elapsed_ns)
-{
-    // determine smallest timestep needed by any timer
-    uint64_t dt_ns = timer_manager.min_timestep_ns; // example 10 us, can be min of all timers
-    uint64_t steps = elapsed_ns / dt_ns;
-    for (uint64_t i = 0; i < steps; i++)
-    {
-        sim.time_ns += dt_ns;
-        // unified check of all timers
-        for (int t_idx = 0; t_idx < timer_manager.timer_index; t_idx++)
-        {
-            vtimer_t* t = &timer_manager.timers[t_idx];
-            if (!t->cb) continue;
-            if (sim.time_ns - t->last_time_ns >= t->periodic_time_ns)
-            {
-                t->last_time_ns = sim.time_ns; // advance by one period
-                t->cb();
-            }
-        }
-    }
-}
-
-void* tick_thread(void* arg) {
-    while (1)
-    {
-        const uint64_t sleep_ns = 1000000ULL;   // 1 ms coarse sleep
-        tick(sleep_ns);
-        // coarse sleep to avoid spinning CPU
-        struct timespec req = {0, sleep_ns};
-        nanosleep(&req, NULL);
-    }
-}
-
-
 static inline int display_w = 1000;
 static inline int display_h = 1000;
 
@@ -111,7 +27,6 @@ static inline void glfw_error_callback(int error, const char* description) { std
 static inline void window_close_callback(GLFWwindow* w) {
     // Force the window to stay open
     glfwSetWindowShouldClose(w, GLFW_FALSE);
-    
     // You could trigger an ImGui popup here saying "Please use Shutdown button"
 }
 
@@ -210,7 +125,6 @@ void gui_init(){
     //Initialization silgui
     silgui_init();
 }
-
 void gui_deinit()
 {
     // Cleanup
@@ -221,7 +135,6 @@ void gui_deinit()
     glfwDestroyWindow(window);
     glfwTerminate();
 }
-
 void gui_loop() {
     if(!glfwWindowShouldClose(window)) {
         // Main loop
@@ -242,12 +155,8 @@ void gui_loop() {
     }
 }
 
-
 pthread_t t;
-
 void platform_init()
 {
-    timer_manager.min_timestep_ns = 1000000;
-    pthread_create(&t, NULL, tick_thread, NULL);
     gui_init();
 }

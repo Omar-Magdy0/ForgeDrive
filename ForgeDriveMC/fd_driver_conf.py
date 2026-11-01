@@ -24,7 +24,7 @@ config = {
     "remap": {},
     "usbxch": {
         "name": "USB1",
-        "tx_bufsize" : 4096,
+        "tx_bufsize" : 2048,
         "rx_bufsize" : 256,
     },
     "hall": {

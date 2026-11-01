@@ -2,17 +2,10 @@
 #include "platform.h"
 #include "sil.h"
 #include "silgui.h"
-#include "fd_hall.h"
+#include "fd_SILTick.h"
 
 
-extern float vtime;
-unsigned int sil_pwm_timer;
-unsigned int sil_to_pwm_freq = 1;
-
-
-#define FD_MC3P_TICKFREQ 1000
 #define SIL_DEFAULT_VCC 36.0f
-#define SIL_MAX_TIMESTEP (1.0/20000.0)
 // Number of SIL steps to run for each PWM update 
 //(for better resolution in the scope plots, better simulation quality and for marginally low time constants)
 
@@ -24,14 +17,11 @@ void postScanMethod()
 {
     fd_mc3p_MC3P1_sync_postScanCallback();
     sil_input.load_torque = (dummy_load.K * sil.state.omega + dummy_load.B) * sil.state.omega + dummy_load.Tc;
-    for(int i = 0; i < sil_to_pwm_freq; i++) {
-        sil.step(sil_input);
-        sil_hall_update();
-        silgui_updateData();
-        silLogger.log(sil, sil_input);
-    }
+    sil.step(sil_input);
+    silgui_updateData();
+    silLogger.log(sil, sil_input);
+    SILTick::instance().register_event((uint64_t)(1e9/MC3P1.config.pwm_Hz), postScanMethod);
 }
-
 
 static void dPsim_dTheta_Sine(double theta_e, double dPsi_dTheta[3])
 {
@@ -50,7 +40,7 @@ static void dPsim_dTheta_Trapezoidal(double theta_e, double dPsi_dTheta[3])
 
 void pv_mc3p_MC3P1_hw_init(fd_mc3p_handle_t *h)
 {
-    sil_input.dt = 1.0f / h->config.pwm_Hz / sil_to_pwm_freq;
+    sil_input.dt = 1.0f / h->config.pwm_Hz;
     sil_input.load_torque = 0.00;
     sil_input.vcc = SIL_DEFAULT_VCC;
     sil.param.dPsim_dTheta = dPsim_dTheta_Sine;
@@ -78,12 +68,39 @@ void pv_mc3p_MC3P1_hw_init(fd_mc3p_handle_t *h)
     #ifdef FD_MC3P_DTC_ACTIVE
     h->dtc_comp_q15 = (int16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
     #endif
-    sil_pwm_timer = register_timer(&timer_manager, postScanMethod, (uint64_t)(1e9/h->config.pwm_Hz));
+    SILTick::instance().register_event((uint64_t)(1e9/h->config.pwm_Hz), postScanMethod);
 }
 
 void pv_mc3p_MC3P1_sector_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector)
 {
-    
+    fd_mc3p_mode_t cm = fd_mc3p_sector_to_mode(sector);
+    if(cm != h->mode)//mode changed... call mode update functions
+    {
+        switch (cm)
+        {
+        case FD_MC3P_MODE_TRAP:
+            fd_mc3p_MC3P1_write_phase_state(h, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP);
+            break;
+        case FD_MC3P_MODE_SVM:
+            fd_mc3p_MC3P1_write_phase_state(h, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP, FD_MC3P_PHASE_COMP);
+            break;
+        default:
+            break;
+        }
+        h->mode = cm;
+    }
+    //update sector
+    switch (h->mode)
+    {
+    case FD_MC3P_MODE_TRAP:
+        break;
+    case FD_MC3P_MODE_SVM:
+        break;
+    default:
+        break;
+    }
+
+    h->sector_last = sector;
 }
 
 void pv_mc3p_MC3P1_offset_calibration(fd_mc3p_handle_t *h)
@@ -91,28 +108,13 @@ void pv_mc3p_MC3P1_offset_calibration(fd_mc3p_handle_t *h)
 
 }
 
-
 void fd_mc3p_MC3P1_reconfigure_pwm(fd_mc3p_handle_t *h)
 {
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
     h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
-    double min_sil_freq = 1.0/SIL_MAX_TIMESTEP;
-    if(h->config.pwm_Hz < min_sil_freq)
-    {
-        //Find the nearest integer multiple of pwm frequency larger than minimum sil frequency
-        double next_freq = 0;
-        for(int i = 1; i <= 1000; i++)
-        {
-            if(i * h->config.pwm_Hz > min_sil_freq)
-            {
-                sil_to_pwm_freq = i;
-            }
-        }
-    }
-    sil_input.dt = 1.0f / h->config.pwm_Hz / sil_to_pwm_freq;
+    sil_input.dt = 1.0f / h->config.pwm_Hz;
     sil.param.inv_pwm_freq = h->config.pwm_Hz;
     sil.param.inv_deatime_ns = h->config.deadtime_nS;
-    configure_timer_timestep(&timer_manager, sil_pwm_timer, (uint64_t)(1e9/h->config.pwm_Hz));
 }
 
 void fd_mc3p_MC3P1_bg_startConv(fd_mc3p_handle_t *h){}

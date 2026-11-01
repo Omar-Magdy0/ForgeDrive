@@ -101,8 +101,9 @@ include_directories(
     ${FDLIB_DIR}/middleware
     ${FDDRV_DIR}
     ${PMSMCONTROL_DIR}
+    ${PMSMCONTROL_DIR}/PosDriver
     ${CMSIS_DSP_DIR}/Include
-    ${CMSIS_CORE_DIR}/Include
+    ${CMSIS_CORE_DIR}/Include   
 )
 # Link with platform EARLY to get include paths
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
@@ -113,12 +114,16 @@ file(GLOB_RECURSE MIDDLEWARE_SRC
     ${FDLIB_DIR}/middleware/*.c
 )
 
+if(DEVICE_PLATFORM STREQUAL "HOST")
+set(POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverSIL.cpp")
+endif()
+
+
 set(APPLICATION_SRC
-    ${PMSMCONTROL_DIR}/PmsmControl.cpp
-    ${PMSMCONTROL_DIR}/PosDriver.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_Foc.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_SComm.cpp
+    ${POSDRIVER}
     ${CMAKE_SOURCE_DIR}/main.cpp
     ${CMAKE_SOURCE_DIR}/sys.cpp
 )
@@ -141,7 +146,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # BUILD Platform Tied TEST CODE
-if(DEVICE_PLATFORM STREQUAL "host")
+if(DEVICE_PLATFORM STREQUAL "HOST")
     target_compile_definitions(${PROJECT_NAME} PRIVATE
         ETL_THROW_EXCEPTIONS
         ETL_VERBOSE_ERRORS

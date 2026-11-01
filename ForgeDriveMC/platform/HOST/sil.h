@@ -16,7 +16,7 @@
 #endif
 
 struct DummyLoad{
-    double Tc;
+    double Tc = 0.1;
     double B = 2.5e-4;
     double K = 1e-7;
     double J = 0.025;
@@ -42,10 +42,10 @@ struct Sil
         double dPsim_dt[3];
         double theta; /** Rotor mechanical angle radians */
         double omega; /** Rotor mechanical angular speed radians per second */
-        double alignment_torque; /** Motor alignment torque */
+        double alignment_torque; /** Motor alignment torque_sp */
         double drive_n1[3];
-        double reluctance_torque; /** Motor reluctance torque */
-        double torque; /** Motor total developed torque */
+        double reluctance_torque; /** Motor reluctance torque_sp */
+        double torque_sp; /** Motor total developed torque_sp */
         unsigned int steps_after_discontinuity = 0;
     } state;
 
@@ -105,7 +105,7 @@ struct Sil
             {
                 file = fopen(filename, "w");
                 if(file){
-                    fprintf(file, "Time,theta,omega,torque,alignment_torque,reluctance_torque,ip_a,ip_b,ip_c,vp_a,vp_b,vp_c,vn,vinv_a,vinv_b,vinv_c,rinv_a,rinv_b,rinv_c\n");
+                    fprintf(file, "Time,theta,omega,torque_sp,alignment_torque,reluctance_torque,ip_a,ip_b,ip_c,vp_a,vp_b,vp_c,vn,vinv_a,vinv_b,vinv_c,rinv_a,rinv_b,rinv_c\n");
                     return true;
                 }else{
                     return false;
@@ -118,7 +118,7 @@ struct Sil
                                   "%.9f,%.9f,%.9f,%.9f,"
                                   "%.9f,%.9f,%.9f,"
                                   "%.9f,%.9f,%.9f\n",
-                        s.time, s.theta, s.omega, s.torque, s.alignment_torque, s.reluctance_torque,
+                        s.time, s.theta, s.omega, s.torque_sp, s.alignment_torque, s.reluctance_torque,
                         s.ip[0], s.ip[1], s.ip[2],
                         s.vp[0], s.vp[1], s.vp[2], s.vn,
                         s.vinv[0], s.vinv[1], s.vinv[2],
@@ -209,7 +209,7 @@ struct Sil
         state.reluctance_torque += state.ip[1] * (state.dLmut_dTheta[0]* state.ip[0] + state.dLself_dTheta[1]*state.ip[1] + state.dLmut_dTheta[1] *state.ip[2]);
         state.reluctance_torque += state.ip[2] * (state.dLmut_dTheta[2]* state.ip[0] + state.dLmut_dTheta[1] *state.ip[1] + state.dLself_dTheta[2]*state.ip[2]);
         state.reluctance_torque = 0.5 * param.motor_pp * state.reluctance_torque;
-        state.torque = state.alignment_torque + state.reluctance_torque; 
+        state.torque_sp = state.alignment_torque + state.reluctance_torque; 
         
         //Eigen Based implementation
         #else
@@ -261,13 +261,13 @@ struct Sil
         state.reluctance_torque = param.motor_pp * 0.5 * (  state.ip[0] * (state.dLself_dTheta[0]*state.ip[0] + state.dLmut_dTheta[0] *state.ip[1] + state.dLmut_dTheta[2] *state.ip[2]) +
                                                             state.ip[1] * (state.dLmut_dTheta[0]* state.ip[0] + state.dLself_dTheta[1]*state.ip[1] + state.dLmut_dTheta[1] *state.ip[2]) +
                                                             state.ip[2] * (state.dLmut_dTheta[2]* state.ip[0] + state.dLmut_dTheta[1] *state.ip[1] + state.dLself_dTheta[2]*state.ip[2]) );
-        state.torque = state.alignment_torque + state.reluctance_torque;
+        state.torque_sp = state.alignment_torque + state.reluctance_torque;
         #endif
 
         // Mechanical solve backward euler
         double J_dt = (param.motor_J + param.load_J)/in.dt;
         double Bt = param.motor_B + param.load_B;
-        double T = state.torque - in.load_torque;
+        double T = state.torque_sp - in.load_torque;
 
         state.omega = (T + J_dt*state.omega)/(J_dt + Bt);
         state.theta = state.omega*in.dt + state.theta;

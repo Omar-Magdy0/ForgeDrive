@@ -39,9 +39,9 @@ set(IMGUI_SRC
     ${IMGUIFD_DIR}/ImGuiFileDialog.cpp
 )
 
-file(GLOB platform_src
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+set(platform_src
+    ${CMAKE_CURRENT_SOURCE_DIR}/platform.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fd_mc3p.cpp
 )
 
 find_package(Threads REQUIRED)
@@ -51,12 +51,14 @@ find_package(glfw3 REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C CXX)
 
 target_sources(fd_freertos PRIVATE
-    ${FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/port.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/port.cpp
+    ${FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c
 )
 
 target_include_directories(fd_freertos PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/freertos
     ${FREERTOS_DIR}/portable/ThirdParty/GCC/Posix
+    ${FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/utils
 )
 
 add_library(PLATFORM STATIC)

@@ -15,7 +15,7 @@
 #define configTICK_RATE_HZ                         1000
 #define configUSE_PREEMPTION                       1
 #define configUSE_TIME_SLICING                     0
-#define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
+//#define configUSE_PORT_OPTIMISED_TASK_SELECTION    1  /* keep it as platform default */
 #define configUSE_TICKLESS_IDLE                    0
 #define configMAX_PRIORITIES                       5
 #define configMINIMAL_STACK_SIZE                   128

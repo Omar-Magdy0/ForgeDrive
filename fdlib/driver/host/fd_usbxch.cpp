@@ -49,7 +49,7 @@ void fd_usbxch_update_impl(fd_usbxch_handle_t *h)
 uint32_t fd_usbxch_write_available_impl(fd_usbxch_handle_t *h)
 {
     (void)h;
-    return UINT16_MAX;
+    return UINT32_MAX;
 }
 uint32_t fd_usbxch_flush_impl(fd_usbxch_handle_t *h)
 {

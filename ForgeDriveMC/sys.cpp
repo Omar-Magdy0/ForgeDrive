@@ -1,84 +1,138 @@
 #include "sys.h"
+#include "fd_timer.h"
+#ifdef FD_PLATFORM_HOST
+#include <thread>
+#endif
+using namespace PmsmControlTypes;
+
+extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
+{
+    (void)task;
+    (void)name;
+
+    taskDISABLE_INTERRUPTS();
+    for (;;)
+    {
+    }
+}
+
+void fd_mc3p_MC3P1_sync_postScanCallback(void)
+{
+    Sys::pmsm1.pwmLoop();
+}
+void fd_mc3p_MC3P1_bg_postScanCallback(void) {}
+void fd_timer_TIMERxMC_periodCallback(void)
+{
+    Sys::pmsm1.xmcLoop();
+}
+
+void lcom(void *arg)
+{
+    TickType_t last_wake = xTaskGetTickCount();
+    constexpr unsigned int LCOM_PERIOD = 1; // 1ms
+    constexpr TickType_t period = pdMS_TO_TICKS(LCOM_PERIOD);
+    for (;;)
+    {
+        // dummy
+        vTaskDelayUntil(&last_wake, period);
+    };
+}
+
+PmsmControlTypes::ConfigGen Sys::configGen =             
+            {.max_freq = 40000,
+             .min_freq = 5000,
+             .max_deadtime_ns = 1000,
+             .min_deadtime_ns = 200,
+             .max_cmag = 20,
+             .min_vbus = 30,
+             .max_vbus = 40,
+             .xTick_freq = 4000,
+             .pos_rate_div = 10};
 
 void Sys::init()
 {
-    fd_drv_init(&core); //Driver initialization
+    fd_drv_init(&DRV); // Driver initialization
     platform_init();
     fd_usbxch_init(USB1);
-
-    // enable motor control function
-    // Control modes configuration
-    // Open loop startup sequence
-    constexpr uint16_t time[PmsmControl::olstup_tb_size()] = {0, 1000, 3000, 5000, 7000, 9000};
-    constexpr float EC_FOC[PmsmControl::olstup_tb_size()] = {3, 5, 7, 9, 10.5, 13};
-    constexpr float RPM[PmsmControl::olstup_tb_size()] = {0, 100, 200, 300, 400, 500};
-    PmsmControlTypes::ConfigPwm pwm_cfg;
-    PmsmControlTypes::ConfigOlstup foc_olstup_cfg;
-    PmsmControlTypes::ConfigSComm scomm_cfg;
-    PmsmControlTypes::ERR err = PmsmControlTypes::ERR::OK;
-
-    pwm_cfg.pwm_freq_hz = 25000;
-    pwm_cfg.deadtime_ns = 1000;
-    pwm_cfg.duty_max = 0.95;
-    pwm_cfg.duty_min = 0;
-    foc_olstup_cfg.vbus_init = 20;
-    memcpy(foc_olstup_cfg.time_ms_tb, time, sizeof(time));
-    memcpy(foc_olstup_cfg.ec_tb, EC_FOC, sizeof(EC_FOC));
-    memcpy(foc_olstup_cfg.rpm_tb, RPM, sizeof(RPM));
-    scomm_cfg.dc_vinj = 1;
-    scomm_cfg.hfi_N = 20;
-    scomm_cfg.hfi_vinj = 12;
-    err = pmsmC1.configControlMode(PmsmControlTypes::MCMode::Idle, PmsmControlTypes::MechMode::OpenSpeed);
-    while (err != PmsmControlTypes::ERR::OK)
-        ;
-    err = pmsmC1.configPwm(pwm_cfg);
-    while (err != PmsmControlTypes::ERR::OK)
-        ;
-    err = pmsmC1.configFocOlstup(foc_olstup_cfg);
-    while (err != PmsmControlTypes::ERR::OK)
-        ;
-    err = pmsmC1.configSComm(scomm_cfg);
-    while (err != PmsmControlTypes::ERR::OK)
-        ;
-    pmsmC1.init();
-    err = pmsmC1.configControlMode(PmsmControlTypes::MCMode::SComm, PmsmControlTypes::MechMode::OpenSpeed);
-    while (err != PmsmControlTypes::ERR::OK)
-        ;
-    err = pmsmC1.setSetpoint(300.0 * (2 * M_PI / 60.0), PmsmControlTypes::MechMode::OpenSpeed);
-
-    daq::Channel channels[9];
-
-    constexpr char chan[] = "CHAN";
-    constexpr char str[] = "STR";
-
-    // Initialize channels
-    for (int i = 0; i < 9; ++i)
+    fd_timer_init(TIMERxMC, configGen.xTick_freq);
+    fd_timer_enable(TIMERxMC, true);
+    lcom_handle = xTaskCreateStatic(lcom,
+                                    "lcom",
+                                    LCOM_STACK_SIZE,
+                                    NULL,
+                                    LCOM_PRIO,
+                                    lcom_stack,
+                                    &lcom_buf);
+    bool config_ok = true;
+    // enable motor control
     {
-        channels[i].Meta = chan;
-        channels[i].scale = static_cast<float>(i);
-        channels[i].offset = static_cast<float>(-i);
+        ERR err[8];
+        uint8_t i = 0;
+        ConfigPwm pwm = {
+            .pwm_Hz = 20000,
+            .deadtime_ns = 300,
+            .duty_min = 0,
+            .duty_max = 0.95};
+        ConfigAnalog analog = {
+            .sync_scale = {
+                {1, 1},
+                {1, 1},
+                {1, 1},
+                {1, 1},
+                {1, 1},
+                {1, 1},
+                {1, 1}},
+            .offset_calibration = true};
+        ConfigSComm scomm = {
+            .oversample_bits = 10,
+            .esettle_min_ticks = 100,
+            .hfi_N = 20,
+            .dc_vinj = 2.5,
+            .hfi_vinj = 2};
+        Model model = {
+            .R = 0.1,
+            .Ld = 0.001,
+            .Lq = 0.001,
+            .psi = 1,
+            .J = 0.1,
+            .B = 0.1,
+            .pole_pairs = 1};
+        Pid pid_Id, pid_Iq, pid_pos, pid_speed;
+        pid_Id = {.Kp = 0.1, .Ki = 0.01, .Kd = 0};
+        pid_Iq = {.Kp = 0.1, .Ki = 0.01, .Kd = 0};
+        pid_pos = {.Kp = 0.1, .Ki = 1e-5, .Kd = 1e-5};
+        pid_speed = {.Kp = 0.1, .Ki = 0.5, .Kd = 0};
+        pmsm1.setControlMode(MCMode::Idle, MechMode::Torque);
+        /*0*/ err[i++] = pmsm1.setConfigPwm(pwm);
+        /*1*/ err[i++] = pmsm1.setConfigAnalog(analog);
+        /*2*/ err[i++] = pmsm1.setConfigSComm(scomm);
+        /*3*/ err[i++] = pmsm1.setPid(pid_Id, PidType::Id);
+        /*4*/ err[i++] = pmsm1.setPid(pid_Iq, PidType::Iq);
+        /*5*/ err[i++] = pmsm1.setPid(pid_pos, PidType::Position);
+        /*6*/ err[i++] = pmsm1.setPid(pid_speed, PidType::Speed);
+        /*7*/ err[i++] = pmsm1.setControlMode(MCMode::Foc, MechMode::Torque);
+        /*8*/ err[i++] = pmsm1.setModel(model);
+        for (int i = 0; i < 8; i++)
+            if (err[i] != ERR::OK)
+                config_ok = false;
     }
-
-    // Construct streams
-    daq::Stream streams[] =
-        {
-            {etl::span<daq::Channel>(&channels[0], 3), str},
-            {etl::span<daq::Channel>(&channels[3], 3), str},
-            {etl::span<daq::Channel>(&channels[6], 3), str}};
-
-    daq_session.registerStreams(streams);
-
-    //FreeRtos initialization
-    
+    while (!config_ok)
+        ;
+    pmsm1.init();
+    pmsm1.setSetpoint(5);
+// FreeRtos initialization
+#ifndef FD_PLATFORM_HOST
+    vTaskStartScheduler();
+    while (true)
+        ; // never reach here
+#else
+    std::thread scheduler_thread([]
+                                 { vTaskStartScheduler(); });
     while (true)
     {
-        fd_usbxch_update(USB1);
-        uint16_t read_len = fd_usbxch_read(USB1, abfStream_rx_buffer, sizeof(abfStream_rx_buffer));
-        abfStream.process(abfStream_rx_buffer, read_len);
-        daq_session.process(nullptr, 0);
-        fd_delay(1);
-#ifdef PLATFORM_HOST
         gui_loop();
-#endif
     }
+    vTaskEndScheduler();
+    scheduler_thread.join();
+#endif
 }

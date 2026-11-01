@@ -420,15 +420,15 @@ inline void silgui_updateData()
         scope_data[4] = sil.state.vp_filt[1] - sil.state.vn_filt;
         scope_data[5] = sil.state.vp_filt[2] - sil.state.vn_filt;
     }
-    scope_data[6] = sil.state.torque;
+    scope_data[6] = sil.state.torque_sp;
     scope.write(scope_data);
 
     // 3-wire two wattmeter method
-    summary.sum_mechanical_power += sil.state.torque * sil.state.omega;
+    summary.sum_mechanical_power += sil.state.torque_sp * sil.state.omega;
     summary.sum_electrical_power += (sil.state.vp[0] - sil.state.vp[1]) * sil.state.ip[0] + (sil.state.vp[2] - sil.state.vp[1]) * sil.state.ip[2];
     summary.sum_current_sq += sil.state.ip[0] * sil.state.ip[0];
     summary.sum_voltage_sq += (sil.state.vp[0] - sil.state.vn) * (sil.state.vp[0] - sil.state.vn);
-    summary.sum_torque += sil.state.torque;
+    summary.sum_torque += sil.state.torque_sp;
     summary.sum_omega += sil.state.omega;
     summary.sample_count++;
 

@@ -218,6 +218,7 @@ static inline void fd_mc3p_{{inst.name}}_write_float(fd_mc3p_handle_t *h)
     fd_mc3p_{{inst.name}}_write_phase_state(h, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_FLOAT, FD_MC3P_PHASE_FLOAT);
     fd_mc3p_{{inst.name}}_write_phase_duty(h, 0, 0, 0);
     pv_mc3p_{{inst.name}}_sector_update(h, FD_MC3P_SECTOR_FLOAT);
+    h->mode = FD_MC3P_MODE_NONE;
 }
 static inline void fd_mc3p_{{inst.name}}_write_trap(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector, uint16_t duty_q15)
 {

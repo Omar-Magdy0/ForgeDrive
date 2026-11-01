@@ -15,18 +15,17 @@ struct SComm
         ESettle_Wait,
         Active_Sampling
     };
-    static constexpr uint16_t oversample = 1 << PmsmControlConf::OVERSAMPLE_BITS;
     static constexpr float HFI_ANGLE_SCALE = 2.0f; // HFI angle spans 2 radians per cycle
 
     //Config runtime
-    uint8_t hfi_N = 20;
+    PmsmControlTypes::ConfigSComm conf;
     q31_t dc_vinj_q31;
     q31_t hfi_vinj_q31;
 
     //States
     int64_t accumulate0;
     int64_t accumulate1;
-    q31_t hfi_Angv_RPT_q31 = static_cast<q31_t>((HFI_ANGLE_SCALE / hfi_N) * INT32_MAX);
+    q31_t hfi_Angv_RPT_q31;
     q31_t hfi_angle_q31;              /** High-frequency injection angle */
     volatile uint32_t eSettle_start_tick = 0;
     volatile IDStage idstage;

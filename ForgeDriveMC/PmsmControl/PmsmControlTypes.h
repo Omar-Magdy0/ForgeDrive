@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include "fd_mc3p.h"
-#include "arm_math.h"
+#include "math/qmath.h"
 
 namespace PmsmControlTypes
 {
@@ -13,28 +13,20 @@ namespace PmsmControlTypes
         Backward = 1 /** Reverse rotation. */
     };
 
-    enum class RunMode : uint8_t
-    {
-        Override,
-        ClosedLoop
-    };
-    
     enum class MechMode : uint8_t
     {
         SKIP,
         Torque,
         Speed,
-        Position,
-        OpenSpeed
+        Position
     };
 
-    enum class PosDriverFsm : uint8_t
+    enum class PidType : uint8_t
     {
-        Unsync,
-        Align,
-        Ramp,
-        OpenLocked,
-        OpenDec
+        Id = 0,
+        Iq,
+        Speed,
+        Position
     };
 
     enum class MCMode : uint8_t
@@ -46,11 +38,17 @@ namespace PmsmControlTypes
         Foc, /** Open-loop V/Hz (V/F) commutation. */
         SComm /** Self-commissioning / parameter identification. */
     };
-
+    
     enum class ElecMode : uint8_t
     {
         Voltage = 0,
         Current
+    };
+
+    enum class RunMode : uint8_t
+    {
+        Override,
+        ClosedLoop
     };
 
     enum class EStopMode : uint8_t
@@ -60,10 +58,15 @@ namespace PmsmControlTypes
         EMERGENCY_PLUG
     };
 
-    enum class PosDriverType
+    enum class Fault : uint32_t
     {
-        Open,
-        Hall,
+        OK = 0,
+        UVLO = 1<<0,
+        OVLO = 1<<1,
+        OLOAD = 1<<2,
+        CSFAULT = 1<<3,
+        OT = 1<<4,
+        OC = 1<<5
     };
 
     enum class ERR : uint8_t
@@ -73,69 +76,128 @@ namespace PmsmControlTypes
         NOT_INITIALIZED = 2,
         NOT_IMPLEMENTED = 3,
         
-
         CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64,
         CONFIG_BAD = 65
     };
-
-    enum DirtyPits
+    
+    struct ProfilePoint2D
     {
-        DIRTYBITS_PWM    = 1 << 0,
-        DIRTYBITS_ADC    = 1 << 1,  // 0x02
-        DIRTYBITS_CTRL   = 1 << 2,  // 0x04
-        DIRTYBITS_SP     = 1 << 3,  // 0x08
-    }; 
+        float t;
+        float V1;
+        float V2;
+    };
+
+    struct CoreState
+    {
+        uint32_t fault;
+        int32_t Vbus_q31;                                               /** DC bus voltage (V). */
+        int32_t Ibus_q31;
+        int32_t eTheta_q31;                                      /** Electrical angle (rad) (-Pi to Pi https://arm-software.github.io/CMSIS-DSP/v1.14.0/group__SinCos.html#gae9e4ddebff9d4eb5d0a093e28e0bc504). */
+        int64_t theta_q32p31;
+        int64_t theta_sp_q32p31;
+        int32_t omega_q16p15;                              /** Mechanical Angular velocity rad per second*/
+        int32_t omega_sp_q16p15;
+        int32_t iTorque_sp_q31;
+        
+        const bool serialize();
+        bool deserialize();
+    };
+
+    struct CoreControl
+    {
+        float inv_kt;
+        int32_t max_cmag_q31;
+        int32_t max_vbus_q31;
+        int32_t min_vbus_q31;
+        fd::pid_q31 position_pid;
+        fd::pid_q31 speed_pid ;
+        uint8_t pos_loop_counter = 0;
+        PmsmControlTypes::MCMode mc_mode = PmsmControlTypes::MCMode::Idle;/** Current control mode. */
+        PmsmControlTypes::MechMode mech_mode; /** Mechanical control type */
+        PmsmControlTypes::ElecMode elec_mode; /** Current error type. */
+        PmsmControlTypes::RunMode run_mode;
+        bool mpta_active = false;
+
+        const bool serialize();
+        bool deserialize();
+    };
+    
+    struct FocState
+    {
+        fd::pid_q31 Id_pid = fd::pid_q31(0, 0, 0);
+        fd::pid_q31 Iq_pid = fd::pid_q31(0, 0, 0);
+        int32_t Vd_q31 = 0;
+        int32_t Vq_q31 = 0;
+        int32_t Id_q31 = 0;
+        int32_t Iq_q31 = 0;
+        int32_t ECq_sp_q31 = 0;
+        int32_t ECd_sp_q31 = 0;
+        volatile int16_t mod_idx_max_q3p12 = static_cast<int16_t>((1 * INT16_MAX) >> 3);
+
+        const bool serialize();
+        bool deserialize();
+    };
 
     struct ConfigPwm
     {
-        uint32_t pwm_freq_hz;
+        uint32_t pwm_Hz;
         uint32_t deadtime_ns;
         float    duty_min;
         float    duty_max;
+
+        const bool serialize();
+        bool deserialize();
     };
 
-    struct ConfigEstop
+    struct ConfigAnalog
     {
-        EStopMode mode;
+        float sync_scale[MC3P_SYNC_CHANNELS_MAX][2];
+        bool offset_calibration;
+
+        const bool serialize();
+        bool deserialize();
     };
 
     struct ConfigSComm
     {
+        uint8_t oversample_bits;
+        uint32_t esettle_min_ticks;
         uint8_t hfi_N = 20;
         float dc_vinj = 2.5;
         float hfi_vinj = 12;
+
+        const bool serialize();
+        bool deserialize();
     };
 
     struct Model
     {
-        float R;           /** Stator resistance (Ohm). */
-        float Ld;           /** D-axis inductance (H). */
-        float Lq;           /** Q-axis inductance (H). */
-        float Kt;           /** Torque constant. */
-        float J;            /** Rotor inertia. */
-        float B;            /** Viscous friction coefficient. */
-        uint8_t pole_pairs = 6; /** Motor pole pairs (electrical). */
+        float R = 0;           /** Stator resistance (Ohm). */
+        float Ld = 0;           /** D-axis inductance (H). */
+        float Lq = 0;           /** Q-axis inductance (H). */
+        float psi = 2.0/3.0;    /** flux Linkage */
+        float J = 0;            /** Rotor inertia. */
+        float B = 0;            /** Viscous friction coefficient. */
+        uint8_t pole_pairs = 1; /** Motor pole pairs (electrical). */
+
+        const bool serialize();
+        bool deserialize();
     };
 
-    inline static constexpr size_t OLSTUP_TABLE_SIZE = 6; /** STUP profile table size. */
-    struct ConfigOlstup
+    struct ConfigGen
     {
-        float vbus_init;
-        uint16_t time_ms_tb[OLSTUP_TABLE_SIZE];
-        float ec_tb[OLSTUP_TABLE_SIZE];
-        float rpm_tb[OLSTUP_TABLE_SIZE];
-    };
+        uint32_t max_freq = 20'000;
+        uint32_t min_freq = 4'000;
+        uint32_t max_deadtime_ns = 1000;
+        uint32_t min_deadtime_ns = 300;
+        float max_cmag = 10;
+        float min_vbus = 30;
+        float max_vbus = 40;
+        uint32_t xTick_freq = 4000;
+        uint32_t pos_rate_div = 5;
 
-    struct ConfigElecLimits
-    {
-        float currentLimit; 
-        float underVoltageLimit;
-        float overVoltageLimit;
-    };
-
-    struct ConfigMechLimits
-    {
-
+        const bool serialize();
+        bool deserialize();
     };
 
     struct Pid
@@ -143,5 +205,8 @@ namespace PmsmControlTypes
         float Kp;
         float Ki;
         float Kd;
+
+        const bool serialize();
+        bool deserialize();
     };
 };

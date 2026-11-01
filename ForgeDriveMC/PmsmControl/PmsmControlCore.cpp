@@ -2,47 +2,35 @@
 
 using namespace PmsmControlTypes;
 
-void PmsmControlCore::olstup_lut(Olstup &stup, q31_t &ec_sp_q31, float &rps)
-{
-    // Interpolate angular velocity and duty cycle and do appropiate updates
-    float et_ms = (xTicks_to_ms(xTicks) - stup.time_start_ms);
-    bool is_complete = et_ms >= stup.cfg.time_ms_tb[OLSTUP_TABLE_SIZE - 1];
-    if (!is_complete)
-    {
-        // We interpolate here for duty cycle and angular velocity
-        float ret_slp = (float)(et_ms - stup.cfg.time_ms_tb[stup.tb_index]) / (stup.cfg.time_ms_tb[stup.tb_index + 1] - stup.cfg.time_ms_tb[stup.tb_index]);
-        float ec_sp = stup.cfg.ec_tb[stup.tb_index] + ret_slp * (stup.cfg.ec_tb[stup.tb_index + 1] - stup.cfg.ec_tb[stup.tb_index]);
-        float rpm = stup.cfg.rpm_tb[stup.tb_index] + ret_slp * (stup.cfg.rpm_tb[stup.tb_index + 1] - stup.cfg.rpm_tb[stup.tb_index]);
-        rps = rpm * (float)(2 * M_PI / 60.0);
-        ec_sp_q31 = FD_MC3P_FLOAT_TO_CS(ec_sp);
-        if (stup.tb_index < (OLSTUP_TABLE_SIZE - 1) && et_ms > stup.cfg.time_ms_tb[stup.tb_index + 1])
-        {
-            stup.tb_index++;
-        }
-    }
-    stup.is_complete = is_complete;
-}
-
-void PmsmControlCore::init()
+ERR PmsmControlCore::init()
 {
     pTicks = 0;
     xTicks = 0;
-    
+    modelUpdate();
+    configGenUpdate();
     /* mode initialization*/
     voltage_q31_to_float(state.Vbus_q31);
     current_q31_to_float(state.Ibus_q31);
     angle_q31_to_float(state.eTheta_q31);
-
-    MC3P1.offset_calibration = true;
     SComm_init();
     Foc_init();
     /* hardware initialization */
-    posDriver.init();
-    fd_mc3p_set_sync_scale(MC3P1, PmsmControlConf::MC3P_SYNC_SCALE);
+    POS1.init();
     fd_mc3p_init(MC3P1);
     fd_mc3p_write_float(MC3P1);
+    return ERR::OK;
 };
-
+void PmsmControlCore::configGenUpdate()
+{
+    control.max_cmag_q31 = FD_MC3P_FLOAT_TO_CS(CLAMP(ABS(conf.max_cmag), 0, FD_MC3P_CS_SCALE));
+    control.min_vbus_q31 = FD_MC3P_FLOAT_TO_VS(CLAMP(ABS(conf.min_vbus), 0, FD_MC3P_VS_SCALE));
+    control.max_vbus_q31 = FD_MC3P_FLOAT_TO_VS(CLAMP(ABS(conf.max_vbus), 0, FD_MC3P_VS_SCALE));
+    xTicks_period_ns = 1'000'000'000 / conf.xTick_freq;
+}
+void PmsmControlCore::modelUpdate()
+{
+    control.inv_kt = 1 / (model.psi * model.pole_pairs);
+}
 void PmsmControlCore::xmcLoop()
 {
     if (control.mc_mode == MCMode::None)
@@ -60,10 +48,9 @@ void PmsmControlCore::xmcLoop()
     }
     xTicks = xTicks + 1;
 }
-
 void PmsmControlCore::pwmConfigUpdate(PmsmControlTypes::ConfigPwm cfg)
 {
-    pwm_freq_hz = cfg.pwm_freq_hz;
+    pwm_freq_hz = cfg.pwm_Hz;
     pTick_period_ns = static_cast<uint32_t>(1'000'000'000 / static_cast<float>(pwm_freq_hz));
     MC3P1.config.pwm_Hz = pwm_freq_hz;
     MC3P1.config.deadtime_nS = cfg.deadtime_ns;
@@ -71,7 +58,6 @@ void PmsmControlCore::pwmConfigUpdate(PmsmControlTypes::ConfigPwm cfg)
     MC3P1.config.duty_max = cfg.duty_max;
     fd_mc3p_reconfigure_pwm(MC3P1);
 }
-
 void PmsmControlCore::pwmLoop()
 {
     if (control.mc_mode == MCMode::None)
@@ -92,7 +78,6 @@ void PmsmControlCore::pwmLoop()
     pTicks = pTicks + 1;
     volatile uint32_t elapsed = fd_dwt_tick() - start;
 }
-
 void PmsmControlCore::setControlMode(MCMode mc_mode)
 {
     if (control.mc_mode != mc_mode)

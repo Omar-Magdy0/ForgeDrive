@@ -103,7 +103,7 @@ public:
     }
 
     template <typename T>
-    static std::string toString(const el::ring_fast<T> &fifo,
+    static std::string toString(const fd::ring_fast<T> &fifo,
                                 const char *name = nullptr)
     {
         std::ostringstream ss;
@@ -137,7 +137,7 @@ public:
     }
 
     template <typename T>
-    static std::string toStringHex(const el::ring_fast<T> &fifo,
+    static std::string toStringHex(const fd::ring_fast<T> &fifo,
                                    const char *name = nullptr)
     {
         std::ostringstream ss;
