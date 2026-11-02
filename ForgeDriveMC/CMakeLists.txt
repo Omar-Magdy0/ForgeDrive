@@ -56,42 +56,6 @@ message(STATUS
 )
 
 ########### FD_DRIVER GENERATION END ################
-###### Serializer GENERATION START #######
-set(SER_SCRIPT "${FDLIB_DIR}/middleware/Serializer.py")
-set(SER_FILES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/PmsmControl/PmsmControlTypes.h
-)
-set(SER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SerializedTypes")
-# Tell CMake to re-configure if the generator script, config, or templates change
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${SER_SCRIPT}"
-    "${SER_FILES}"
-)
-
-execute_process(
-    COMMAND "${Python3_EXECUTABLE}" "${SER_SCRIPT}"
-            -i ${SER_FILES}
-            -o "${SER_DIR}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    RESULT_VARIABLE GEN_RESULT
-    OUTPUT_VARIABLE GEN_OUTPUT
-    ERROR_VARIABLE GEN_ERROR
-)
-
-if(NOT GEN_RESULT EQUAL 0)
-    message(FATAL_ERROR
-        "Serializer generation failed!\n"
-        "Exit code: ${GEN_RESULT}\n"
-        "Output:\n${GEN_OUTPUT}\n"
-        "Errors:\n${GEN_ERROR}"
-    )
-endif()
-
-if(GEN_OUTPUT)
-    message(STATUS "${GEN_OUTPUT}")
-endif()
-########### Serializer GENERATION END ################
-
 
 ####platform specific settings
 # SET TOOLCHAIN BEFORE PROJECT
@@ -110,6 +74,7 @@ target_include_directories(fd_freertos PUBLIC
     ${FREERTOS_DIR}/include
 )
 add_compile_definitions($<$<CONFIG:Debug>:FD_DEBUG>)
+add_compile_definitions(CBOR_TINYCBOR=1)
 add_subdirectory("${FDDRV_DIR}")
 add_subdirectory("platform/${DEVICE_PLATFORM}")
 # Setup cmake module path and compiler settings

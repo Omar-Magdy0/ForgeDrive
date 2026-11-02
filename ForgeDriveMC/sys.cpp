@@ -1,5 +1,6 @@
 #include "sys.h"
 #include "fd_timer.h"
+
 #ifdef FD_PLATFORM_HOST
 #include <thread>
 #endif
@@ -32,6 +33,15 @@ void lcom(void *arg)
     constexpr TickType_t period = pdMS_TO_TICKS(LCOM_PERIOD);
     for (;;)
     {
+        switch (0)
+        {
+        case 0:
+            
+            break;
+        
+        default:
+            break;
+        }
         // dummy
         vTaskDelayUntil(&last_wake, period);
     };

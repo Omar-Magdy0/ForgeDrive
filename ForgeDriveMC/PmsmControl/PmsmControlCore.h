@@ -1,4 +1,5 @@
 
+#pragma once
 #include "arm_math.h"
 #include "fd_mc3p.h"
 #include "fd_hall.h"
@@ -10,7 +11,7 @@
 #include "PmsmControlTypes.h"
 #include "PosDriver.h"
 
-class PmsmControlCore
+struct PmsmControlCore
 {
     const ConfigGen conf;
 
@@ -45,7 +46,6 @@ class PmsmControlCore
     void pwmConfigUpdate(ConfigPwm cfg);
     void (*onFault)(void *ctx, PMSM_FAULT f);
     
-    public:
     PmsmControlCore(void(*_onFault)(void*, PMSM_FAULT), const ConfigGen &_conf) : conf(_conf), onFault(_onFault){};
     void pwmLoop();
     void xmcLoop();

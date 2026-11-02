@@ -129,10 +129,9 @@ PMSM_ERR setConfigSComm(ConfigSComm cfg)
     return PMSM_ERR::OK;
 }
 // Getters
-const CoreState& getState(){return state;}
-const CoreControl& getControl(){return control;}
+void getControlMode(MCMode &mc_mode, MechMode &mech_mode){mc_mode = control.mc_mode; mech_mode = control.mech_mode;}
 const PmsmModel& getModel(){return model;}
-const FocState& getFocState(){return foc.state;}
+
 const ConfigPwm getPwm(){
     ConfigPwm cfg;
     cfg.deadtime_ns = MC3P1.config.deadtime_nS;

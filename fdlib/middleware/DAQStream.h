@@ -19,7 +19,6 @@ namespace daq
     public:
         const char *name;
         float scale;
-        float offset;
     };
 
     class Stream
