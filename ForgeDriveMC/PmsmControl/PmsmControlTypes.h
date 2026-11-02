@@ -78,7 +78,7 @@ enum struct PMSM_ERR : uint8_t
     CONFIG_BAD = 65
 };
 
-enum struct IDStage
+enum struct IDStage : uint8_t
 {
     IDLE,
     RS_ID,           /** Stator resistance identification. */
@@ -86,7 +86,8 @@ enum struct IDStage
     REST0,
     LQ_ID            /** Q-axis inductance identification. */
 };
-enum struct IDSubStage
+
+enum struct IDSubStage : uint8_t
 {
     ESettle_Start,
     ESettle_Wait,

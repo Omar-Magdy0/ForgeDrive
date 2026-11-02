@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdio.h>
 //=======================================================
-#include "DAQStream.h"
 #include "ABFStream.h"
 #include "fd_usbxch.h"
 #include <etl/span.h>
@@ -23,6 +22,7 @@ extern "C" {
 }
 #endif 
 
+/*
 class DAQSessionAPP : public daq::Session
 {
 protected:
@@ -58,7 +58,7 @@ public:
         return 0;
     }
 };
-
+*/
 class Sys
 {
     static constexpr unsigned int ABFRX_BUF_SIZE = 255;

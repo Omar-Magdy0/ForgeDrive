@@ -10,7 +10,7 @@ set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
 set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
 set(FREERTOS_DIR "${THIRDPARTY_DIR}/FreeRTOS/FreeRTOS-Kernel")
-
+set(TINYCBOR_DIR "${THIRDPARTY_DIR}/tinycbor")
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "
@@ -56,7 +56,41 @@ message(STATUS
 )
 
 ########### FD_DRIVER GENERATION END ################
+###### Serializer GENERATION START #######
+set(SER_SCRIPT "${FDLIB_DIR}/middleware/Serializer.py")
+set(SER_FILES 
+    ${CMAKE_CURRENT_SOURCE_DIR}/PmsmControl/PmsmControlTypes.h
+)
+set(SER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SerializedTypes")
+# Tell CMake to re-configure if the generator script, config, or templates change
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${SER_SCRIPT}"
+    "${SER_FILES}"
+)
 
+execute_process(
+    COMMAND "${Python3_EXECUTABLE}" "${SER_SCRIPT}"
+            -i ${SER_FILES}
+            -o "${SER_DIR}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    RESULT_VARIABLE GEN_RESULT
+    OUTPUT_VARIABLE GEN_OUTPUT
+    ERROR_VARIABLE GEN_ERROR
+)
+
+if(NOT GEN_RESULT EQUAL 0)
+    message(FATAL_ERROR
+        "Serializer generation failed!\n"
+        "Exit code: ${GEN_RESULT}\n"
+        "Output:\n${GEN_OUTPUT}\n"
+        "Errors:\n${GEN_ERROR}"
+    )
+endif()
+
+if(GEN_OUTPUT)
+    message(STATUS "${GEN_OUTPUT}")
+endif()
+########### Serializer GENERATION END ################
 
 
 ####platform specific settings
@@ -107,6 +141,12 @@ include_directories(
     ${CMSIS_CORE_DIR}/Include   
 )
 # Link with platform EARLY to get include paths
+
+
+
+
+
+add_subdirectory(${TINYCBOR_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinycbor)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
 add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp)
 
@@ -116,9 +156,11 @@ file(GLOB_RECURSE MIDDLEWARE_SRC
 )
 
 
-set(POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverVIRT.cpp")
+
 if(DEVICE_PLATFORM STREQUAL "HOST")
 list(APPEND POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverSIL.cpp")
+else()
+set(POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverVIRT.cpp")
 endif()
 
 
@@ -130,18 +172,16 @@ set(APPLICATION_SRC
     ${CMAKE_SOURCE_DIR}/main.cpp
     ${CMAKE_SOURCE_DIR}/sys.cpp
 )
-
 file(GLOB_RECURSE CORE_SRC
     ${FDLIB_DIR}/fd/*.cpp
     ${FDLIB_DIR}/fd/*.c
 )
-
 target_link_libraries(fd_freertos PUBLIC fd_drv)
-
 add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
 include(${FDDRV_DIR}/post_build.cmake OPTIONAL)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     fd_drv
+    tinycbor
     fd_freertos
     CMSISDSP
     PLATFORM
