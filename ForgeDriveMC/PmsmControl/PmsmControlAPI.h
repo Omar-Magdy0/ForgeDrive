@@ -1,16 +1,10 @@
-
-using MCMode = PmsmControlTypes::MCMode;
-using Fault = PmsmControlTypes::Fault;
-using MechMode = PmsmControlTypes::MechMode;
-using PidType = PmsmControlTypes::PidType;
-
-ERR setSetpoint(float sp, MechMode mech_mode = MechMode::SKIP)
+PMSM_ERR setSetpoint(float sp, MechMode mech_mode = MechMode::SKIP)
 {
     if (mech_mode != MechMode::SKIP)
     {
         if (mech_mode < MechMode::Torque || mech_mode > MechMode::Position)
         {
-            return ERR::CONFIG_BAD;
+            return PMSM_ERR::CONFIG_BAD;
         }
         control.mech_mode = mech_mode;
     }
@@ -34,64 +28,64 @@ ERR setSetpoint(float sp, MechMode mech_mode = MechMode::SKIP)
     default:
         break;
     }
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
 // Configuration
-ERR setModel(PmsmControlTypes::Model m){
+PMSM_ERR setModel(PmsmModel m){
     this->model = m;
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
-ERR setControlMode(MCMode mc_mode, MechMode mech_mode)
+PMSM_ERR setControlMode(MCMode mc_mode, MechMode mech_mode)
 {
     if (mc_mode != MCMode::Idle && control.mc_mode != MCMode::Idle)
     {
-        return ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
+        return PMSM_ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
     }
     uint32_t mask = fd_atomic_start();
     setControlMode(mc_mode);
     control.mech_mode = mech_mode;
     fd_atomic_end(mask);
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
-ERR setConfigPwm(PmsmControlTypes::ConfigPwm cfg)
+PMSM_ERR setConfigPwm(ConfigPwm cfg)
 {
     if (control.mc_mode == MCMode::SComm)
     {
-        return ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
+        return PMSM_ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
     } // don't allow pwm reconfiguring during self commissioning
     if (cfg.pwm_Hz > conf.max_freq || cfg.pwm_Hz < conf.min_freq)
     {
-        return ERR::CONFIG_BAD;
+        return PMSM_ERR::CONFIG_BAD;
     }
     if (cfg.deadtime_ns > conf.max_deadtime_ns || cfg.deadtime_ns < conf.min_deadtime_ns)
     {
-        return ERR::CONFIG_BAD;
+        return PMSM_ERR::CONFIG_BAD;
     }
     if (cfg.duty_min < 0 || cfg.duty_min > 1)
     {
-        return ERR::CONFIG_BAD;
+        return PMSM_ERR::CONFIG_BAD;
     }
     if (cfg.duty_min > cfg.duty_max)
     {
-        return ERR::CONFIG_BAD;
+        return PMSM_ERR::CONFIG_BAD;
     }
 
     uint32_t mask = fd_atomic_start(); // Atomic operation we do this quick
     pwmConfigUpdate(cfg);
     fd_atomic_end(mask);
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
-ERR setConfigAnalog(PmsmControlTypes::ConfigAnalog cfg)
+PMSM_ERR setConfigAnalog(ConfigAnalog cfg)
 {
     if (control.mc_mode != MCMode::Idle || MC3P1.mode != FD_MC3P_MODE_NONE)
     {
-        return ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
+        return PMSM_ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
     } // don't allow pwm reconfiguring during self commissioning
     fd_mc3p_set_sync_scale(MC3P1, cfg.sync_scale);
     MC3P1.offset_calibration = cfg.offset_calibration;
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
-ERR setPid(PmsmControlTypes::Pid pid, PmsmControlTypes::PidType n)
+PMSM_ERR setPid(Pid pid, PidType n)
 {
     pid.Kp = CLAMP(pid.Kp, -1, 1);
     pid.Ki = CLAMP(pid.Ki, -1, 1);
@@ -115,41 +109,41 @@ ERR setPid(PmsmControlTypes::Pid pid, PmsmControlTypes::PidType n)
         break;
     }
     fd_atomic_end(mask);
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
-ERR setConfigSComm(PmsmControlTypes::ConfigSComm cfg)
+PMSM_ERR setConfigSComm(ConfigSComm cfg)
 {
     if (control.mc_mode != MCMode::Idle)
     {
-        return ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
+        return PMSM_ERR::CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
     }
     if (cfg.dc_vinj <= 0 || cfg.dc_vinj > FD_MC3P_VS_SCALE)
     {
-        return ERR::CONFIG_BAD;
+        return PMSM_ERR::CONFIG_BAD;
     }
     if (cfg.hfi_vinj <= 0 || cfg.hfi_vinj > FD_MC3P_VS_SCALE)
     {
-        return ERR::CONFIG_BAD;
+        return PMSM_ERR::CONFIG_BAD;
     }
     scomm.conf = cfg;
-    return ERR::OK;
+    return PMSM_ERR::OK;
 }
 // Getters
-const PmsmControlTypes::CoreState& getState(){return state;}
-const PmsmControlTypes::CoreControl& getControl(){return control;}
-const PmsmControlTypes::Model& getModel(){return model;}
-const PmsmControlTypes::FocState& getFocState(){return foc.state;}
-const PmsmControlTypes::ConfigPwm getPwm(){
-    PmsmControlTypes::ConfigPwm cfg;
+const CoreState& getState(){return state;}
+const CoreControl& getControl(){return control;}
+const PmsmModel& getModel(){return model;}
+const FocState& getFocState(){return foc.state;}
+const ConfigPwm getPwm(){
+    ConfigPwm cfg;
     cfg.deadtime_ns = MC3P1.config.deadtime_nS;
     cfg.duty_max = (float)MC3P1.config.duty_max;
     cfg.duty_min = (float)MC3P1.config.duty_min;
     cfg.pwm_Hz = MC3P1.config.deadtime_nS;
     return cfg;
 }
-const PmsmControlTypes::Pid getPid(PmsmControlTypes::PidType n)
+const Pid getPid(PidType n)
 {
-    PmsmControlTypes::Pid pid;
+    Pid pid;
     switch (n)
        {
        case PidType::Id:
@@ -175,8 +169,8 @@ uint32_t getFault() const
 {
     return state.fault;
 }
-ERR clearFault()
+PMSM_ERR clearFault()
 {
-    state.fault = (uint32_t)Fault::OK;
-    return ERR::OK;
+    state.fault = (uint32_t)PMSM_FAULT::OK;
+    return PMSM_ERR::OK;
 }

@@ -12,8 +12,6 @@
 
 class PmsmControlCore
 {
-    using ERR = PmsmControlTypes::ERR;
-    using ConfigGen = PmsmControlTypes::ConfigGen;
     const ConfigGen conf;
 
     volatile uint32_t xTicks;
@@ -36,23 +34,23 @@ class PmsmControlCore
     } mc3p_sync_meas{};
 
     // Control variables
-    PmsmControlTypes::CoreState state;
-    PmsmControlTypes::CoreControl control;
-    PmsmControlTypes::Model model;
+    CoreState state;
+    CoreControl control;
+    PmsmModel model;
 
 #include "PmsmControlCore_Foc.h"
 #include "PmsmControlCore_SComm.h"
 
-    void setControlMode(PmsmControlTypes::MCMode mc_mode);
-    void pwmConfigUpdate(PmsmControlTypes::ConfigPwm cfg);
-    void (*onFault)(void *ctx, PmsmControlTypes::Fault f);
+    void setControlMode(MCMode mc_mode);
+    void pwmConfigUpdate(ConfigPwm cfg);
+    void (*onFault)(void *ctx, PMSM_FAULT f);
     
     public:
-    PmsmControlCore(void(*_onFault)(void*, PmsmControlTypes::Fault), const ConfigGen &_conf) : conf(_conf), onFault(_onFault){};
+    PmsmControlCore(void(*_onFault)(void*, PMSM_FAULT), const ConfigGen &_conf) : conf(_conf), onFault(_onFault){};
     void pwmLoop();
     void xmcLoop();
 #include "PmsmControlAPI.h"
-    ERR init();
+    PMSM_ERR init();
     void configGenUpdate();
     void modelUpdate();
 };

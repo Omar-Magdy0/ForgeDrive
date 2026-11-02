@@ -1,8 +1,7 @@
 #include "PmsmControlCore.h"
 
-using namespace PmsmControlTypes;
 
-ERR PmsmControlCore::init()
+PMSM_ERR PmsmControlCore::init()
 {
     pTicks = 0;
     xTicks = 0;
@@ -18,7 +17,7 @@ ERR PmsmControlCore::init()
     POS1.init();
     fd_mc3p_init(MC3P1);
     fd_mc3p_write_float(MC3P1);
-    return ERR::OK;
+    return PMSM_ERR::OK;
 };
 void PmsmControlCore::configGenUpdate()
 {
@@ -48,7 +47,7 @@ void PmsmControlCore::xmcLoop()
     }
     xTicks = xTicks + 1;
 }
-void PmsmControlCore::pwmConfigUpdate(PmsmControlTypes::ConfigPwm cfg)
+void PmsmControlCore::pwmConfigUpdate(ConfigPwm cfg)
 {
     pwm_freq_hz = cfg.pwm_Hz;
     pTick_period_ns = static_cast<uint32_t>(1'000'000'000 / static_cast<float>(pwm_freq_hz));

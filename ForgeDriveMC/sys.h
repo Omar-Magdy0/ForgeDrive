@@ -71,10 +71,10 @@ class Sys
     static inline void onError(void *ctx, uint8_t id)
     {
     }
-    static inline void onPmsmFault(void *ctx, PmsmControlTypes::Fault)
+    static inline void onPmsmFault(void *ctx, PMSM_FAULT f)
     {
     }
-    static PmsmControlTypes::ConfigGen configGen;
+    static ConfigGen configGen;
     inline static uint8_t abfrx_buf[ABFRX_BUF_SIZE];
     inline static StaticTask_t lcom_buf;
     inline static StackType_t lcom_stack[LCOM_STACK_SIZE];

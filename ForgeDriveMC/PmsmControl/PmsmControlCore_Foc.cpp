@@ -11,7 +11,6 @@ constexpr uint32_t POS_MAX_ERROR_STEP = INT32_MAX/3600;
 // Speed scaling: convert from Q32.31 delta-angle to Q7.24 angular velocity
 constexpr int SPEED_FROM_DELTA_SHIFT = 7;
 
-using namespace PmsmControlTypes;
 static inline q31_t maxa_minb_q31(q31_t i1, q31_t i2)
 {
     q31_t max, min;
@@ -105,9 +104,9 @@ void PmsmControlCore::Foc_xmcLoop()
 void PmsmControlCore::Foc_pwmLoop()
 {
     state.Vbus_q31 = mc3p_sync_meas.svm.vbus_q31;
-    if(state.Vbus_q31 > control.max_vbus_q31)state.fault |= (uint32_t)Fault::OVLO;
-    else if(state.Vbus_q31 < control.min_vbus_q31)state.fault |= (uint32_t)Fault::UVLO;
-    if(state.fault != (uint32_t)Fault::OK)
+    if(state.Vbus_q31 > control.max_vbus_q31)state.fault |= (uint32_t)PMSM_FAULT::OVLO;
+    else if(state.Vbus_q31 < control.min_vbus_q31)state.fault |= (uint32_t)PMSM_FAULT::UVLO;
+    if(state.fault != (uint32_t)PMSM_FAULT::OK)
     {
         fd_mc3p_write_float(MC3P1);
         return;

@@ -1,24 +1,10 @@
 
 struct SComm
 {
-    enum class IDStage
-    {
-        IDLE,
-        RS_ID,           /** Stator resistance identification. */
-        LD_ID,           /** D-axis inductance identification. */
-        REST0,
-        LQ_ID            /** Q-axis inductance identification. */
-    };
-    enum class IDSubStage
-    {
-        ESettle_Start,
-        ESettle_Wait,
-        Active_Sampling
-    };
     static constexpr float HFI_ANGLE_SCALE = 2.0f; // HFI angle spans 2 radians per cycle
 
     //Config runtime
-    PmsmControlTypes::ConfigSComm conf;
+    ConfigSComm conf;
     q31_t dc_vinj_q31;
     q31_t hfi_vinj_q31;
 
@@ -34,11 +20,11 @@ struct SComm
     
     
     //Results
-    PmsmControlTypes::Model model;
+    PmsmModel model;
 } scomm;
 
 void SComm_init();    /** Initialize self-commissioning. */
-void SComm_onEnter(PmsmControlTypes::MCMode prev_mct);    /** Initialize self-commissioning. */
+void SComm_onEnter(MCMode prev_mct);    /** Initialize self-commissioning. */
 void SComm_onExit();
 void SComm_pwmLoop(); /** Self-commissioning PWM loop. */
 void SComm_xmcLoop(); /** Self-commissioning slow loop. */

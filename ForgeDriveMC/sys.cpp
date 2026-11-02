@@ -3,7 +3,6 @@
 #ifdef FD_PLATFORM_HOST
 #include <thread>
 #endif
-using namespace PmsmControlTypes;
 
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
 {
@@ -38,7 +37,7 @@ void lcom(void *arg)
     };
 }
 
-PmsmControlTypes::ConfigGen Sys::configGen =             
+ConfigGen Sys::configGen =             
             {.max_freq = 40000,
              .min_freq = 5000,
              .max_deadtime_ns = 1000,
@@ -66,7 +65,7 @@ void Sys::init()
     bool config_ok = true;
     // enable motor control
     {
-        ERR err[8];
+        PMSM_ERR err[8];
         uint8_t i = 0;
         ConfigPwm pwm = {
             .pwm_Hz = 20000,
@@ -89,7 +88,7 @@ void Sys::init()
             .hfi_N = 20,
             .dc_vinj = 2.5,
             .hfi_vinj = 2};
-        Model model = {
+        PmsmModel model = {
             .R = 0.1,
             .Ld = 0.001,
             .Lq = 0.001,
@@ -113,7 +112,7 @@ void Sys::init()
         /*7*/ err[i++] = pmsm1.setControlMode(MCMode::Foc, MechMode::Torque);
         /*8*/ err[i++] = pmsm1.setModel(model);
         for (int i = 0; i < 8; i++)
-            if (err[i] != ERR::OK)
+            if (err[i] != PMSM_ERR::OK)
                 config_ok = false;
     }
     while (!config_ok)
