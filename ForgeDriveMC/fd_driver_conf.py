@@ -25,7 +25,7 @@ config = {
     "usbxch": {
         "name": "USB1",
         "tx_bufsize" : 2048,
-        "rx_bufsize" : 256,
+        "rx_bufsize" : 512,
     },
     "hall": {
 

@@ -1,10 +1,11 @@
 #include "sys.h"
 #include "fd_timer.h"
-
+#include "RPC.hpp"
 #ifdef FD_PLATFORM_HOST
 #include <thread>
 #endif
 
+using namespace ForgeDriveMC_RPC;
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
 {
     (void)task;
@@ -26,6 +27,57 @@ void fd_timer_TIMERxMC_periodCallback(void)
     Sys::pmsm1.xmcLoop();
 }
 
+
+enum class LCOM_Client : uint8_t
+{
+    RPC,
+    DAQStream,
+    DAQCodec,
+    COUNT
+};
+
+enum ABF_Channel : uint8_t
+{
+    RPC = 120,
+    DAQStream = 121,
+    DAQCodec = 127,
+};
+
+
+void Sys::onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
+{
+    switch ((ABF_Channel)id)
+    {
+    case ABF_Channel::RPC:
+    {
+        //dispatch incoming rpc command and respond
+        TCborParse parse(etl::span<const uint8_t>(payload, payload_len));
+        TCborEncode encode(etl::span<uint8_t>(tx_buf, TX_BUF_SIZE));
+        RPC_DISPATCH(parse, encode);
+        auto size = encode.size();
+        abfStream.encode(abf_header_buf, tx_buf, ABF_Channel::RPC, size);
+        fd_usbxch_write(USB1, abf_header_buf, abf::HEADER_SIZE);
+        fd_usbxch_write(USB1, tx_buf, size);
+        fd_usbxch_flush(USB1);
+        break;
+    }
+    case ABF_Channel::DAQStream:
+    {
+
+        break;
+    }
+    default:
+        break;
+    }
+
+}
+void Sys::onError(void *ctx, uint8_t id)
+{
+}
+void Sys::onPmsmFault(void *ctx, PMSM_FAULT f)
+{
+}
+
 void lcom(void *arg)
 {
     TickType_t last_wake = xTaskGetTickCount();
@@ -33,18 +85,21 @@ void lcom(void *arg)
     constexpr TickType_t period = pdMS_TO_TICKS(LCOM_PERIOD);
     for (;;)
     {
-        switch (0)
+        //Reading here 
+        auto available = fd_usbxch_read_available(USB1);
+        if(available)
         {
-        case 0:
-            
-            break;
-        
-        default:
-            break;
+            void *r1, *r2;
+            uint16_t c1, c2;
+            fd_usbxch_read_reserve(USB1, &r1, &c1, &r2, &c2);
+            if(c1)Sys::abfStream.process(static_cast<const uint8_t*>(r1), c1);
+            if(c2)Sys::abfStream.process(static_cast<const uint8_t*>(r2), c2);
+            fd_usbxch_read_commit(USB1, c1+c2);
         }
-        // dummy
-        vTaskDelayUntil(&last_wake, period);
-    };
+        //Check for writers requests
+
+        vTaskDelayUntil(&last_wake, period); 
+    }
 }
 
 ConfigGen Sys::configGen =             

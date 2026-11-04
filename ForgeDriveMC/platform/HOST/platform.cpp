@@ -9,7 +9,7 @@
 #include <imgui_impl_opengl3.h>
 #include <GLFW/glfw3.h>
 #include <vector>
-#include <cmath>
+#include <math.h>
 #include <iostream>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)

@@ -82,7 +82,7 @@ void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Write
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_write_impl(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_{{inst.name}}_write(fd_usbxch_handle_t *h, const uint8_t *data, uint32_t length)
 {
     void *w1, *w2;
     uint16_t c1, c2;
@@ -98,7 +98,7 @@ uint32_t fd_usbxch_write_impl(fd_usbxch_handle_t *h, const uint8_t *data, uint32
 /* ---------------------------------------------------------------------------
  * Write available (space left in tx buffer)
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_write_available_impl(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_{{inst.name}}_write_available(fd_usbxch_handle_t *h)
 {
     return (uint32_t)fd_ring_free(&h->tx);
 }
@@ -106,7 +106,7 @@ uint32_t fd_usbxch_write_available_impl(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Flush – trigger an IN transfer immediately if data is pending
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_flush_impl(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_{{inst.name}}_flush(fd_usbxch_handle_t *h)
 {
     if (h->flags & USBXCH_FLAG_TX_BUSY)
         return 1; /* already in progress */
@@ -119,7 +119,7 @@ uint32_t fd_usbxch_flush_impl(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Clear – drain all ring buffers and reset stats
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_clear_impl(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_{{inst.name}}_clear(fd_usbxch_handle_t *h)
 {
     /* Drain TX: reset head/tail to empty and clear any stale transfer state */
     h->tx.head = h->tx.tail = 0;
@@ -130,10 +130,23 @@ uint32_t fd_usbxch_clear_impl(fd_usbxch_handle_t *h)
     return 0;
 }
 
+bool fd_usbxch_{{inst.name}}_read_reserve(fd_usbxch_handle_t *h, void** readptr1, uint16_t* cont1, void** readptr2, uint16_t* cont2)
+{
+    return fd_ring_read_reserve(&h->rx, readptr1, cont1, readptr2, cont2);
+}
+
+bool fd_usbxch_{{inst.name}}_read_commit(fd_usbxch_handle_t *h, size_t len)
+{
+    if (len > fd_ring_size(&h->rx))
+        return false;
+
+    fd_ring_read_commit(&h->rx, (uint16_t)len);
+    return true;
+}
 /* ---------------------------------------------------------------------------
  * Read from OUT endpoint 1
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_read_impl(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
+uint32_t fd_usbxch_{{inst.name}}_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length)
 {
     void *r1, *r2;
     uint16_t c1, c2;
@@ -159,7 +172,7 @@ uint32_t fd_usbxch_read_impl(fd_usbxch_handle_t *h, uint8_t *data, uint32_t leng
 /* ---------------------------------------------------------------------------
  * Read available (occupied bytes in RX ring)
  * --------------------------------------------------------------------------- */
-uint32_t fd_usbxch_read_available_impl(fd_usbxch_handle_t *h)
+uint32_t fd_usbxch_{{inst.name}}_read_available(fd_usbxch_handle_t *h)
 {
     uint16_t occ = fd_ring_size(&h->rx);
     return occ;
@@ -168,7 +181,7 @@ uint32_t fd_usbxch_read_available_impl(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Connected status – true when VBUS present and SET_CONFIGURATION received
  * --------------------------------------------------------------------------- */
-bool fd_usbxch_connected_impl(fd_usbxch_handle_t *h)
+bool fd_usbxch_{{inst.name}}_connected(fd_usbxch_handle_t *h)
 {
     return (h->flags & USBXCH_FLAG_CONFIGURED) != 0;
 }
@@ -176,7 +189,7 @@ bool fd_usbxch_connected_impl(fd_usbxch_handle_t *h)
 /* ---------------------------------------------------------------------------
  * Update – periodic housekeeping (call from main/super-loop)
  * --------------------------------------------------------------------------- */
-void fd_usbxch_update_impl(fd_usbxch_handle_t *h)
+void fd_usbxch_{{inst.name}}_update(fd_usbxch_handle_t *h)
 {
     /* Start IN transfer for EP1 if data is pending */
     if (!(h->flags & USBXCH_FLAG_TX_BUSY) && fd_ring_size(&h->tx) > 0)
@@ -268,5 +281,4 @@ void USBD_XCH_TxComplete(void *ctx)
     h->tx_to_release = c1;
     h->flags |= USBXCH_FLAG_TX_BUSY;
 }
-
 

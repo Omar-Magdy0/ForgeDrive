@@ -76,7 +76,7 @@ target_include_directories(fd_freertos PUBLIC
 add_compile_definitions($<$<CONFIG:Debug>:FD_DEBUG>)
 add_compile_definitions(CBOR_TINYCBOR=1)
 add_subdirectory("${FDDRV_DIR}")
-add_subdirectory("platform/${DEVICE_PLATFORM}")
+include("platform/${DEVICE_PLATFORM}/platform.cmake")
 # Setup cmake module path and compiler settings
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 message("Build type: " ${CMAKE_BUILD_TYPE})
@@ -103,14 +103,20 @@ include_directories(
     ${PMSMCONTROL_DIR}
     ${PMSMCONTROL_DIR}/PosDriver
     ${CMSIS_DSP_DIR}/Include
-    ${CMSIS_CORE_DIR}/Include   
+    ${CMSIS_CORE_DIR}/Include  
+    ${PLATFORM_DIR} 
 )
-# Link with platform EARLY to get include paths
+target_compile_definitions(fd_drv PUBLIC
+    
+)
+target_include_directories(fd_drv PRIVATE
+    ${PLATFORM_DIR}
+)
 
-
-
-
-
+set(WITH_CBOR2JSON OFF CACHE BOOL "" FORCE)
+set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WITH_FLOATING_POINT ON CACHE BOOL "" FORCE)
 add_subdirectory(${TINYCBOR_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinycbor)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
 add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp)
@@ -119,8 +125,6 @@ file(GLOB_RECURSE MIDDLEWARE_SRC
     ${FDLIB_DIR}/middleware/*.cpp
     ${FDLIB_DIR}/middleware/*.c
 )
-
-
 
 if(DEVICE_PLATFORM STREQUAL "HOST")
 list(APPEND POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverSIL.cpp")
@@ -134,6 +138,7 @@ set(APPLICATION_SRC
     ${PMSMCONTROL_DIR}/PmsmControlCore_Foc.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_SComm.cpp
     ${POSDRIVER}
+    ${PLATFORM_SRC}
     ${CMAKE_SOURCE_DIR}/main.cpp
     ${CMAKE_SOURCE_DIR}/sys.cpp
 )
@@ -146,18 +151,14 @@ add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
 include(${FDDRV_DIR}/post_build.cmake OPTIONAL)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     fd_drv
-    tinycbor
     fd_freertos
+    ${PLATFORM_LIBRARIES}
     CMSISDSP
-    PLATFORM
     etl::etl
+    tinycbor
 )
 
-# BUILD Platform Tied TEST CODE
-if(DEVICE_PLATFORM STREQUAL "HOST")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        ETL_THROW_EXCEPTIONS
-        ETL_VERBOSE_ERRORS
-        ETL_CHECK_PUSH_POP
-    )
-endif()
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    ${PLATFORM_DEFINITIONS}
+)
+

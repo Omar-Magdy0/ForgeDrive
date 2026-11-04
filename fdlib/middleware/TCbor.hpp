@@ -1,14 +1,15 @@
 #pragma once
 #include "cbor.h"
 #include "etl/span.h"
-#include "etl/string_view.h"
+#include "etl/string.h"
+#include <stdint.h>
 #include <type_traits>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 
 #define MAX_NESTING 5
-enum class CborType : uint8_t
+enum class TCborType : uint8_t
 {
     Integer,
     ByteString,
@@ -26,15 +27,15 @@ enum class CborType : uint8_t
     Invalid = 0xff
 };
 
-struct CborParse
+struct TCborParse
 {
     CborParser parser;
     CborValue it[MAX_NESTING + 1];
-    CborType container_type[MAX_NESTING];
+    TCborType container_type[MAX_NESTING];
     size_t container_length[MAX_NESTING];
     uint8_t depth = 0;
     bool valid = false;
-    CborParse(etl::span<uint8_t> rx_buf)
+    TCborParse(etl::span<const uint8_t> rx_buf)
     {
         valid = cbor_parser_init(rx_buf.data(), rx_buf.size(), CborValidateBasic, &parser, &it[0]) == CborNoError;
         depth = 0;
@@ -45,7 +46,7 @@ struct CborParse
     }
     bool isArray() const
     {
-        return valid && isArray(it[depth]);
+        return isArray(it[depth]);
     }
     bool isMap(const CborValue &value) const
     {
@@ -53,7 +54,7 @@ struct CborParse
     }
     bool isMap() const
     {
-        return valid && isMap(it[depth]);
+        return isMap(it[depth]);
     }
     bool isString(const CborValue &value) const
     {
@@ -61,7 +62,7 @@ struct CborParse
     }
     bool isString() const
     {
-        return valid && isString(it[depth]);
+        return isString(it[depth]);
     }
     bool isBytes(const CborValue &value) const
     {
@@ -69,7 +70,7 @@ struct CborParse
     }
     bool isBytes() const
     {
-        return valid && isBytes(it[depth]);
+        return isBytes(it[depth]);
     }
     bool isInteger(const CborValue &value) const
     {
@@ -77,7 +78,7 @@ struct CborParse
     }
     bool isInteger() const
     {
-        return valid && isInteger(it[depth]);
+        return isInteger(it[depth]);
     }
     bool isFloat(const CborValue &value) const
     {
@@ -85,7 +86,7 @@ struct CborParse
     }
     bool isFloat() const
     {
-        return valid && isFloat(it[depth]);
+        return isFloat(it[depth]);
     }
     bool isBoolean(const CborValue &value) const
     {
@@ -93,7 +94,7 @@ struct CborParse
     }
     bool isBoolean() const
     {
-        return valid && isBoolean(it[depth]);
+        return isBoolean(it[depth]);
     }
     bool isNull(const CborValue &value) const
     {
@@ -101,13 +102,14 @@ struct CborParse
     }
     bool isNull() const
     {
-        return valid && isNull(it[depth]);
+        return isNull(it[depth]);
     }
     template <typename T>
     bool getINT(CborValue &value, T &v)
     {
         static_assert(std::is_integral_v<T>, "Integer type required");
-        if (cbor_value_at_end(&value))return false;
+        if (cbor_value_at_end(&value))
+            return false;
         if constexpr (std::is_unsigned_v<T>)
         {
             if (!cbor_value_is_unsigned_integer(&value))
@@ -137,14 +139,15 @@ struct CborParse
     template <typename T>
     bool getINT(T &v)
     {
-        return valid && getINT(it[depth], v);
+        return getINT(it[depth], v);
     }
     template <typename T>
     bool getFLOAT(CborValue &value, T &v)
     {
         static_assert(std::is_floating_point_v<T>,
                       "Floating-point type required");
-        if (cbor_value_at_end(&value))return false;
+        if (cbor_value_at_end(&value))
+            return false;
         if constexpr (std::is_same_v<T, float>)
         {
             if (!cbor_value_is_float(&value))
@@ -165,11 +168,12 @@ struct CborParse
     template <typename T>
     bool getFLOAT(T &v)
     {
-        return valid && getFLOAT(it[depth], v);
+        return getFLOAT(it[depth], v);
     }
     bool getBOOL(CborValue &value, bool &v)
     {
-        if (cbor_value_at_end(&value))return false;
+        if (cbor_value_at_end(&value))
+            return false;
         if (!cbor_value_is_boolean(&value))
             return false;
         if (cbor_value_get_boolean(&value, &v) != CborNoError)
@@ -179,45 +183,46 @@ struct CborParse
     }
     bool getBOOL(bool &v)
     {
-        return valid && getBOOL(it[depth], v);
+        return getBOOL(it[depth], v);
     }
-    bool getSTRING(CborValue &value, etl::string_view &out)
+    bool getSTRING(CborValue &value, etl::string_ext &out)
     {
-        if (cbor_value_at_end(&value))return false;
+        if (cbor_value_at_end(&value))
+            return false;
         if (!cbor_value_is_text_string(&value))
             return false;
-        const char *data;
-        size_t size;
-        if (cbor_value_get_text_string_chunk(&value, &data, &size) != CborNoError)
+
+        size_t size = out.capacity();
+        if (cbor_value_copy_text_string(
+                &value, out.data(), &size, &value) != CborNoError)
             return false;
-        out = etl::string_view(data, size);
-        cbor_value_advance(&value);
+        if(size >= out.capacity())return false; //null termination didn't succeed;
+        out.resize(size);
         return true;
     }
-    bool getSTRING(etl::string_view &out)
+    bool getSTRING(etl::string_ext &out)
     {
-        return valid && get(it[depth], out);
+        return get(it[depth], out);
     }
-    bool getBYTES(CborValue &value, etl::span<const uint8_t> &out)
+    bool getBYTES(CborValue &value, etl::span<uint8_t> &out, size_t &size)
     {
-        if (cbor_value_at_end(&value))return false;
+        if (cbor_value_at_end(&value))
+            return false;
         if (!cbor_value_is_byte_string(&value))
             return false;
-        const uint8_t *data;
-        size_t size;
-        if (cbor_value_get_byte_string_chunk(&value, &data, &size) != CborNoError)
+        size = out.size();
+        if (cbor_value_copy_byte_string(&value, out.data(), &size, &value) != CborNoError)
             return false;
-        out = etl::span<const uint8_t>(data, size);
-        cbor_value_advance(&value);
         return true;
     }
-    bool getBYTES(etl::span<const uint8_t> &out)
+    bool getBYTES(etl::span<uint8_t> &out, size_t &size)
     {
-        return valid && get(it[depth], out);
+        return getBYTES(it[depth], out, size);
     }
     bool getNull(CborValue &value)
     {
-        if (cbor_value_at_end(&value))return false;
+        if (cbor_value_at_end(&value))
+            return false;
         if (!cbor_value_is_null(&value))
             return false;
         cbor_value_advance_fixed(&value);
@@ -225,14 +230,23 @@ struct CborParse
     }
     bool getNull()
     {
-        return valid && getNull(it[depth]);
+        return getNull(it[depth]);
     }
     template <typename T>
     bool get(CborValue &value, T &v)
     {
-        if constexpr (std::is_same_v<T, bool>)
+        using U = std::remove_cv_t<T>;
+        if constexpr (std::is_same_v<U, bool>)
         {
             return getBOOL(value, v);
+        }
+        else if constexpr (std::is_enum_v<U>)
+        {
+            using B = std::underlying_type_t<U>;
+            B raw{};
+            if (!get(value, raw)) return false;
+            v = static_cast<U>(raw);
+            return true;
         }
         else if constexpr (std::is_integral_v<T>)
         {
@@ -242,61 +256,62 @@ struct CborParse
         {
             return getFLOAT(value, v);
         }
-        else if constexpr (std::is_same_v<T, etl::string_view>)
+        else if constexpr (std::is_same_v<T, etl::string_ext>)
         {
             return getSTRING(value, v);
-        }
-        else if constexpr (std::is_same_v<T, etl::span<const uint8_t>>)
-        {
-            return getBYTES(value, v);
         }
         else
         {
             static_assert(!sizeof(T), "Unsupported CBOR destination type");
         }
     }
+    bool get(CborValue &value, etl::span<uint8_t> &out, size_t &size)
+    {
+        return getBYTES(value, out, size);
+    }
+    bool get( etl::span<uint8_t> &out, size_t &size){return get(it[depth], out, size);}
     template <typename T>
     bool get(T &v)
     {
-        return valid && get(it[depth], v);
+        return get(it[depth], v);
     }
-    CborType getType(CborValue &value)
+    TCborType getType(CborValue &value)
     {
         switch (cbor_value_get_type(&value))
         {
         case CborIntegerType:
-            return CborType::Integer;
+            return TCborType::Integer;
         case CborByteStringType:
-            return CborType::ByteString;
+            return TCborType::ByteString;
         case CborTextStringType:
-            return CborType::TextString;
+            return TCborType::TextString;
         case CborArrayType:
-            return CborType::Array;
+            return TCborType::Array;
         case CborMapType:
-            return CborType::Map;
+            return TCborType::Map;
         case CborTagType:
-            return CborType::Tag;
+            return TCborType::Tag;
         case CborSimpleType:
-            return CborType::Simple;
+            return TCborType::Simple;
         case CborBooleanType:
-            return CborType::Boolean;
+            return TCborType::Boolean;
         case CborNullType:
-            return CborType::Null;
+            return TCborType::Null;
         case CborUndefinedType:
-            return CborType::Undefined;
+            return TCborType::Undefined;
         case CborHalfFloatType:
-            return CborType::HalfFloat;
+            return TCborType::HalfFloat;
         case CborFloatType:
-            return CborType::Float;
+            return TCborType::Float;
         case CborDoubleType:
-            return CborType::Double;
+            return TCborType::Double;
         case CborInvalidType:
-            return CborType::Invalid;
+            return TCborType::Invalid;
         }
 
-        return CborType::Invalid;
+        return TCborType::Invalid;
     }
-    CborType getType() { return getType(it[depth]); }
+    TCborType getType() { return getType(it[depth]); }
     bool hasNext() const
     {
         return !cbor_value_at_end(it + depth);
@@ -312,7 +327,7 @@ struct CborParse
 
         return cbor_value_advance(&it[depth]) == CborNoError;
     }
-    bool enterContainer(CborType type)
+    bool enterContainer(TCborType type)
     {
         if (!valid || depth >= MAX_NESTING)
             return false;
@@ -320,7 +335,7 @@ struct CborParse
         CborValue &parent = it[depth];
         size_t len;
 
-        if (type == CborType::Array)
+        if (type == TCborType::Array)
         {
             if (!cbor_value_is_array(&parent))
                 return false;
@@ -348,11 +363,11 @@ struct CborParse
     }
     bool enterArray()
     {
-        return enterContainer(CborType::Array);
+        return enterContainer(TCborType::Array);
     }
     bool enterMap()
     {
-        return enterContainer(CborType::Map);
+        return enterContainer(TCborType::Map);
     }
     bool leaveContainer()
     {
@@ -369,13 +384,13 @@ struct CborParse
     bool leaveArray()
     {
         return depth > 0 &&
-               container_type[depth - 1] == CborType::Array &&
+               container_type[depth - 1] == TCborType::Array &&
                leaveContainer();
     }
     bool leaveMap()
     {
         return depth > 0 &&
-               container_type[depth - 1] == CborType::Map &&
+               container_type[depth - 1] == TCborType::Map &&
                leaveContainer();
     }
     bool containerLength(size_t &length) const
@@ -386,24 +401,132 @@ struct CborParse
         length = container_length[depth - 1];
         return true;
     }
-    bool find(uint8_t key, CborValue &it)
+    template <typename T>
+    bool key(T &v)
     {
+        return get(v);
     }
-    bool find(const char *str, CborValue &result) const
+    template <typename T>
+    bool element(T &v)
     {
-        if (!valid || depth == 0 ||
-            container_type[depth - 1] != CborType::Map)
-            return false;
-
-        if (cbor_value_map_find_value(&it[depth], str, &result) != CborNoError)
-            return false;
-
-        return cbor_value_is_valid(&result);
+        return get(v);
     }
 };
 
-struct CborEncode
+struct TCborEncode
 {
-    CborParser encoder;
-    CborValue it[MAX_NESTING + 1];
-}
+    CborEncoder it[MAX_NESTING + 1];
+    uint8_t depth = 0;
+    uint8_t *_tx_buf_ptr = NULL;
+    TCborEncode(etl::span<uint8_t> tx_buf)
+    {
+        cbor_encoder_init(&it[0], tx_buf.data(), tx_buf.size(), CborValidateBasic);
+        _tx_buf_ptr = tx_buf.data();
+        depth = 0;
+    }
+    template <typename T>
+    bool putINT(const T &v)
+    {
+        static_assert(std::is_integral_v<T>, "Integer type required");
+        if constexpr (std::is_unsigned_v<T>)
+            return cbor_encode_uint(&it[depth], static_cast<uint64_t>(v)) == CborNoError;
+        else
+            return cbor_encode_int(&it[depth], static_cast<int64_t>(v)) == CborNoError;
+    }
+    template <typename T>
+    bool putFLOAT(const T &v)
+    {
+        static_assert(std::is_floating_point_v<T>, "Floating-point type required");
+
+        if constexpr (std::is_same_v<T, float>)
+            return cbor_encode_float(&it[depth], v) == CborNoError;
+        else
+            return cbor_encode_double(&it[depth], v) == CborNoError;
+    }
+    bool putBOOL(const bool &v)
+    {
+        return cbor_encode_boolean(&it[depth], v) == CborNoError;
+    }
+    bool putSTRING(const etl::string_ext &v)
+    {
+        return cbor_encode_text_string(&it[depth], v.data(), v.size()) == CborNoError;
+    }
+    bool putBYTES(const etl::span<const uint8_t> &v)
+    {
+        return cbor_encode_byte_string(&it[depth], v.data(), v.size()) == CborNoError;
+    }
+    bool putNull()
+    {
+        return cbor_encode_null(&it[depth]) == CborNoError;
+    }
+    bool enterArray(size_t length)
+    {
+        if (depth >= MAX_NESTING)
+            return false;
+        if (cbor_encoder_create_array(&it[depth], &it[depth + 1], length) != CborNoError)
+            return false;
+        ++depth;
+        return true;
+    }
+    bool enterMap(size_t pairs)
+    {
+        if (depth >= MAX_NESTING)
+            return false;
+        if (cbor_encoder_create_map(&it[depth], &it[depth + 1], pairs) != CborNoError)
+            return false;
+        ++depth;
+        return true;
+    }
+    template <typename K>
+    bool enterMap(const K &key, size_t pairs)
+    {
+        return put(key) && enterMap(pairs);
+    }
+    template <typename K>
+    bool enterArray(const K &key, size_t length)
+    {
+        return put(key) && enterArray(length);
+    }
+    bool leaveContainer()
+    {
+        if (depth == 0)
+            return false;
+
+        if (cbor_encoder_close_container(&it[depth - 1], &it[depth]) != CborNoError)
+            return false;
+
+        --depth;
+        return true;
+    }
+    bool leaveArray() { return leaveContainer(); }
+    bool leaveMap()   { return leaveContainer(); }
+    template <typename K, typename T>
+    bool put(const K &key, const T &v)
+    {
+        return put(key) && put(v);
+    }
+    template <typename T>
+    bool put(const T &v)
+    {
+        using U = std::remove_cv_t<T>;
+
+        if constexpr (std::is_same_v<U, bool>)
+            return putBOOL(v);
+        else if constexpr (std::is_same_v<U, etl::string_ext>)
+            return putSTRING(v);
+        else if constexpr (std::is_same_v<U, etl::span<const uint8_t>>)
+            return putBYTES(v);
+        else if constexpr (std::is_enum_v<U>)
+            return put(static_cast<std::underlying_type_t<U>>(v));
+        else if constexpr (std::is_floating_point_v<U>)
+            return putFLOAT(v);
+        else if constexpr (std::is_integral_v<U>)
+            return putINT(v);
+        else
+            static_assert(!sizeof(U), "Unsupported CBOR type");
+    }
+    size_t size()
+    {
+        return cbor_encoder_get_buffer_size(&it[0], _tx_buf_ptr);
+    }
+};

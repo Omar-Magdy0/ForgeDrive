@@ -36,14 +36,16 @@ typedef struct {
 
 {% set inst = usbxch %}
 void fd_usbxch_{{inst.name}}_init(fd_usbxch_handle_t *h);
-uint32_t fd_usbxch_write_impl(fd_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
-uint32_t fd_usbxch_write_available_impl(fd_usbxch_handle_t *h);
-uint32_t fd_usbxch_flush_impl(fd_usbxch_handle_t *h);
-uint32_t fd_usbxch_clear_impl(fd_usbxch_handle_t *h);
-uint32_t fd_usbxch_read_impl(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length);
-uint32_t fd_usbxch_read_available_impl(fd_usbxch_handle_t *h);
-bool fd_usbxch_connected_impl(fd_usbxch_handle_t *h);
-void fd_usbxch_update_impl(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_{{inst.name}}_write(fd_usbxch_handle_t *h, const uint8_t* data, uint32_t length);
+uint32_t fd_usbxch_{{inst.name}}_write_available(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_{{inst.name}}_flush(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_{{inst.name}}_clear(fd_usbxch_handle_t *h);
+uint32_t fd_usbxch_{{inst.name}}_read(fd_usbxch_handle_t *h, uint8_t *data, uint32_t length);
+bool fd_usbxch_{{inst.name}}_read_reserve(fd_usbxch_handle_t *h, void** readptr1, uint16_t* cont1, void** readptr2, uint16_t* cont2);
+bool fd_usbxch_{{inst.name}}_read_commit(fd_usbxch_handle_t *h, size_t len);
+uint32_t fd_usbxch_{{inst.name}}_read_available(fd_usbxch_handle_t *h);
+bool fd_usbxch_{{inst.name}}_connected(fd_usbxch_handle_t *h);
+void fd_usbxch_{{inst.name}}_update(fd_usbxch_handle_t *h);
 extern fd_usbxch_handle_t {{inst.name}};
 
 
@@ -55,14 +57,17 @@ extern fd_usbxch_handle_t {{inst.name}};
 #define FD_USBXCH_DISPATCH(inst, suffix) FD_USBXCH_DISPATCH_IMPL(inst, suffix)
 
 #define fd_usbxch_init(inst)                    FD_USBXCH_DISPATCH(inst, _init)(&(inst))
-#define fd_usbxch_write(inst, data, len)        fd_usbxch_write_impl(&(inst), data, len)
-#define fd_usbxch_write_available(inst)         fd_usbxch_write_available_impl(&(inst))
-#define fd_usbxch_flush(inst)                   fd_usbxch_flush_impl(&(inst))
-#define fd_usbxch_clear(inst)                   fd_usbxch_clear_impl(&(inst))
-#define fd_usbxch_read(inst, data, len)         fd_usbxch_read_impl(&(inst), data, len)
-#define fd_usbxch_read_available(inst)          fd_usbxch_read_available_impl(&(inst))
-#define fd_usbxch_connected(inst)               fd_usbxch_connected_impl(&(inst))
-#define fd_usbxch_update(inst)                  fd_usbxch_update_impl(&(inst))  
+#define fd_usbxch_write(inst, ...)              FD_USBXCH_DISPATCH(inst, _write)(&(inst), ##__VA_ARGS__)
+#define fd_usbxch_write_available(inst)         FD_USBXCH_DISPATCH(inst, _write_available)(&(inst))
+#define fd_usbxch_flush(inst)                   FD_USBXCH_DISPATCH(inst, _flush)(&(inst))
+#define fd_usbxch_clear(inst)                   FD_USBXCH_DISPATCH(inst, _clear)(&(inst))
+#define fd_usbxch_read(inst, ...)               FD_USBXCH_DISPATCH(inst, _read)(&(inst), ##__VA_ARGS__)
+#define fd_usbxch_read_reserve(inst, ...)       FD_USBXCH_DISPATCH(inst, _read_reserve)(&(inst), ##__VA_ARGS__)
+#define fd_usbxch_read_commit(inst, ...)        FD_USBXCH_DISPATCH(inst, _read_commit)(&(inst), ##__VA_ARGS__)
+#define fd_usbxch_read_available(inst)          FD_USBXCH_DISPATCH(inst, _read_available)(&(inst))
+#define fd_usbxch_connected(inst)               FD_USBXCH_DISPATCH(inst, _connected)(&(inst))
+#define fd_usbxch_update(inst)                  FD_USBXCH_DISPATCH(inst, _update)(&(inst))
+
 
 #ifdef __cplusplus
 }

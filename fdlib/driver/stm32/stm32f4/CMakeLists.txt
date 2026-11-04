@@ -71,13 +71,6 @@ set(STM32_Drivers_Src
 )
 
 
-set(STM32CMX_Src
-    ${STM32CMX_DIR}/syscalls.c
-    ${STM32CMX_DIR}/sysmem.c
-    ${STARTUP_FILE}
-    ${SYSTEM_FILE}
-)
-
 set(USBD_Src
     ${USBD_DIR}/Core/Src/usbd_core.c
     ${USBD_DIR}/Core/Src/usbd_ctlreq.c
@@ -104,7 +97,8 @@ list(REMOVE_DUPLICATES fd_drv_includes)
 
 add_library(fd_drv STATIC)
 target_sources(fd_drv PRIVATE
-    ${STM32CMX_Src}
+    ${STARTUP_FILE}
+    ${SYSTEM_FILE}
     ${STM32_Drivers_Src}
     ${USBD_Src}
     ${fd_drv_local}

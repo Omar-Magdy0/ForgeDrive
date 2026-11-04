@@ -1,16 +1,11 @@
 #pragma once
 #include <stdint.h>
 #include "PmsmControlCore.h"
+#include "TCbor.hpp"
+#include "sys.h"
 
 namespace ForgeDriveMC_RPC
 {
-
-    enum class RPCMessageType : uint8_t
-    {
-        Request = 0,
-        Response,
-        Notification
-    };
 
     enum class RPCStatus : uint8_t
     {
@@ -26,53 +21,46 @@ namespace ForgeDriveMC_RPC
         SET_SETPOINT = 0,
     };
 
+    bool RPC_ERROR(TCborParse &parse, TCborEncode &encode, RPCStatus sts)
+    {
+        encode.put(UINT16_MAX);
+        encode.put(sts);
+        return false;
+    }
 
-    bool RPC_DISPATCH(RPC_CBOR &cbor)
+    bool RPC_SET_SETPOINT(TCborParse &parse, TCborEncode &encode, RPCStatus &sts)
+    {
+        float sp;
+        MechMode mc;
+        PMSM_ERR err;
+        if (!(parse.get(sp) && parse.get(mc)))
+            return RPC_ERROR(parse, encode, RPCStatus::INVALID_ARGUMENTS);
+        err = Sys::pmsm1.setSetpoint(sp, mc);
+        encode.put(RPC_ID::SET_SETPOINT);
+        encode.put(err);
+        return true;
+    }
+
+    bool RPC_DISPATCH(TCborParse &parse, TCborEncode &encode)
     {
         RPCStatus sts = RPCStatus::OK;
-        cbor.reset();
-        uint8_t id;
-        if(!cbor.get(id))sts = RPCStatus::METHOD_NOT_FOUND; 
-        if (sts == RPCStatus::OK)
+        RPC_ID id;
+        bool suc = true;
+        if (!parse.get(id))
+            return RPC_ERROR(parse, encode, RPCStatus::METHOD_NOT_FOUND);
+        if (!parse.enterArray())
+            return RPC_ERROR(parse, encode, RPCStatus::INVALID_ARGUMENTS);
+        switch (id)
         {
-            switch ((RPC_ID)id)
-            {
-            case SET_SETPOINT:
-            {
-                float sp;
-                uint8_t mc;
-                PMSM_ERR err;
-                bool arg_good = true;
-                arg_good &= cbor.get(sp);
-                arg_good &= cbor.get(mc);
-                arg_good &= cbor.atEnd();
-                if(!arg_good){sts = RPCStatus::INVALID_ARGUMENTS;}
-                if(arg_good)err = setSetpoint(sp, static_cast<MCMode>mc);
-
-                break;
-            }
-            default:
-                sts = RPCStatus::METHOD_NOT_FOUND;
-                break;
-            }
+        case RPC_ID::SET_SETPOINT:
+            suc = RPC_SET_SETPOINT(parse, encode, sts);
+            break;
+        default:
+            return RPC_ERROR(parse, encode, RPCStatus::METHOD_NOT_FOUND);
         }
-        if (sts != RPCStatus::OK)
-        {
-            switch (sts)
-            {
-            case RPCStatus::INVALID_ARGUMENTS:
-            {
-                break;
-            }
-            case RPCStatus::METHOD_NOT_FOUND:
-            {
-                break;
-            }
-            default:
-                break;
-            }
-        }
-        return true;
+        if (!parse.leaveArray())
+            return RPC_ERROR(parse, encode, RPCStatus::INVALID_ARGUMENTS);
+        return suc;
     }
 
 };
