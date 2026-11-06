@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <vector.h>
+#include <vector>
 #define SILSERVER_PORT_USBXCH 5001
 
 {% set inst = usbxch %}
@@ -81,6 +81,7 @@ bool fd_usbxch_{{inst.name}}_read_reserve(fd_usbxch_handle_t *h,
                                          uint16_t* cont2)
 {
     (void)h;
+    SILServer &server = SILServer::instance();
     size_t available = server.read_available(SILSERVER_PORT_USBXCH);
     if (!available)
         return false;

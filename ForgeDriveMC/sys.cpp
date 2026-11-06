@@ -1,6 +1,6 @@
 #include "sys.h"
 #include "fd_timer.h"
-#include "RPC.hpp"
+#include "RpcDispatch.hpp"
 #ifdef FD_PLATFORM_HOST
 #include <thread>
 #endif
@@ -27,7 +27,6 @@ void fd_timer_TIMERxMC_periodCallback(void)
     Sys::pmsm1.xmcLoop();
 }
 
-
 enum class LCOM_Client : uint8_t
 {
     RPC,
@@ -36,13 +35,12 @@ enum class LCOM_Client : uint8_t
     COUNT
 };
 
-enum ABF_Channel : uint8_t
+enum class ABF_Channel : uint8_t
 {
     RPC = 120,
     DAQStream = 121,
     DAQCodec = 127,
 };
-
 
 void Sys::onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
 {
@@ -51,11 +49,10 @@ void Sys::onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
     case ABF_Channel::RPC:
     {
         //dispatch incoming rpc command and respond
-        TCborParse parse(etl::span<const uint8_t>(payload, payload_len));
-        TCborEncode encode(etl::span<uint8_t>(tx_buf, TX_BUF_SIZE));
-        RPC_DISPATCH(parse, encode);
-        auto size = encode.size();
-        abfStream.encode(abf_header_buf, tx_buf, ABF_Channel::RPC, size);
+        RpcDispatch rpc(etl::span<const uint8_t>(payload, payload_len), etl::span<uint8_t>(tx_buf, TX_BUF_SIZE));
+        rpc.dispatch();
+        auto size = rpc.size();
+        abfStream.encode(abf_header_buf, tx_buf, (uint8_t)ABF_Channel::RPC, size);
         fd_usbxch_write(USB1, abf_header_buf, abf::HEADER_SIZE);
         fd_usbxch_write(USB1, tx_buf, size);
         fd_usbxch_flush(USB1);
@@ -97,6 +94,7 @@ void lcom(void *arg)
             fd_usbxch_read_commit(USB1, c1+c2);
         }
         //Check for writers requests
+        //TODO: add daq stream / codec processing and writing
 
         vTaskDelayUntil(&last_wake, period); 
     }

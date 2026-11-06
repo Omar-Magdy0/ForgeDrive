@@ -5,7 +5,7 @@ using namespace daq;
 DAQ_ERR Session::discovery_req()
 {
 
-
+    return DAQ_ERR();
 }
 
 DAQ_ERR Session::discovery_respond()

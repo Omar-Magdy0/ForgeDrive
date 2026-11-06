@@ -1,6 +1,7 @@
 #pragma once
 #include "cbor.h"
 #include "etl/span.h"
+#include "etl/vector.h"
 #include "etl/string.h"
 #include <stdint.h>
 #include <type_traits>
@@ -185,7 +186,7 @@ struct TCborParse
     {
         return getBOOL(it[depth], v);
     }
-    bool getSTRING(CborValue &value, etl::string_ext &out)
+    bool getSTRING(CborValue &value, etl::istring &out)
     {
         if (cbor_value_at_end(&value))
             return false;
@@ -200,24 +201,25 @@ struct TCborParse
         out.resize(size);
         return true;
     }
-    bool getSTRING(etl::string_ext &out)
+    bool getSTRING(etl::istring &out)
     {
         return get(it[depth], out);
     }
-    bool getBYTES(CborValue &value, etl::span<uint8_t> &out, size_t &size)
+    bool getBYTES(CborValue &value, etl::ivector<uint8_t> &out)
     {
         if (cbor_value_at_end(&value))
             return false;
         if (!cbor_value_is_byte_string(&value))
             return false;
-        size = out.size();
+        size_t size = out.capacity();
         if (cbor_value_copy_byte_string(&value, out.data(), &size, &value) != CborNoError)
             return false;
+        out.resize(size);
         return true;
     }
-    bool getBYTES(etl::span<uint8_t> &out, size_t &size)
+    bool getBYTES(etl::ivector<uint8_t> &out)
     {
-        return getBYTES(it[depth], out, size);
+        return getBYTES(it[depth], out);
     }
     bool getNull(CborValue &value)
     {
@@ -248,28 +250,27 @@ struct TCborParse
             v = static_cast<U>(raw);
             return true;
         }
-        else if constexpr (std::is_integral_v<T>)
+        else if constexpr (std::is_integral_v<U>)
         {
             return getINT(value, v);
         }
-        else if constexpr (std::is_floating_point_v<T>)
+        else if constexpr (std::is_floating_point_v<U>)
         {
             return getFLOAT(value, v);
         }
-        else if constexpr (std::is_same_v<T, etl::string_ext>)
+        else if constexpr (std::is_base_of_v<etl::istring, U>)
         {
             return getSTRING(value, v);
+        }
+        else if constexpr (std::is_base_of_v<etl::ivector<uint8_t>, U>)
+        {
+            return getBYTES(value, v);
         }
         else
         {
             static_assert(!sizeof(T), "Unsupported CBOR destination type");
         }
     }
-    bool get(CborValue &value, etl::span<uint8_t> &out, size_t &size)
-    {
-        return getBYTES(value, out, size);
-    }
-    bool get( etl::span<uint8_t> &out, size_t &size){return get(it[depth], out, size);}
     template <typename T>
     bool get(T &v)
     {
@@ -447,13 +448,14 @@ struct TCborEncode
     {
         return cbor_encode_boolean(&it[depth], v) == CborNoError;
     }
-    bool putSTRING(const etl::string_ext &v)
+    bool putSTRING(const etl::istring &v)
     {
         return cbor_encode_text_string(&it[depth], v.data(), v.size()) == CborNoError;
     }
-    bool putBYTES(const etl::span<const uint8_t> &v)
+    bool putBYTES(const etl::ivector<uint8_t>& v)
     {
-        return cbor_encode_byte_string(&it[depth], v.data(), v.size()) == CborNoError;
+        return cbor_encode_byte_string(
+            &it[depth], v.data(), v.size()) == CborNoError;
     }
     bool putNull()
     {
@@ -512,9 +514,9 @@ struct TCborEncode
 
         if constexpr (std::is_same_v<U, bool>)
             return putBOOL(v);
-        else if constexpr (std::is_same_v<U, etl::string_ext>)
+        else if constexpr (std::is_base_of_v<etl::istring, U>)
             return putSTRING(v);
-        else if constexpr (std::is_same_v<U, etl::span<const uint8_t>>)
+        else if constexpr (std::is_base_of_v<etl::ivector<uint8_t>, U>)
             return putBYTES(v);
         else if constexpr (std::is_enum_v<U>)
             return put(static_cast<std::underlying_type_t<U>>(v));
