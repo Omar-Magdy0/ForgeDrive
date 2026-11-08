@@ -105,6 +105,7 @@ include_directories(
     ${CMSIS_DSP_DIR}/Include
     ${CMSIS_CORE_DIR}/Include  
     ${PLATFORM_DIR} 
+    ${CMAKE_SOURCE_DIR}/RPC
 )
 target_compile_definitions(fd_drv PUBLIC
     

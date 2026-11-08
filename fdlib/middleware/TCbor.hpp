@@ -1,13 +1,15 @@
 #pragma once
 #include "cbor.h"
-#include "etl/span.h"
-#include "etl/vector.h"
-#include "etl/string.h"
 #include <stdint.h>
 #include <type_traits>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+
+#include "etl/span.h"
+#include "etl/vector.h"
+#include "etl/string.h"
+#include "etl/tuple.h"
 
 #define MAX_NESTING 5
 enum class TCborType : uint8_t
@@ -234,11 +236,25 @@ struct TCborParse
     {
         return getNull(it[depth]);
     }
+    template <typename Tuple>
+    bool getTUPLE(CborValue &value, Tuple &v)
+    {
+        if (!enterArray())return false;
+        if (!etl::apply([this, &value](auto &...values)
+                        { return (get(value, values) && ...); }, v))
+            return false;
+        if (!leaveArray())return false;
+        return true;
+    }
     template <typename T>
     bool get(CborValue &value, T &v)
     {
         using U = std::remove_cv_t<T>;
-        if constexpr (std::is_same_v<U, bool>)
+        if constexpr (etl::is_tuple<U>::value)
+        {
+            return getTUPLE(value, v);
+        }
+        else if constexpr (std::is_same_v<U, bool>)
         {
             return getBOOL(value, v);
         }
@@ -407,11 +423,6 @@ struct TCborParse
     {
         return get(v);
     }
-    template <typename T>
-    bool element(T &v)
-    {
-        return get(v);
-    }
 };
 
 struct TCborEncode
@@ -502,6 +513,18 @@ struct TCborEncode
     }
     bool leaveArray() { return leaveContainer(); }
     bool leaveMap()   { return leaveContainer(); }
+    template <typename Tuple>
+    bool putTUPLE(const Tuple& v)
+    {
+        if (!enterArray(etl::tuple_size<Tuple>::value))
+            return false;
+        if (!etl::apply([this](const auto &...values)
+                        { return (put(values) && ...); }, v))
+            return false;
+        if (!leaveArray())
+            return false;
+        return true;
+    }
     template <typename K, typename T>
     bool put(const K &key, const T &v)
     {
@@ -511,8 +534,9 @@ struct TCborEncode
     bool put(const T &v)
     {
         using U = std::remove_cv_t<T>;
-
-        if constexpr (std::is_same_v<U, bool>)
+        if constexpr (etl::is_tuple<U>::value)
+            return putTUPLE(v);
+        else if constexpr (std::is_same_v<U, bool>)
             return putBOOL(v);
         else if constexpr (std::is_base_of_v<etl::istring, U>)
             return putSTRING(v);
