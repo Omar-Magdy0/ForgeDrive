@@ -11,7 +11,8 @@
 #include <thread>
 #include <vector>
 #include "fd/ring.h"
-
+#include <functional>
+#include "IComm.h"
 struct UsbDeviceInfo
 {
     uint16_t vid;
@@ -26,7 +27,7 @@ struct UsbDeviceInfo
     std::vector<uint8_t> interfaces;
 };
 
-class Usbxch
+class Usbxch : public IComm
 {
 public:
     static constexpr size_t RXBUF_SIZE = (1 << 24);
@@ -40,7 +41,7 @@ public:
     {
     }
 
-    ~Usbxch();
+    ~Usbxch() override;
 
     static std::vector<UsbDeviceInfo> scan();
     bool connect(const std::string& serial_number,
@@ -51,21 +52,13 @@ public:
                  unsigned char bulk_out_ep,
                  int timeout_ms);
 
-    void disconnect();
-    bool isConnected() const;
-    void (*onConnect)(void *ctx) = nullptr;
-    void (*onDisconnect)(void *ctx) = nullptr;
-    void (*onError)(void *ctx, int ec) = nullptr;
-    void *callback_ctx = nullptr;
+    void disconnect() override;
+    bool isConnected() const override;
     inline static int timeout = 5000;
 
-    int write(const uint8_t* data, size_t length);
-    int write(const std::vector<uint8_t>& data)
-    {
-        return write(data.data(), data.size());
-    }
-    int read(uint8_t* data, size_t max_len);
-    size_t available();
+    bool write(std::span<const uint8_t> data) override;
+    size_t read(std::span<uint8_t> data) override;
+    size_t available() override;
 
 private:
     libusb_context* context_ = nullptr;

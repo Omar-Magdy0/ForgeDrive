@@ -42,7 +42,14 @@ enum class VoltagePlotType
     Line_To_Neutral,
     Line_To_Neutral_Filtered,
     PhaseEmf,
-    Alpha_beta,
+    AlphaBeta,
+    DQ
+};
+
+enum class CurrentPlotType
+{
+    Phase,
+    AlphaBeta,
     DQ
 };
 
@@ -58,14 +65,21 @@ inline const char *voltage_plot_names[] = {
     "Line to Neutral",
     "Line to Neutral Filtered",
     "Phase EMF",
-    "Alpha_beta",
+    "AlphaBeta",
     "DQ"};
+
+inline const char *current_plot_names[] =
+    {
+        "Phase",
+        "AlphaBeta",
+        "DQ"};
 
 inline const char *display_mode_names[] = {
     "Trapezoidal",
     "FOC"};
 
 inline VoltagePlotType voltage_plot_type = VoltagePlotType::Line_To_Neutral;
+inline CurrentPlotType current_plot_type = CurrentPlotType::Phase;
 inline DisplayMode display_mode = DisplayMode::Trapezoidal;
 
 struct DataSummary
@@ -135,11 +149,11 @@ static void drawControlPanel()
     }
 
     ImGui::Text("Voltage Plot");
-    if (ImGui::BeginCombo("Type", voltage_plot_names[(int)voltage_plot_type]))
+    if (ImGui::BeginCombo("Type##Voltage", voltage_plot_names[(int)voltage_plot_type]))
     {
         for (int i = 0; i < IM_ARRAYSIZE(voltage_plot_names); i++)
         {
-            if (display_mode == DisplayMode::Trapezoidal && (i == (int)VoltagePlotType::Alpha_beta || i == (int)VoltagePlotType::DQ))
+            if (display_mode == DisplayMode::Trapezoidal && (i == (int)VoltagePlotType::AlphaBeta || i == (int)VoltagePlotType::DQ))
                 continue;
             bool is_selected = ((int)voltage_plot_type == i);
 
@@ -148,6 +162,26 @@ static void drawControlPanel()
                 voltage_plot_type = (VoltagePlotType)i;
             }
 
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::Text("Current Plot");
+    if (ImGui::BeginCombo("Type##Current", current_plot_names[(int)current_plot_type]))
+    {
+        for (int i = 0; i < IM_ARRAYSIZE(current_plot_names); i++)
+        {
+            if (display_mode == DisplayMode::Trapezoidal && (i == (int)CurrentPlotType::AlphaBeta || i == (int)CurrentPlotType::DQ))
+                continue;
+            bool is_selected = ((int)current_plot_type == i);
+            if (ImGui::Selectable(current_plot_names[i], is_selected))
+            {
+                current_plot_type = (CurrentPlotType)i;
+            }
             if (is_selected)
             {
                 ImGui::SetItemDefaultFocus();
@@ -167,11 +201,11 @@ static void drawControlPanel()
     // Display current path
     static char log_path[512] = "./sil_log.h5";
     ImGui::InputText("##path", log_path, sizeof(log_path));
-    
+
     if (ImGui::Button("Save"))
     {
         IGFD::FileDialogConfig config;
-        config.path = ".";              // Start directory
+        config.path = ".";           // Start directory
         config.fileName = "sil_log"; // Default filename
         config.flags = ImGuiFileDialogFlags_Modal | ImGuiFileDialogFlags_ConfirmOverwrite;
         config.sidePaneWidth = 600;
@@ -180,8 +214,7 @@ static void drawControlPanel()
             "ChooseFileDlgKey",
             "Choose HDF5 Save Location",
             ".h5", // Filter for .h5 files
-            config
-        );
+            config);
     }
     ImGui::SameLine();
     if (ImGui::Button("Stop"))
@@ -189,10 +222,11 @@ static void drawControlPanel()
         silLogger.logStop();
     }
     ImGui::SameLine();
-    ImGui::ColorButton("##log_status", 
-                   silLogger.isLogOn() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1),
-                   ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop);
-    if (ImGui::IsItemHovered()) {
+    ImGui::ColorButton("##log_status",
+                       silLogger.isLogOn() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1),
+                       ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop);
+    if (ImGui::IsItemHovered())
+    {
         ImGui::SetTooltip(silLogger.isLogOn() ? "Logging active" : "Logging stopped");
     }
 
@@ -211,39 +245,38 @@ static void drawControlPanel()
     ImGui::EndChild();
 }
 
+inline void draw_rotation_indicator(ImDrawList *draw_list,
+                                    float omega_rad_s,
+                                    const ImVec2 &pos,
+                                    float size = 80.0f)
+{
 
-
-inline void draw_rotation_indicator(ImDrawList* draw_list, 
-                             float omega_rad_s, 
-                             const ImVec2& pos,
-                             float size = 80.0f) {
-    
     static float angle = 0;
     static double last_time = ImGui::GetTime();
-    
+
     // Update angle
     double current_time = ImGui::GetTime();
     float dt = current_time - last_time;
     last_time = current_time;
-    
+
     // 1/100 of actual speed for display
     float rpm = omega_rad_s * 60.0f / (2.0f * M_PI);
-    float display_rpm = rpm / 20.0;  // 1/20 speed
+    float display_rpm = rpm / 20.0; // 1/20 speed
     float delta_angle = display_rpm * 360.0f * dt / 60.0f;
     angle = fmod(angle + delta_angle, 360.0f);
-    
-    ImVec2 center(pos.x + size/2, pos.y + size/2);
+
+    ImVec2 center(pos.x + size / 2, pos.y + size / 2);
     // Draw circle
-    draw_list->AddCircle(center, size/2, IM_COL32(150, 150, 150, 255), 0, 2.0f);
+    draw_list->AddCircle(center, size / 2, IM_COL32(150, 150, 150, 255), 0, 2.0f);
     // Draw arrow
     float rad = angle * M_PI / 180.0f;
-    float arrow_length = size/2 * 0.9f;
+    float arrow_length = size / 2 * 0.9f;
     ImVec2 tip(center.x + arrow_length * cos(rad),
                center.y + arrow_length * sin(rad));
-    
+
     // Arrow line
     draw_list->AddLine(center, tip, IM_COL32(255, 100, 100, 255), 3.0f);
-    
+
     // Center dot
     draw_list->AddCircleFilled(center, 4, IM_COL32(255, 255, 255, 255));
 }
@@ -263,13 +296,14 @@ static void drawSummary()
     ImGui::Text("Mechanical Power: %.2f W", summary.avg_mechanical_power);
     ImGui::Text("Efficiency: %.2f %%", summary.eff * 100);
     ImGui::Separator();
-        
+
     // Get the ImDrawList for current window
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImDrawList *draw_list = ImGui::GetWindowDrawList();
     // Get cursor position (where next element will be placed)
     ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
-    cursor_pos.x += 10; cursor_pos.y += 10;
-    draw_rotation_indicator(draw_list , sil.state.omega, cursor_pos, indicator_width);
+    cursor_pos.x += 10;
+    cursor_pos.y += 10;
+    draw_rotation_indicator(draw_list, sil.state.omega, cursor_pos, indicator_width);
 
     ImGui::EndChild();
 }
@@ -286,9 +320,15 @@ static void drawPhaseCurrentPlot(float height)
         ImPlot::SetupAxisLinks(ImAxis_X1, &shared_x_range.Min, &shared_x_range.Max);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -20, 20);
         pthread_mutex_lock(&scope_mutex);
-        ImPlot::PlotLine("Ia", channel_buffer[0], SAMPLE_DEPTH);
-        ImPlot::PlotLine("Ib", channel_buffer[1], SAMPLE_DEPTH);
-        ImPlot::PlotLine("Ic", channel_buffer[2], SAMPLE_DEPTH);
+        if (current_plot_type == CurrentPlotType::AlphaBeta || current_plot_type == CurrentPlotType::DQ)
+        {
+            ImPlot::PlotLine("Id", channel_buffer[0], SAMPLE_DEPTH);
+            ImPlot::PlotLine("Iq", channel_buffer[1], SAMPLE_DEPTH);
+        }else{
+            ImPlot::PlotLine("Ia", channel_buffer[0], SAMPLE_DEPTH);
+            ImPlot::PlotLine("Ib", channel_buffer[1], SAMPLE_DEPTH);
+            ImPlot::PlotLine("Ic", channel_buffer[2], SAMPLE_DEPTH);
+        }
         ImPlot::PlotInfLines("Trigger", &scope.trigger_level, 1, {ImPlotProp_Flags, ImPlotInfLinesFlags_Horizontal});
         pthread_mutex_unlock(&scope_mutex);
         ImPlot::EndPlot();
@@ -304,9 +344,17 @@ static void drawPhaseVoltagePlot(float height)
         ImPlot::SetupAxisLinks(ImAxis_X1, &shared_x_range.Min, &shared_x_range.Max);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -20, 20);
         pthread_mutex_lock(&scope_mutex);
-        ImPlot::PlotLine("Va", channel_buffer[3], SAMPLE_DEPTH);
-        ImPlot::PlotLine("Vb", channel_buffer[4], SAMPLE_DEPTH);
-        ImPlot::PlotLine("Vc", channel_buffer[5], SAMPLE_DEPTH);
+        if (voltage_plot_type == VoltagePlotType::AlphaBeta || voltage_plot_type == VoltagePlotType::DQ)
+        {
+            ImPlot::PlotLine("Vd", channel_buffer[3], SAMPLE_DEPTH);
+            ImPlot::PlotLine("Vq", channel_buffer[4], SAMPLE_DEPTH);
+        }
+        else
+        {
+            ImPlot::PlotLine("Va", channel_buffer[3], SAMPLE_DEPTH);
+            ImPlot::PlotLine("Vb", channel_buffer[4], SAMPLE_DEPTH);
+            ImPlot::PlotLine("Vc", channel_buffer[5], SAMPLE_DEPTH);
+        }
         pthread_mutex_unlock(&scope_mutex);
         ImPlot::EndPlot();
     }
@@ -386,39 +434,77 @@ inline void silgui_init()
 inline void silgui_updateData()
 {
     float scope_data[CHANNELS];
-    static float prev_scope_data[3] = {0, 0, 0};
-    scope_data[0] = sil.state.ip[0];
-    scope_data[1] = sil.state.ip[1];
-    scope_data[2] = sil.state.ip[2];
-
-    if (voltage_plot_type == VoltagePlotType::Line_To_Ground)
+    switch (voltage_plot_type)
+    {
+    case VoltagePlotType::Line_To_Ground:
     {
         scope_data[3] = sil.state.vp[0];
         scope_data[4] = sil.state.vp[1];
         scope_data[5] = sil.state.vp[2];
+        break;
     }
-    else if (voltage_plot_type == VoltagePlotType::Line_To_Neutral)
+    case VoltagePlotType::Line_To_Neutral:
     {
         scope_data[3] = sil.state.vp[0] - sil.state.vn;
         scope_data[4] = sil.state.vp[1] - sil.state.vn;
         scope_data[5] = sil.state.vp[2] - sil.state.vn;
+        break;
     }
-    else if (voltage_plot_type == VoltagePlotType::Line_To_Line)
+    case VoltagePlotType::Line_To_Line:
     {
         scope_data[3] = sil.state.vp[0] - sil.state.vp[1];
         scope_data[4] = sil.state.vp[1] - sil.state.vp[2];
         scope_data[5] = sil.state.vp[2] - sil.state.vp[0];
+        break;
     }
-    else if (voltage_plot_type == VoltagePlotType::PhaseEmf)
+    case VoltagePlotType::PhaseEmf:
     {
         scope_data[3] = sil.state.dPsim_dt[0];
         scope_data[4] = sil.state.dPsim_dt[1];
         scope_data[5] = sil.state.dPsim_dt[2];
-    }else if (voltage_plot_type == VoltagePlotType::Line_To_Neutral_Filtered)
+        break;
+    }
+    case VoltagePlotType::Line_To_Neutral_Filtered:
     {
         scope_data[3] = sil.state.vp_filt[0] - sil.state.vn_filt;
         scope_data[4] = sil.state.vp_filt[1] - sil.state.vn_filt;
         scope_data[5] = sil.state.vp_filt[2] - sil.state.vn_filt;
+        break;
+    }
+    case VoltagePlotType::DQ:
+    {
+        sil.abc_to_dq(sil.state.vp[0], sil.state.vp[1], sil.state.vp[2], &scope_data[3], &scope_data[4]);
+        break;
+    }
+    case VoltagePlotType::AlphaBeta:
+    {
+        sil.abc_to_alpha_beta(sil.state.vp[0], sil.state.vp[1], sil.state.vp[2], &scope_data[3], &scope_data[4]);
+        break;
+    }
+    default:
+        break;
+    }
+    switch (current_plot_type)
+    {
+    case CurrentPlotType::Phase:
+    {
+        scope_data[0] = sil.state.ip[0];
+        scope_data[1] = sil.state.ip[1];
+        scope_data[2] = sil.state.ip[2];
+        break;
+    }
+    case CurrentPlotType::DQ:
+    {
+        sil.abc_to_dq(sil.state.ip[0], sil.state.ip[1], sil.state.ip[2], &scope_data[0], &scope_data[1]);
+        break;
+    }
+    case CurrentPlotType::AlphaBeta:
+    {
+        sil.abc_to_alpha_beta(sil.state.ip[0], sil.state.ip[1], sil.state.ip[2], &scope_data[0], &scope_data[1]);
+        break;
+    }
+    default:
+        break;
     }
     scope_data[6] = sil.state.torque_sp;
     scope.write(scope_data);

@@ -76,7 +76,7 @@ int Usbxch::arm_rx()
     if (rc != LIBUSB_SUCCESS)
     {
         rx_active_.store(false, std::memory_order_release);
-        if(onError)onError(callback_ctx, rc);
+        if(onError)onError(rc);
         return false;
     }    
     return true;
@@ -125,7 +125,7 @@ int Usbxch::arm_tx()
     if (rc != LIBUSB_SUCCESS)
     {
         tx_active_.store(false, std::memory_order_release);
-        onError(callback_ctx, rc);
+        if(onError)onError(rc);
         return false;
     }    
 
@@ -150,7 +150,7 @@ void Usbxch::finish_disconnect()
     connected_ = false;
 
     if (onDisconnect)
-        onDisconnect(callback_ctx);
+        onDisconnect();
 
     event_running_ = false;
     disconnect_req.store(false);
@@ -304,8 +304,11 @@ bool Usbxch::connect(const std::string &serial_number, uint16_t vid, uint16_t pi
     arm_rx();
 
     event_running_.store(true, std::memory_order_release);
-    event_thread_ = std::thread(USB1::event_loop, this);
-    if(onConnect)onConnect(callback_ctx);
+    event_thread_ = std::thread([this]()
+    {
+        event_loop();
+    });
+    if(onConnect)onConnect();
     return true;
 }
 
@@ -324,29 +327,29 @@ void Usbxch::disconnect()
     disconnect_req.store(true);
 }
 
-int Usbxch::write(const uint8_t *data, size_t length)
+bool Usbxch::write(std::span<const uint8_t> data)
 {
     //Arm using the asynchronous libusb API
     size_t c1, c2;
     uint8_t *w1, *w2;
-    bool suc = tx_stream.write_reserve(length, &w1, &c1, &w2, &c2);
+    bool suc = tx_stream.write_reserve(data.size(), &w1, &c1, &w2, &c2);
     if(!suc)return false;
-    memcpy(w1, data, c1);
-    if(c2) memcpy(w2, data+c1, c2);
-    tx_stream.write_commit(length);
+    memcpy(w1, data.data(), c1);
+    if(c2) memcpy(w2, data.data()+c1, c2);
+    tx_stream.write_commit(data.size());
 
     arm_tx();
     return suc;
 }
 
-int Usbxch::read(uint8_t* data, size_t max_len)
+size_t Usbxch::read(std::span<uint8_t> data)
 {
     auto c = rx_stream.size();
 
-    if (!c || max_len == 0)
+    if (!c || data.size() == 0)
         return 0;
 
-    auto rd = std::min(c, max_len);
+    auto rd = std::min(c, data.size());
 
     size_t c1, c2;
     uint8_t* r1;
@@ -357,13 +360,13 @@ int Usbxch::read(uint8_t* data, size_t max_len)
     size_t remaining = rd;
 
     size_t n1 = std::min<size_t>(c1, remaining);
-    memcpy(data, r1, n1);
+    memcpy(data.data(), r1, n1);
     remaining -= n1;
 
     if (remaining)
     {
         size_t n2 = std::min<size_t>(c2, remaining);
-        memcpy(data + n1, r2, n2);
+        memcpy(data.data() + n1, r2, n2);
     }
 
     rx_stream.read_commit(rd);
@@ -391,7 +394,7 @@ void Usbxch::event_loop()
         int rc = libusb_handle_events_timeout(context_, &tv);
         if (rc != LIBUSB_SUCCESS)
         {
-            if(onError)onError(callback_ctx, rc);
+            if(onError)onError(rc);
         }
         //also finish events/requests here ,, like the disconnect one 
         if (disconnect_req.load())
@@ -424,7 +427,7 @@ void LIBUSB_CALL Usbxch::rx_callback(libusb_transfer* transfer)
         ctx->rx_active_.store(false);
     } else if (transfer->status == LIBUSB_TRANSFER_ERROR)
     {
-        if(ctx->onError)ctx->onError(ctx->callback_ctx, transfer->status );
+        if(ctx->onError)ctx->onError(transfer->status);
         ctx->rx_active_.store(false);
     }
 }
@@ -444,7 +447,7 @@ void LIBUSB_CALL Usbxch::tx_callback(libusb_transfer* transfer)
         ctx->tx_active_.store(false);
     } else if (transfer->status == LIBUSB_TRANSFER_ERROR)
     {
-        if(ctx->onError)ctx->onError(ctx->callback_ctx, transfer->status);
+        if(ctx->onError)ctx->onError(transfer->status);
         ctx->tx_active_.store(false);
     }
 }

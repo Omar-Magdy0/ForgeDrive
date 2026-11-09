@@ -95,7 +95,7 @@ Err Stream::encode(uint8_t* header, uint8_t* payload,
 
 Err Stream::process(const uint8_t* data, size_t length)
 {
-    for (int i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
         switch (m_state) {
             case State::HUNT_SYNC:
                 if (data[i] == SYNC_BYTE) {

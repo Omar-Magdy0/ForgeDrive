@@ -5,9 +5,33 @@ project(ForgeTool VERSION 1.0.0 LANGUAGES CXX)
 
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
+set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
+set(IMPLOT_DIR ${THIRDPARTY_DIR}/implot)
+set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
+
+set(IMGUI_SRC  
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMPLOT_DIR}/implot_items.cpp
+    ${IMPLOT_DIR}/implot.cpp
+    ${IMPLOT_DIR}/implot_demo.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUIFD_DIR}/ImGuiFileDialog.cpp
+)
+
+set(IMGUI_INCLUDES
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    ${IMGUIFD_DIR}
+    ${IMPLOT_DIR}
+)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -38,6 +62,9 @@ add_executable(${PROJECT_NAME}
     ForgeTool.cpp
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
+    Gui.cpp
+    App.cpp
+    ${IMGUI_SRC}
     ${MIDDLEWARE_SRC}
     ${CORE_SRC}
 )
@@ -62,6 +89,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${FDLIB_DIR}/middleware
     ${FDLIB_DIR}
+    ${IMGUI_INCLUDES}
 )
 
 # Compiler flags (optional - remove if not needed)

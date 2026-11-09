@@ -10,7 +10,6 @@ set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
 set(HOST_COMMON_INCLUDES
     ${CMAKE_CURRENT_LIST_DIR}
     ${IMGUI_DIR}
-    ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${IMPLOT_DIR}
     ${IMGUIFD_DIR}
