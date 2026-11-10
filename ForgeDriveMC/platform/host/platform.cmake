@@ -1,1 +1,0 @@
-set(CMAKE_TOOLCHAIN_FILE "${THIRDPARTY_DIR}/linux/native-gcc.cmake")

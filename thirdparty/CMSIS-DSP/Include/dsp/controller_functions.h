@@ -413,7 +413,7 @@ __STATIC_FORCEINLINE q15_t arm_pid_q15(
   /**
    * @defgroup park Vector Park Transform
    *
-   * Forward Park transform converts the input two-coordinate vector to flux and torque components.
+   * Forward Park transform converts the input two-coordinate vector to flux and torque_sp components.
    * The Park transform can be used to realize the transformation of the <code>Ialpha</code> and the <code>Ibeta</code> currents
    * from the stationary to the moving reference frame and control the spatial relationship between
    * the stator vector current and rotor flux vector.
@@ -519,7 +519,7 @@ __STATIC_FORCEINLINE void arm_park_q31(
 
   /**
    * @defgroup inv_park Vector Inverse Park transform
-   * Inverse Park transform converts the input flux and torque components to two-coordinate vector.
+   * Inverse Park transform converts the input flux and torque_sp components to two-coordinate vector.
    *
    * The function operates on a single sample of data and each call to the function returns the processed output.
    * The library provides separate functions for Q31 and floating-point data types.

@@ -1,17 +1,16 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 
 # Select target platform
-set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
-set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
+set(DEVICE "STM32F401xC" CACHE STRING "Target MCU or platform")
+
+set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
-
-####platform specific settings
-# SET TOOLCHAIN BEFORE PROJECT
-include(platform/${PLATFORM_NAME}/platform.cmake)
-project(ForgeDriveMC LANGUAGES C CXX ASM)
-
+set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
+set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
+set(FREERTOS_DIR "${THIRDPARTY_DIR}/FreeRTOS/FreeRTOS-Kernel")
+set(TINYCBOR_DIR "${THIRDPARTY_DIR}/tinycbor")
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "
@@ -21,18 +20,72 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     ")
 endif()
 
+###### FD_DRIVER GENERATION START #######
+
+set(Python3_EXECUTABLE "${CMAKE_SOURCE_DIR}/../venv/bin/python3")
+set(GEN_SCRIPT "${FDLIB_DIR}/driver/gen/generate.py")
+set(CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_conf.py")
+set(FDDRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_gen")
+
+# Optional: Glob templates or dependencies inside fdlib or local directory for auto-reconfiguration
+file(GLOB_RECURSE TEMPLATE_FILES 
+    "${FDLIB_DIR}/driver/*.c"
+    "${FDLIB_DIR}/driver/*.h"
+    "${FDLIB_DIR}/driver/*.j2"
+)
+# Tell CMake to re-configure if the generator script, config, or templates change
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
+    "${GEN_SCRIPT}"
+    "${CONFIG_FILE}"
+    ${TEMPLATE_FILES}
+)
+
+# Run your exact generator command at configure time
+execute_process(
+    COMMAND ${Python3_EXECUTABLE} ${GEN_SCRIPT} ${CONFIG_FILE} -d ${DEVICE} -o ${FDDRV_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE GEN_RESULT
+    OUTPUT_VARIABLE GEN_OUTPUT
+    ERROR_VARIABLE GEN_ERROR
+)
+
+message(STATUS
+    "Result ${GEN_RESULT}\n"
+    "stdout:\n${GEN_OUTPUT}\n"
+    "stderr:\n${GEN_ERROR}\n"
+)
+
+########### FD_DRIVER GENERATION END ################
+
+####platform specific settings
+# SET TOOLCHAIN BEFORE PROJECT
+
+set(CMAKE_TOOLCHAIN_FILE "${FDDRV_DIR}/toolchain.cmake")
+include(${FDDRV_DIR}/device.cmake)
+message(STATUS "Target device: ${DEVICE_NAME}")
+message(STATUS "Target platform: ${DEVICE_PLATFORM}")
+project(ForgeDriveMC LANGUAGES C CXX ASM)
+add_library(fd_freertos STATIC
+    ${FREERTOS_DIR}/tasks.c
+    ${FREERTOS_DIR}/queue.c
+    ${FREERTOS_DIR}/list.c
+)
+target_include_directories(fd_freertos PUBLIC
+    ${FREERTOS_DIR}/include
+)
+add_compile_definitions($<$<CONFIG:Debug>:FD_DEBUG>)
+add_compile_definitions(CBOR_TINYCBOR=1)
+add_subdirectory("${FDDRV_DIR}")
+include("platform/${DEVICE_PLATFORM}/platform.cmake")
 # Setup cmake module path and compiler settings
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 message("Build type: " ${CMAKE_BUILD_TYPE})
-
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
 
 # Set C++ standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -44,92 +97,69 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}
-    ${ECOLIB_DIR}
-    ${ECOLIB_DIR}/middleware
-    ${ECOLIB_DIR}/middleware/cortos
+    ${FDLIB_DIR}
+    ${FDLIB_DIR}/middleware
+    ${FDDRV_DIR}
     ${PMSMCONTROL_DIR}
+    ${PMSMCONTROL_DIR}/PosDriver
+    ${CMSIS_DSP_DIR}/Include
+    ${CMSIS_CORE_DIR}/Include  
+    ${PLATFORM_DIR} 
+    ${CMAKE_SOURCE_DIR}/RPC
+)
+target_compile_definitions(fd_drv PUBLIC
+    
+)
+target_include_directories(fd_drv PRIVATE
+    ${PLATFORM_DIR}
 )
 
-
-# Link with platform EARLY to get include paths
-add_subdirectory(platform/${PLATFORM_NAME})
+set(WITH_CBOR2JSON OFF CACHE BOOL "" FORCE)
+set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WITH_FLOATING_POINT ON CACHE BOOL "" FORCE)
+add_subdirectory(${TINYCBOR_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinycbor)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
-
-message(STATUS "LIBRARIES TO LINK: ${PLATFORM_LIB}")
-
-# Add platform includes to global include path
-include_directories(${PLATFORM_INCLUDES})
+add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp)
 
 file(GLOB_RECURSE MIDDLEWARE_SRC    
-    ${ECOLIB_DIR}/middleware/*.cpp
-    ${ECOLIB_DIR}/middleware/*.c
+    ${FDLIB_DIR}/middleware/*.cpp
+    ${FDLIB_DIR}/middleware/*.c
 )
 
+if(DEVICE_PLATFORM STREQUAL "HOST")
+list(APPEND POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverSIL.cpp")
+else()
+set(POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverVIRT.cpp")
+endif()
 
 
 set(APPLICATION_SRC
-    ${PMSMCONTROL_DIR}/PmsmControl.cpp
-    ${PMSMCONTROL_DIR}/PosDriver.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_Foc.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_SComm.cpp
+    ${POSDRIVER}
+    ${PLATFORM_SRC}
     ${CMAKE_SOURCE_DIR}/main.cpp
     ${CMAKE_SOURCE_DIR}/sys.cpp
 )
-
-
 file(GLOB_RECURSE CORE_SRC
-    ${ECOLIB_DIR}/fd/*.cpp
-    ${ECOLIB_DIR}/fd/*.c
+    ${FDLIB_DIR}/fd/*.cpp
+    ${FDLIB_DIR}/fd/*.c
 )
-
-
-# Create executable
+target_link_libraries(fd_freertos PUBLIC fd_drv)
 add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
-
-# Add eld sources directly to the executable to ensure strong IRQ handlers
-# override weak startup symbols (avoids linker archive symbol resolution issues)
-target_sources(${PROJECT_NAME} PRIVATE ${PLATFORM_SOURCE})
-
+include(${FDDRV_DIR}/post_build.cmake OPTIONAL)
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${PLATFORM_INTERFACE}
-    ${PLATFORM_LIB}
-    ${TOOLCHAIN_LINK_LIBRARIES}
+    fd_drv
+    fd_freertos
+    ${PLATFORM_LIBRARIES}
+    CMSISDSP
     etl::etl
+    tinycbor
 )
 
-# BUILD Platform Tied TEST CODE
-if(PLATFORM_NAME STREQUAL "host")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        PLATFORM_HOST
-        ETL_THROW_EXCEPTIONS
-        ETL_VERBOSE_ERRORS
-        ETL_CHECK_PUSH_POP
-    )
-endif()
-
-
-
-if(NOT PLATFORM_NAME STREQUAL "host")
-# ADD THIS: Show size automatically after every build
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "=== Memory Usage ==="
-    COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${PROJECT_NAME}>
-    COMMENT "Displaying memory usage"
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    ${PLATFORM_DEFINITIONS}
 )
 
-# Size target for checking memory usage
-add_custom_target(size
-    DEPENDS ${PROJECT_NAME}
-    COMMAND ${CMAKE_COMMAND} -E echo "=== Detailed Memory Analysis ==="
-    COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${PROJECT_NAME}>
-)
-
-# Convert output to hex and binary
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.hex
-)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}> ${PROJECT_NAME}.bin
-)
-endif()

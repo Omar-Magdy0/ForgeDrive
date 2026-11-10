@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,8 +27,8 @@ static inline void fd_ring_init(fd_ring_t* cb,
 }
 
 static inline uint16_t fd_ring_size(const fd_ring_t* cb) {
-    uint16_t head = cb->head;  // atomic read
-    uint16_t tail = cb->tail;  // atomic read
+    uint16_t head = cb->head; 
+    uint16_t tail = cb->tail; 
     if (head >= tail)
         return head - tail;
     return cb->capacity - tail + head;
@@ -41,13 +40,17 @@ static inline uint16_t fd_ring_free(const fd_ring_t* cb) {
 
 static inline void fd_ring_write_commit(fd_ring_t* cb, uint16_t count) {
     uint16_t head = cb->head;
-    head = (head + count) - (head + count >= cb->capacity ? cb->capacity : 0);
+    head += count;
+    if (head >= cb->capacity)
+        head -= cb->capacity;
     cb->head = head;
 }
 
 static inline void fd_ring_read_commit(fd_ring_t* cb, uint16_t count) {
     uint16_t tail = cb->tail;
-    tail = (tail + count) - (tail + count >= cb->capacity ? cb->capacity : 0);
+    tail += count;
+    if (tail >= cb->capacity)
+        tail -= cb->capacity;
     cb->tail = tail;
 }
 
@@ -62,15 +65,17 @@ static inline bool fd_ring_write_reserve(fd_ring_t* cb,
     {
         return false;
     }
-        
+
+    uint16_t head = cb->head;
+    uint16_t tail = cb->tail;
     uint16_t cont_space;
 
-    if (cb->head >= cb->tail)
-        cont_space = cb->capacity - cb->head - (cb->tail == 0 ? 1 : 0);
+    if (head >= tail)
+        cont_space = cb->capacity - head - (tail == 0 ? 1 : 0);
     else
-        cont_space = cb->tail - cb->head - 1;
+        cont_space = tail - head - 1;
 
-    *writeptr1 = cb->buffer + cb->head;
+    *writeptr1 = cb->buffer + head;
 
     if (cont_space >= count) {
         *writeptr2 = NULL;
@@ -91,7 +96,9 @@ static inline bool fd_ring_read_reserve(fd_ring_t* cb,
                                       void** readptr2,
                                       uint16_t* cont2)
 {
-    if (fd_ring_size(cb) == 0)
+    uint16_t count = fd_ring_size(cb);
+    
+    if (count == 0)
     {
         *readptr1 = NULL;
         *cont1 = 0;
@@ -100,15 +107,16 @@ static inline bool fd_ring_read_reserve(fd_ring_t* cb,
         return false;
     }
 
+    uint16_t head = cb->head;
+    uint16_t tail = cb->tail;
     uint16_t cont_space;
-    uint16_t count = fd_ring_size(cb);
-
-    if (cb->tail >= cb->head)
-        cont_space = cb->capacity - cb->tail;
+    
+    if (tail >= head)
+        cont_space = cb->capacity - tail;
     else
-        cont_space = cb->head - cb->tail;
+        cont_space = head - tail;
 
-    *readptr1 = cb->buffer + cb->tail;
+    *readptr1 = cb->buffer + tail;
 
     if (cont_space >= count) {
         *readptr2 = NULL;

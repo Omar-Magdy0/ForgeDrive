@@ -1,7 +1,8 @@
 #pragma once
 
 // Generic versions with configurable min/max
-namespace el
+
+namespace fd
 {
     template <typename T>
     bool constexpr in_range(T c, T min, T max) { return (c <= max) && (c >= min); }
@@ -17,3 +18,16 @@ namespace el
         return ((x) <= (min)) ? (max) : ((x)-1);
     }
 };
+
+
+#define CLAMP(v, min, max) (((v) < (min)) ? (min) : (((v) > (max)) ? (max) : (v)))
+#define ABS(x) ((x) < 0 ? -(x) : (x))
+
+#define FD_KILO  1e3
+#define FD_MEGA  1e6
+#define FD_GIGA  1e9
+
+#define FD_MILLI 1e-3
+#define FD_MICRO 1e-6
+#define FD_NANO  1e-9
+#define FD_PICO  1e-12

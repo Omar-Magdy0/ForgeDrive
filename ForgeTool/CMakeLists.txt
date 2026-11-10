@@ -3,12 +3,35 @@ cmake_minimum_required(VERSION 3.10)
 # Project name and version
 project(ForgeTool VERSION 1.0.0 LANGUAGES CXX)
 
-set(PLATFORM_NAME "host" CACHE STRING "Target platform (host, stm32f4)")
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-set(ECOLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
+set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
+set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
+set(IMPLOT_DIR ${THIRDPARTY_DIR}/implot)
+set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
+
+set(IMGUI_SRC  
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMPLOT_DIR}/implot_items.cpp
+    ${IMPLOT_DIR}/implot.cpp
+    ${IMPLOT_DIR}/implot_demo.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUIFD_DIR}/ImGuiFileDialog.cpp
+)
+
+set(IMGUI_INCLUDES
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    ${IMGUIFD_DIR}
+    ${IMPLOT_DIR}
+)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -19,18 +42,19 @@ endif()
 
 # Find libusb-1.0
 find_package(PkgConfig REQUIRED)
+find_path(ASIO_INCLUDE_DIR asio.hpp REQUIRED)
 pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
-
+add_subdirectory(${THIRDPARTY_DIR}/etl etl)
 
 
 file(GLOB_RECURSE MIDDLEWARE_SRC    
-    ${ECOLIB_DIR}/middleware/*.cpp
-    ${ECOLIB_DIR}/middleware/*.c
+    ${FDLIB_DIR}/middleware/*.cpp
+    ${FDLIB_DIR}/middleware/*.c
 )
 
 file(GLOB_RECURSE CORE_SRC    
-    ${ECOLIB}/fd/*.cpp
-    ${ECOLIB}/fd/*.c
+    ${FORGELIB}/fd/*.cpp
+    ${FORGELIB}/fd/*.c
 )
 
 # Add executable
@@ -38,7 +62,9 @@ add_executable(${PROJECT_NAME}
     ForgeTool.cpp
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
-    Serial.hpp
+    Gui.cpp
+    App.cpp
+    ${IMGUI_SRC}
     ${MIDDLEWARE_SRC}
     ${CORE_SRC}
 )
@@ -53,14 +79,17 @@ target_link_libraries(${PROJECT_NAME}
     Threads::Threads
     OpenGL::GL 
     glfw
+    etl::etl
 )
 
 # Include directories for libusb
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${ASIO_INCLUDE_DIR}
     ${LIBUSB_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${ECOLIB_DIR}/middleware
-    ${ECOLIB}/el
+    ${FDLIB_DIR}/middleware
+    ${FDLIB_DIR}
+    ${IMGUI_INCLUDES}
 )
 
 # Compiler flags (optional - remove if not needed)
@@ -69,6 +98,13 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wextra
     -Wpedantic
     -O2
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    ETL_THROW_EXCEPTIONS
+
+    $<$<CONFIG:Debug>:ETL_VERBOSE_ERRORS>
+    $<$<CONFIG:Debug>:ETL_CHECK_PUSH_POP>
 )
 
 # For debugging, uncomment this:

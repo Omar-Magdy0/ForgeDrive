@@ -20,7 +20,7 @@ namespace daq::codec
         LARGE16 = 0xFE,
     };
 
-    enum class Err : uint8_t
+    enum class ERR : uint8_t
     {
         OK,
         RESYNCDOD_BAD,
@@ -64,8 +64,8 @@ namespace daq::codec
         friend CodecTest;
         etl::span<ChannelState> ccs;
         uint32_t &sample_counter;
-        el::ring_fast<uint8_t> stream;
-        el::ring_fast<ControlMark> marks;
+        fd::ring_fast<uint8_t> stream;
+        fd::ring_fast<ControlMark> marks;
         uint8_t samples_till_sync = 0;
         uint8_t sync_period = 64;
         uint8_t reserve;
@@ -202,7 +202,7 @@ namespace daq::codec
             // No entropy compression for now, to be added later
             ControlMark next_mark;
             bool has_mark = marks.peek(next_mark);
-            uint16_t dist_to_mark;
+            size_t dist_to_mark;
             uint16_t bytes_to_read;
             if (has_mark)
             {
@@ -228,7 +228,7 @@ namespace daq::codec
             if (bytes_to_read > buf.size())
                 bytes_to_read = buf.size();
             uint8_t *r1, *r2;
-            uint16_t c1, c2;
+            size_t c1, c2;
             if (!stream.read_reserve(&r1, &c1, &r2, &c2))
                 return 0;
             uint16_t copied = 0;
@@ -320,12 +320,12 @@ namespace daq::codec
             current_channel = 0;
             state = ReaderState::DOD;
         }
-        inline Err decode(etl::span<const uint8_t> buf_, StreamType type)
+        inline ERR decode(etl::span<const uint8_t> buf_, StreamType type)
         {
             buf_idx = 0;
             buf = buf_;
             if (buf.size() == 0)
-                return Err::OK;
+                return ERR::OK;
 
             if(in_sync)
             {
@@ -345,7 +345,7 @@ namespace daq::codec
             }
             else
             {
-                return Err::NEED_SYNC;
+                return ERR::NEED_SYNC;
             }
         }
         inline int16_t dod_decode(uint8_t channel_, int16_t dod)
@@ -361,7 +361,7 @@ namespace daq::codec
             return static_cast<int16_t>(
                 (val >> 1) ^ -(static_cast<int16_t>(val & 1)));
         }
-        inline Err decodeControl()
+        inline ERR decodeControl()
         {
             switch (buf[buf_idx++])
             {
@@ -372,21 +372,21 @@ namespace daq::codec
                 return decodeFlush();
                 break;
             default:
-                return Err::FAULT;
+                return ERR::FAULT;
                 break;
             }
         }
-        inline Err decodeFlush()
+        inline ERR decodeFlush()
         {
             if (in_sync)
             block.ready = true;
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err decodeResyncDod()
+        inline ERR decodeResyncDod()
         {
             uint8_t expected_size = sizeof(uint32_t) + sizeof(ccs->dod_state) * channels + 1;
             if (buf.size() != expected_size || buf.size() > scratch_buf.size())
-                return Err::RESYNCDOD_BAD;
+                return ERR::RESYNCDOD_BAD;
             for (size_t i = 0; i < buf.size(); i++)
             {
                 scratch_buf[i] = buf[buf_idx++];
@@ -395,9 +395,9 @@ namespace daq::codec
                 block.ready = true;
             in_sync = true;
             state = ReaderState::Sample;
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err decodeSample()
+        inline ERR decodeSample()
         {
             for (size_t i = 0; i < buf.size(); i++)
             {
@@ -422,9 +422,9 @@ namespace daq::codec
                 }
             }
 
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err decodeDod(uint8_t byte)
+        inline ERR decodeDod(uint8_t byte)
         {
             if (byte > VIRTUAL_BITS_END)
             { // Escape
@@ -449,9 +449,9 @@ namespace daq::codec
                 // Normal DOD
                 dod_buf[current_channel++] = unzigzag(byte);
             }
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err decodeLarge16(uint8_t byte)
+        inline ERR decodeLarge16(uint8_t byte)
         {
             scratch_buf[2 - state_rem] = byte;
             state_rem--;
@@ -460,9 +460,9 @@ namespace daq::codec
                 dod_buf[current_channel++] = unzigzag(scratch_buf[0] << 8 | scratch_buf[1]);
                 state = ReaderState::DOD;
             }
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err decodeVirtualBits(uint8_t byte)
+        inline ERR decodeVirtualBits(uint8_t byte)
         {
             scratch_buf[1] = byte;
             state_rem--;
@@ -471,16 +471,16 @@ namespace daq::codec
                 dod_buf[current_channel++] = unzigzag(scratch_buf[0] << 8 | scratch_buf[1]);
                 state = ReaderState::DOD;
             }
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err syncUpdate()
+        inline ERR syncUpdate()
         {
             uint8_t sch_idx = 0;
             block.counter = scratch_buf[sch_idx] << 24 | scratch_buf[sch_idx + 1] << 16 | scratch_buf[sch_idx + 2] << 8 | scratch_buf[sch_idx + 3];
             sch_idx += 4;
             block.samples.clear();
             if (block.samples.capacity() == 0)
-                return Err::BAD_BLOCK;
+                return ERR::BAD_BLOCK;
             for (int i = 0; i < channels; i++)
             {
                 int16_t sample = scratch_buf[sch_idx] << 8 | scratch_buf[sch_idx + 1];
@@ -493,12 +493,12 @@ namespace daq::codec
             }
             block.ready = false;
             state = ReaderState::DOD;
-            return Err::OK;
+            return ERR::OK;
         }
-        inline Err emitSample()
+        inline ERR emitSample()
         {
             if(block.samples.available() < channels){
-                return Err::BLOCK_FULL;
+                return ERR::BLOCK_FULL;
             }
             for (int i = 0; i < channels; i++)
             {
@@ -506,7 +506,7 @@ namespace daq::codec
                 block.samples.push_back(sample);
             }
             current_channel = 0;
-            return Err::OK;
+            return ERR::OK;
         }
     };
 };

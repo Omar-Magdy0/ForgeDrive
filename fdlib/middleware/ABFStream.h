@@ -79,7 +79,7 @@ namespace abf
          * @param payloadLength [out] Length of decoded payload
          * @return Err status
          */
-        Err process(const uint8_t *data, uint16_t length);
+        Err process(const uint8_t *data, size_t length);
 
         /**
          * @brief Encode a frame for transmission

@@ -77,7 +77,7 @@ class DAQSessionAPP : public daq::Session
 {
 protected:
     abf::Stream &abf;
-    IUsbxch &usb;
+    Usbxch &usb;
     Object c_obj;
     daq::MARKER c_mark;
     uint8_t c_id = 0;
@@ -88,9 +88,9 @@ protected:
 public:
     std::unordered_map<uint8_t, Object> objects;
     DAQSessionAPP(abf::Stream &abf_stream,
-                  IUsbxch &usb,
+                  Usbxch &usb,
                   uint8_t *idv_buffer,
-                  uint16_t idv_buffer_len) : daq::Session(idv_buffer, idv_buffer_len), abf(abf_stream), usb(usb)
+                  uint16_t idv_buffer_len) : daq::Session(NULL, etl::span<uint8_t>(idv_buffer, idv_buffer_len)), abf(abf_stream), usb(usb)
     {
     }
     uint8_t send() override

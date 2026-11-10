@@ -93,9 +93,9 @@ Err Stream::encode(uint8_t* header, uint8_t* payload,
     return Err::OK;
 }
 
-Err Stream::process(const uint8_t* data, uint16_t length)
+Err Stream::process(const uint8_t* data, size_t length)
 {
-    for (int i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
         switch (m_state) {
             case State::HUNT_SYNC:
                 if (data[i] == SYNC_BYTE) {
@@ -143,9 +143,7 @@ Err Stream::process(const uint8_t* data, uint16_t length)
                         reset();
                         onError(context, (uint8_t)Err::RX_BUFFER_SMALL);
                     }
-                }
-                
-                if (m_rxPos == m_header[2]) {
+                }else if (m_rxPos == m_header[2]) {
                     reset();
                     uint8_t serviceId = m_header[1];
                     uint8_t payloadLength = m_header[2];

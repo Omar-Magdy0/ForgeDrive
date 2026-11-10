@@ -1,38 +1,47 @@
 #pragma once
 
-#include "PmsmControl/PmsmControl.h"
+#include "PmsmControl/PmsmControlCore.h"
 #include "platform.h"
-#include "ABFStream.h"
 #include "fd_usbxch.h"
 #include <cstdint>
 #include <array>
 #include <string.h>
 #include <stdio.h>
 //=======================================================
-#include "fd_driver_core.h"
-#include "DAQSessionAPP.h"
+#include "ABFStream.h"
+#include "fd_usbxch.h"
+#include <etl/span.h>
+#include "fd_drv.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif 
+#include "FreeRTOS.h"
+#include "task.h"
+#ifdef __cplusplus
+}
+#endif 
 
 
 class Sys
 {
-    static inline void onFrame(void* ctx, uint8_t id, uint8_t* payload, uint8_t payload_len)
-    {
-        daq_session.process(payload, payload_len);
-    }
-    static inline void onError(void* ctx, uint8_t id)
-    {
+    static constexpr size_t LCOM_STACK_SIZE = 256; // lcom denotes, low priority communication (usb telemetry/commanding)
+    static constexpr unsigned int LCOM_PRIO = 3;
 
-    }
-    inline static uint8_t abfStream_rx_buffer[255];
-    inline static uint8_t daq_idv_buffer[255];
-    inline static fd_core_t core;
-    inline static fd_usbxch_handle_t usbxch;
-    inline static abf::Stream abfStream = abf::Stream(abfStream_rx_buffer, sizeof(abfStream_rx_buffer), NULL, onFrame, onError);
-    inline static DAQSessionAPP daq_session = DAQSessionAPP(abfStream, usbxch, "SAD",daq_idv_buffer);
-    public:
+    static void onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len);
+    static void onError(void *ctx, uint8_t id);
+    static void onPmsmFault(void *ctx, PMSM_FAULT f);
+    static ConfigGen configGen;
+    inline static StaticTask_t lcom_buf;
+    inline static StackType_t lcom_stack[LCOM_STACK_SIZE];
+    static constexpr unsigned int ABFRX_BUF_SIZE = 255;
+    static constexpr unsigned int TX_BUF_SIZE = 255;
+    inline static uint8_t abfrx_buf[ABFRX_BUF_SIZE];
+public:
+    inline static PmsmControlCore pmsm1 = PmsmControlCore(onPmsmFault, configGen);
     static void init(void);
+    inline static TaskHandle_t lcom_handle = nullptr;
+    inline static abf::Stream abfStream = abf::Stream(abfrx_buf, ABFRX_BUF_SIZE, nullptr, onFrame, onError);
+    inline static uint8_t tx_buf[TX_BUF_SIZE];
+    inline static uint8_t abf_header_buf[abf::HEADER_SIZE];
 };
-
-
