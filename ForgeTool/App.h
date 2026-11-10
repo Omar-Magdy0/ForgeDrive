@@ -14,6 +14,7 @@ abf::Stream astream = abf::Stream(abf_rx_buf, sizeof(abf_rx_buf), this, onFrame,
 
 Gui gui;
 void run();
+void imgui_init();
 void gui_init();
 void gui_loop();
 void gui_deinit();

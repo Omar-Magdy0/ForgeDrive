@@ -225,7 +225,7 @@ bool Usbxch::connect(const std::string &serial_number, uint16_t vid, uint16_t pi
 {
     if (interface_number < 0 || timeout_ms < 0)
         return false;
-
+    timeout = timeout_ms;
     disconnect();
     if (event_thread_.joinable())
         event_thread_.join();

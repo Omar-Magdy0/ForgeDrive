@@ -8,7 +8,7 @@ set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
 set(IMPLOT_DIR ${THIRDPARTY_DIR}/implot)
 set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
-
+set(GUI_DIR ${CMAKE_SOURCE_DIR}/Gui)
 set(IMGUI_SRC  
     ${IMGUI_DIR}/imgui_draw.cpp
     ${IMGUI_DIR}/imgui_tables.cpp
@@ -62,7 +62,7 @@ add_executable(${PROJECT_NAME}
     ForgeTool.cpp
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
-    Gui.cpp
+    ${GUI_DIR}/Gui.cpp
     App.cpp
     ${IMGUI_SRC}
     ${MIDDLEWARE_SRC}
@@ -89,6 +89,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${FDLIB_DIR}/middleware
     ${FDLIB_DIR}
+    ${GUI_DIR}
+    ${THIRDPARTY_DIR}/fonts/FontAwesome7
     ${IMGUI_INCLUDES}
 )
 
@@ -97,18 +99,16 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall
     -Wextra
     -Wpedantic
-    -O2
+    -finput-charset=UTF-8
+    -fexec-charset=UTF-8
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     ETL_THROW_EXCEPTIONS
-
+    FONTS_DIR="${THIRDPARTY_DIR}/fonts"
     $<$<CONFIG:Debug>:ETL_VERBOSE_ERRORS>
     $<$<CONFIG:Debug>:ETL_CHECK_PUSH_POP>
 )
-
-# For debugging, uncomment this:
-# target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
 
 # Install (optional - remove if not needed)
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)

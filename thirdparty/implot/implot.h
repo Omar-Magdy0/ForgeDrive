@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// ImPlot v0.18 WIP
+// ImPlot v1.1
 
 // Table of Contents:
 //
@@ -62,9 +62,9 @@
 #endif
 
 // ImPlot version string.
-#define IMPLOT_VERSION "0.18 WIP"
+#define IMPLOT_VERSION "1.1"
 // ImPlot version integer encoded as XYYZZ (X=major, YY=minor, ZZ=patch).
-#define IMPLOT_VERSION_NUM 1801
+#define IMPLOT_VERSION_NUM 10100
 // Macro for templated plotting functions; keeps header clean.
 #define IMPLOT_TMP template <typename T> IMPLOT_API
 
@@ -138,13 +138,18 @@ enum ImAxis_ {
 // Plotting properties. These provide syntactic sugar for creating ImPlotSpecs from (ImPlotProp,value) pairs. See ImPlotSpec documentation.
 enum ImPlotProp_ {
     ImPlotProp_LineColor,       // line color (applies to lines, bar edges); IMPLOT_AUTO_COL will use next Colormap color or current item color
+    ImPlotProp_LineColors,      // array of colors for each line; if nullptr, use LineColor for all lines
     ImPlotProp_LineWeight,      // line weight in pixels (applies to lines, bar edges, marker edges)
     ImPlotProp_FillColor,       // fill color (applies to shaded regions, bar faces); IMPLOT_AUTO_COL will use next Colormap color or current item color
-    ImPlotProp_FillAlpha,       // alpha multiplier (applies to FillColor and MarkerFillColor)
+    ImPlotProp_FillColors,      // array of colors for each fill; if nullptr, use FillColor for all fills
+    ImPlotProp_FillAlpha,       // alpha multiplier (applies to FillColor, FillColors, MarkerFillColor, and MarkerFillColors)
     ImPlotProp_Marker,          // marker type; specify ImPlotMarker_Auto to use the next unused marker
     ImPlotProp_MarkerSize,      // size of markers (radius) *in pixels*
+    ImPlotProp_MarkerSizes,     // array of sizes for each marker; if nullptr, use MarkerSize for all markers
     ImPlotProp_MarkerLineColor, // marker edge color; IMPLOT_AUTO_COL will use LineColor
+    ImPlotProp_MarkerLineColors, // array of colors for each marker edge; if nullptr, use MarkerLineColor for all markers
     ImPlotProp_MarkerFillColor, // marker face color; IMPLOT_AUTO_COL will use LineColor
+    ImPlotProp_MarkerFillColors, // array of colors for each marker face; if nullptr, use MarkerFillColor for all markers
     ImPlotProp_Size,            // size of error bar whiskers (width or height), and digital bars (height) *in pixels*
     ImPlotProp_Offset,          // data index offset
     ImPlotProp_Stride,          // data stride in bytes; IMPLOT_AUTO will result in sizeof(T) where T is the type passed to PlotX
@@ -168,26 +173,27 @@ enum ImPlotFlags_ {
 
 // Options for plot axes (see SetupAxis).
 enum ImPlotAxisFlags_ {
-    ImPlotAxisFlags_None          = 0,       // default
-    ImPlotAxisFlags_NoLabel       = 1 << 0,  // the axis label will not be displayed (axis labels are also hidden if the supplied string name is nullptr)
-    ImPlotAxisFlags_NoGridLines   = 1 << 1,  // no grid lines will be displayed
-    ImPlotAxisFlags_NoTickMarks   = 1 << 2,  // no tick marks will be displayed
-    ImPlotAxisFlags_NoTickLabels  = 1 << 3,  // no text labels will be displayed
-    ImPlotAxisFlags_NoInitialFit  = 1 << 4,  // axis will not be initially fit to data extents on the first rendered frame
-    ImPlotAxisFlags_NoMenus       = 1 << 5,  // the user will not be able to open context menus with right-click
-    ImPlotAxisFlags_NoSideSwitch  = 1 << 6,  // the user will not be able to switch the axis side by dragging it
-    ImPlotAxisFlags_NoHighlight   = 1 << 7,  // the axis will not have its background highlighted when hovered or held
-    ImPlotAxisFlags_Opposite      = 1 << 8,  // axis ticks and labels will be rendered on the conventionally opposite side (i.e, right or top)
-    ImPlotAxisFlags_Foreground    = 1 << 9,  // grid lines will be displayed in the foreground (i.e. on top of data) instead of the background
-    ImPlotAxisFlags_Invert        = 1 << 10, // the axis will be inverted
-    ImPlotAxisFlags_AutoFit       = 1 << 11, // axis will be auto-fitting to data extents
-    ImPlotAxisFlags_RangeFit      = 1 << 12, // axis will only fit points if the point is in the visible range of the **orthogonal** axis
-    ImPlotAxisFlags_PanStretch    = 1 << 13, // panning in a locked or constrained state will cause the axis to stretch if possible
-    ImPlotAxisFlags_LockMin       = 1 << 14, // the axis minimum value will be locked when panning/zooming
-    ImPlotAxisFlags_LockMax       = 1 << 15, // the axis maximum value will be locked when panning/zooming
-    ImPlotAxisFlags_Lock          = ImPlotAxisFlags_LockMin | ImPlotAxisFlags_LockMax,
-    ImPlotAxisFlags_NoDecorations = ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels,
-    ImPlotAxisFlags_AuxDefault    = ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_Opposite
+    ImPlotAxisFlags_None             = 0,       // default
+    ImPlotAxisFlags_NoLabel          = 1 << 0,  // the axis label will not be displayed (axis labels are also hidden if the supplied string name is nullptr)
+    ImPlotAxisFlags_NoGridLines      = 1 << 1,  // no grid lines will be displayed
+    ImPlotAxisFlags_NoTickMarks      = 1 << 2,  // no tick marks will be displayed
+    ImPlotAxisFlags_NoTickLabels     = 1 << 3,  // no text labels will be displayed
+    ImPlotAxisFlags_NoInitialFit     = 1 << 4,  // axis will not be initially fit to data extents on the first rendered frame
+    ImPlotAxisFlags_NoMenus          = 1 << 5,  // the user will not be able to open context menus with right-click
+    ImPlotAxisFlags_NoSideSwitch     = 1 << 6,  // the user will not be able to switch the axis side by dragging it
+    ImPlotAxisFlags_NoHighlight      = 1 << 7,  // the axis will not have its background highlighted when hovered or held
+    ImPlotAxisFlags_Opposite         = 1 << 8,  // axis ticks and labels will be rendered on the conventionally opposite side (i.e, right or top)
+    ImPlotAxisFlags_Foreground       = 1 << 9,  // grid lines will be displayed in the foreground (i.e. on top of data) instead of the background
+    ImPlotAxisFlags_Invert           = 1 << 10, // the axis will be inverted
+    ImPlotAxisFlags_AutoFit          = 1 << 11, // axis will be auto-fitting to data extents
+    ImPlotAxisFlags_RangeFit         = 1 << 12, // axis will only fit points if the point is in the visible range of the **orthogonal** axis
+    ImPlotAxisFlags_PanStretch       = 1 << 13, // panning in a locked or constrained state will cause the axis to stretch if possible
+    ImPlotAxisFlags_LockMin          = 1 << 14, // the axis minimum value will be locked when panning/zooming
+    ImPlotAxisFlags_LockMax          = 1 << 15, // the axis maximum value will be locked when panning/zooming
+    ImPlotAxisFlags_TickLabelsInside = 1 << 16, // axis tick labels will be drawn inside the plot area (applies only to the innermost axes)
+    ImPlotAxisFlags_Lock             = ImPlotAxisFlags_LockMin | ImPlotAxisFlags_LockMax,
+    ImPlotAxisFlags_NoDecorations    = ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels,
+    ImPlotAxisFlags_AuxDefault       = ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_Opposite
 };
 
 // Options for subplots (see BeginSubplot)
@@ -234,6 +240,8 @@ enum ImPlotDragToolFlags_ {
     ImPlotDragToolFlags_NoFit     = 1 << 1, // the drag tool won't be considered for plot fits
     ImPlotDragToolFlags_NoInputs  = 1 << 2, // lock the tool from user inputs
     ImPlotDragToolFlags_Delayed   = 1 << 3, // tool rendering will be delayed one frame; useful when applying position-constraints
+    ImPlotDragToolFlags_NoMove    = 1 << 4, // the tool can't be moved; it still catches and reports clicks and hovers, but shows no move cursor
+    ImPlotDragToolFlags_NoResize  = 1 << 5, // DragRect's corners and edges can't resize it; they still catch and report clicks and hovers, but show no resize cursor
 };
 
 // Flags for ColormapScale
@@ -443,6 +451,8 @@ enum ImPlotMarker_ {
     ImPlotMarker_Cross,     // a cross marker (not fill-able)
     ImPlotMarker_Plus,      // a plus marker (not fill-able)
     ImPlotMarker_Asterisk,  // a asterisk marker (not fill-able)
+    ImPlotMarker_Vertical,   // a vertical line marker (not fill-able)
+    ImPlotMarker_Horizontal, // a horizontal line marker (not fill-able)
     ImPlotMarker_COUNT
 };
 
@@ -496,7 +506,7 @@ enum ImPlotBin_ {
 //    spec.LineColor = ImVec4(1,0,0,1);
 //    spec.LineWeight = 2.0f;
 //    spec.Marker = ImPlotMarker_Circle;
-//    spec.Flags = ImPlotItemFlags_NoLegend | ImPlotLineFlags_Segments;
+//    spec.Flags = (ImPlotItemFlags)ImPlotItemFlags_NoLegend | ImPlotLineFlags_Segments;
 //    ImPlot::PlotLine("MyLine", xs, ys, 100, spec);
 //
 // 2. Inline using (ImPlotProp,value) pairs (order does NOT matter):
@@ -505,17 +515,22 @@ enum ImPlotBin_ {
 //      ImPlotProp_LineColor, ImVec4(1,0,0,1),
 //      ImPlotProp_LineWeight, 2.0f,
 //      ImPlotProp_Marker, ImPlotMarker_Circle,
-//      ImPlotProp_Flags, ImPlotItemFlags_NoLegend | ImPlotLineFlags_Segments
+//      ImPlotProp_Flags, (ImPlotItemFlags)ImPlotItemFlags_NoLegend | ImPlotLineFlags_Segments
 //    });
 struct ImPlotSpec {
     ImVec4          LineColor       = IMPLOT_AUTO_COL;       // line color (applies to lines, bar edges); IMPLOT_AUTO_COL will use next Colormap color or current item color
+    ImU32*          LineColors      = nullptr;               // array of colors for each line; if nullptr, use LineColor for all lines
     float           LineWeight      = 1.0f;                  // line weight in pixels (applies to lines, bar edges, marker edges)
     ImVec4          FillColor       = IMPLOT_AUTO_COL;       // fill color (applies to shaded regions, bar faces); IMPLOT_AUTO_COL will use next Colormap color or current item color
-    float           FillAlpha       = 1.0f;                  // alpha multiplier (applies to FillColor and MarkerFillColor)
+    ImU32*          FillColors      = nullptr;               // array of colors for each fill; if nullptr, use FillColor for all fills
+    float           FillAlpha       = 1.0f;                  // alpha multiplier (applies to FillColor, FillColors, MarkerFillColor, and MarkerFillColors)
     ImPlotMarker    Marker          = ImPlotMarker_None;     // marker type; specify ImPlotMarker_Auto to use the next unused marker
     float           MarkerSize      = 4;                     // size of markers (radius) *in pixels*
+    float*          MarkerSizes     = nullptr;               // array of sizes for each marker; if nullptr, use MarkerSize for all markers
     ImVec4          MarkerLineColor = IMPLOT_AUTO_COL;       // marker edge color; IMPLOT_AUTO_COL will use LineColor
+    ImU32*          MarkerLineColors = nullptr;              // array of colors for each marker edge; if nullptr, use MarkerLineColor for all markers
     ImVec4          MarkerFillColor = IMPLOT_AUTO_COL;       // marker face color; IMPLOT_AUTO_COL will use LineColor
+    ImU32*          MarkerFillColors = nullptr;              // array of colors for each marker face; if nullptr, use MarkerFillColor for all markers
     float           Size            = 4;                     // size of error bar whiskers (width or height), and digital bars (height) *in pixels*
     int             Offset          = 0;                     // data index offset
     int             Stride          = IMPLOT_AUTO;           // data stride in bytes; IMPLOT_AUTO will result in sizeof(T) where T is the type passed to PlotX
@@ -557,6 +572,27 @@ struct ImPlotSpec {
         default: break;
         }
         IM_ASSERT(0 && "User provided an ImPlotProp which cannot be set from scalar value!");
+    }
+
+    // Set a property from a pointer value.
+    void SetProp(ImPlotProp prop, ImU32* v) {
+        switch (prop) {
+        case ImPlotProp_LineColors       : LineColors       = v;  return;
+        case ImPlotProp_FillColors       : FillColors       = v;  return;
+        case ImPlotProp_MarkerLineColors : MarkerLineColors = v;  return;
+        case ImPlotProp_MarkerFillColors : MarkerFillColors = v;  return;
+        default: break;
+        }
+        IM_ASSERT(0 && "User provided an ImPlotProp which cannot be set from pointer value!");
+    }
+
+    // Set a property from a float pointer value.
+    void SetProp(ImPlotProp prop, float* v) {
+        switch (prop) {
+        case ImPlotProp_MarkerSizes : MarkerSizes = v; return;
+        default: break;
+        }
+        IM_ASSERT(0 && "User provided an ImPlotProp which cannot be set from float pointer value!");
     }
 
     // Set a property from an ImVec4 value.
@@ -1110,6 +1146,10 @@ IMPLOT_API void CancelPlotSelection();
 // Hides or shows the next plot item (i.e. as if it were toggled from the legend).
 // Use ImPlotCond_Always if you need to forcefully set this every frame.
 IMPLOT_API void HideNextItem(bool hidden = true, ImPlotCond cond = ImPlotCond_Once);
+// Returns true if the plot item #label_id in the current plot is hidden (i.e. toggled off from the legend or by HideNextItem).
+// Can be called before the item is submitted (e.g. to skip expensive work for a hidden item), in which case it reports
+// the state from the previous frame. Returns false for items that have never been submitted. See also IsLastItemHidden.
+IMPLOT_API bool IsItemHidden(const char* label_id);
 
 // Use the following around calls to Begin/EndPlot to align l/r/t/b padding.
 // Consider using Begin/EndSubplots first. They are more feature rich and
@@ -1207,6 +1247,8 @@ IMPLOT_API void PopStyleVar(int count = 1);
 
 // Gets the last item primary color (i.e. its legend icon color)
 IMPLOT_API ImVec4 GetLastItemColor();
+// Returns true if the last plot item is hidden (i.e. toggled off from the legend or by HideNextItem).
+IMPLOT_API bool IsLastItemHidden();
 
 // Returns the null terminated string name for an ImPlotCol.
 IMPLOT_API const char* GetStyleColorName(ImPlotCol idx);
@@ -1357,34 +1399,17 @@ IMPLOT_API void ShowDemoWindow(bool* p_open = nullptr);
 #define IMPLOT_DEPRECATED(method) method
 #endif
 
-enum ImPlotFlagsObsolete_ {
-    ImPlotFlags_YAxis2 = 1 << 20,
-    ImPlotFlags_YAxis3 = 1 << 21,
-};
-
 namespace ImPlot {
 
-// OBSOLETED in v0.18 (from February 2026)
-// IMPLOT_API void SetNextLineStyle(const ImVec4& col = IMPLOT_AUTO_COL, float weight = IMPLOT_AUTO); // OBSOLETED IN 0.18 // Set ImPlotSpec.LineColor/LineWeight or construct ImPlotSpec with { ImPlotSpec_LineColor, color, ImPlotSpec_LineWeight, weight }.
+// OBSOLETED in v1.0 (from February 2026)
+// IMPLOT_API void SetNextLineStyle(const ImVec4& col = IMPLOT_AUTO_COL, float weight = IMPLOT_AUTO); // OBSOLETED IN v1.0 // Set ImPlotSpec.LineColor/LineWeight or construct ImPlotSpec with { ImPlotSpec_LineColor, color, ImPlotSpec_LineWeight, weight }.
 
-// IMPLOT_API void SetNextFillStyle(const ImVec4& col = IMPLOT_AUTO_COL, float alpha_mod = IMPLOT_AUTO);// OBSOLETED IN 0.18 // Set ImPlotSpec.FillColor/FillAlpha or construct ImPlotSpec with { ImPlotSpec_FillColor, color, ImPlotSpec_FillAlpha, alpha }.
+// IMPLOT_API void SetNextFillStyle(const ImVec4& col = IMPLOT_AUTO_COL, float alpha_mod = IMPLOT_AUTO);// OBSOLETED IN v1.0 // Set ImPlotSpec.FillColor/FillAlpha or construct ImPlotSpec with { ImPlotSpec_FillColor, color, ImPlotSpec_FillAlpha, alpha }.
 
-// IMPLOT_API void SetNextMarkerStyle(ImPlotMarker marker = IMPLOT_AUTO, float size = IMPLOT_AUTO, const ImVec4& fill = IMPLOT_AUTO_COL, float weight = IMPLOT_AUTO, const ImVec4& outline = IMPLOT_AUTO_COL); // OBSOLETED IN 0.18 // Set ImPlotSpec.Marker/MarkerSize/MarkerFillColor/LineWeight/MarkerLineColor or construct ImPlotSpec with { ImPlotSpec_Marker, marker, ImPlotSpec_MarkerSize, size, ImPlotSpec_MarkerFillColor, fill_color, ImPlotSpec_LineWeight, weight, ImPlotSpec_MarkerLineColor, outline }.
+// IMPLOT_API void SetNextMarkerStyle(ImPlotMarker marker = IMPLOT_AUTO, float size = IMPLOT_AUTO, const ImVec4& fill = IMPLOT_AUTO_COL, float weight = IMPLOT_AUTO, const ImVec4& outline = IMPLOT_AUTO_COL); // OBSOLETED IN v1.0 // Set ImPlotSpec.Marker/MarkerSize/MarkerFillColor/LineWeight/MarkerLineColor or construct ImPlotSpec with { ImPlotSpec_Marker, marker, ImPlotSpec_MarkerSize, size, ImPlotSpec_MarkerFillColor, fill_color, ImPlotSpec_LineWeight, weight, ImPlotSpec_MarkerLineColor, outline }.
 
-// IMPLOT_API void SetNextErrorBarStyle(const ImVec4& col = IMPLOT_AUTO_COL, float size = IMPLOT_AUTO, float weight = IMPLOT_AUTO); // OBSOLETED IN 0.18 // Set ImPlotSpec.LineColor/Size/LineWeight or construct ImPlotSpec with { ImPlotSpec_LineColor, col, ImPlotSpec_Size, size, ImPlotSpec_LineWeight, weight }.
+// IMPLOT_API void SetNextErrorBarStyle(const ImVec4& col = IMPLOT_AUTO_COL, float size = IMPLOT_AUTO, float weight = IMPLOT_AUTO); // OBSOLETED IN v1.0 // Set ImPlotSpec.LineColor/Size/LineWeight or construct ImPlotSpec with { ImPlotSpec_LineColor, col, ImPlotSpec_Size, size, ImPlotSpec_LineWeight, weight }.
 
-// OBSOLETED in v0.13 -> PLANNED REMOVAL in v1.0
-IMPLOT_DEPRECATED( IMPLOT_API bool BeginPlot(const char* title_id,
-                                             const char* x_label,  // = nullptr,
-                                             const char* y_label,  // = nullptr,
-                                             const ImVec2& size       = ImVec2(-1,0),
-                                             ImPlotFlags flags        = ImPlotFlags_None,
-                                             ImPlotAxisFlags x_flags  = 0,
-                                             ImPlotAxisFlags y_flags  = 0,
-                                             ImPlotAxisFlags y2_flags = ImPlotAxisFlags_AuxDefault,
-                                             ImPlotAxisFlags y3_flags = ImPlotAxisFlags_AuxDefault,
-                                             const char* y2_label     = nullptr,
-                                             const char* y3_label     = nullptr) );
 
 } // namespace ImPlot
 

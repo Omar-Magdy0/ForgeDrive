@@ -106,6 +106,7 @@ include_directories(
     ${CMSIS_CORE_DIR}/Include  
     ${PLATFORM_DIR} 
     ${CMAKE_SOURCE_DIR}/RPC
+    ${THIRDPARTY_DIR}/fonts/FontAwesome7
 )
 target_compile_definitions(fd_drv PUBLIC
     
@@ -161,5 +162,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     ${PLATFORM_DEFINITIONS}
+    FONTS_DIR="${THIRDPARTY_DIR}/fonts"
 )
 

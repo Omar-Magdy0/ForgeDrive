@@ -59,6 +59,12 @@ enum class DisplayMode
     FOC
 };
 
+const ImVec4 phase_colors[] = {
+    ImVec4(0.95f, 0.20f, 0.20f, 1.0f), // Ia - Red
+    ImVec4(0.20f, 0.50f, 1.00f, 1.0f), // Ib - Blue
+    ImVec4(1.00f, 0.80f, 0.15f, 1.0f)  // Ic - Yellow
+};
+
 inline const char *voltage_plot_names[] = {
     "Line to Ground",
     "Line to Line",
@@ -253,7 +259,7 @@ inline void draw_rotation_indicator(ImDrawList *draw_list,
 
     static float angle = 0;
     static double last_time = ImGui::GetTime();
-
+    ImGui::Dummy(ImVec2(size, size+20));
     // Update angle
     double current_time = ImGui::GetTime();
     float dt = current_time - last_time;
@@ -304,7 +310,12 @@ static void drawSummary()
     cursor_pos.x += 10;
     cursor_pos.y += 10;
     draw_rotation_indicator(draw_list, sil.state.omega, cursor_pos, indicator_width);
-
+    
+    int revs = (int)(sil.state.theta / (2.0f * M_PI));
+    float angle = fmod(sil.state.theta, 2.0f * M_PI) * (180.0f / (float)M_PI);
+    cursor_pos.y += 30;
+    ImGui::Text("Revs: %d", revs);
+    ImGui::Text("Angle: %.2f°", angle);
     ImGui::EndChild();
 }
 
@@ -320,16 +331,26 @@ static void drawPhaseCurrentPlot(float height)
         ImPlot::SetupAxisLinks(ImAxis_X1, &shared_x_range.Min, &shared_x_range.Max);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -20, 20);
         pthread_mutex_lock(&scope_mutex);
+        ImPlotSpec linespec;
+        linespec.LineWeight = 1.0f;
+        linespec.Marker = ImPlotMarker_None;
         if (current_plot_type == CurrentPlotType::AlphaBeta || current_plot_type == CurrentPlotType::DQ)
         {
-            ImPlot::PlotLine("Id", channel_buffer[0], SAMPLE_DEPTH);
-            ImPlot::PlotLine("Iq", channel_buffer[1], SAMPLE_DEPTH);
+            linespec.LineColor = phase_colors[0];
+            ImPlot::PlotLine("Id", channel_buffer[0], SAMPLE_DEPTH, 1, 0, linespec);
+            linespec.LineColor = phase_colors[1];
+            ImPlot::PlotLine("Iq", channel_buffer[1], SAMPLE_DEPTH, 1, 0, linespec);
         }else{
-            ImPlot::PlotLine("Ia", channel_buffer[0], SAMPLE_DEPTH);
-            ImPlot::PlotLine("Ib", channel_buffer[1], SAMPLE_DEPTH);
-            ImPlot::PlotLine("Ic", channel_buffer[2], SAMPLE_DEPTH);
+            linespec.LineColor = phase_colors[0];
+            ImPlot::PlotLine("Ia", channel_buffer[0], SAMPLE_DEPTH, 1, 0, linespec);
+            linespec.LineColor = phase_colors[1];
+            ImPlot::PlotLine("Ib", channel_buffer[1], SAMPLE_DEPTH, 1, 0, linespec);
+            linespec.LineColor = phase_colors[2];
+            ImPlot::PlotLine("Ic", channel_buffer[2], SAMPLE_DEPTH, 1, 0, linespec);
         }
-        ImPlot::PlotInfLines("Trigger", &scope.trigger_level, 1, {ImPlotProp_Flags, ImPlotInfLinesFlags_Horizontal});
+        linespec.LineColor = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
+        linespec.Flags = ImPlotInfLinesFlags_Horizontal;
+        ImPlot::PlotInfLines("Horizontal", &scope.trigger_level, 1, linespec);
         pthread_mutex_unlock(&scope_mutex);
         ImPlot::EndPlot();
     }
@@ -344,16 +365,24 @@ static void drawPhaseVoltagePlot(float height)
         ImPlot::SetupAxisLinks(ImAxis_X1, &shared_x_range.Min, &shared_x_range.Max);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -20, 20);
         pthread_mutex_lock(&scope_mutex);
+        ImPlotSpec linespec;
+        linespec.LineWeight = 1.5f;
+        linespec.Marker = ImPlotMarker_None;
         if (voltage_plot_type == VoltagePlotType::AlphaBeta || voltage_plot_type == VoltagePlotType::DQ)
         {
-            ImPlot::PlotLine("Vd", channel_buffer[3], SAMPLE_DEPTH);
-            ImPlot::PlotLine("Vq", channel_buffer[4], SAMPLE_DEPTH);
+            linespec.LineColor = phase_colors[0];
+            ImPlot::PlotLine("Vd", channel_buffer[3], SAMPLE_DEPTH, 1, 0, linespec);
+            linespec.LineColor = phase_colors[1];
+            ImPlot::PlotLine("Vq", channel_buffer[4], SAMPLE_DEPTH, 1, 0, linespec);
         }
         else
         {
-            ImPlot::PlotLine("Va", channel_buffer[3], SAMPLE_DEPTH);
-            ImPlot::PlotLine("Vb", channel_buffer[4], SAMPLE_DEPTH);
-            ImPlot::PlotLine("Vc", channel_buffer[5], SAMPLE_DEPTH);
+            linespec.LineColor = phase_colors[0];
+            ImPlot::PlotLine("Va", channel_buffer[3], SAMPLE_DEPTH, 1, 0, linespec);
+            linespec.LineColor = phase_colors[1];
+            ImPlot::PlotLine("Vb", channel_buffer[4], SAMPLE_DEPTH, 1, 0, linespec);
+            linespec.LineColor = phase_colors[2];
+            ImPlot::PlotLine("Vc", channel_buffer[5], SAMPLE_DEPTH, 1, 0, linespec);
         }
         pthread_mutex_unlock(&scope_mutex);
         ImPlot::EndPlot();
