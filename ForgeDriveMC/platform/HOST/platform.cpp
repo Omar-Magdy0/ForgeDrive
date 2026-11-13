@@ -149,14 +149,13 @@ void gui_deinit()
     glfwTerminate();
 }
 void gui_loop() {
-    if(!glfwWindowShouldClose(window)) {
+    while(!glfwWindowShouldClose(window)) {
         // Main loop
         glfwPollEvents();
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         glfwGetFramebufferSize(window, &display_w, &display_h);
-        
         silgui_render();
         ImGui::Render();
         glViewport(0, 0, display_w, display_h);
@@ -165,6 +164,7 @@ void gui_loop() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
+    gui_deinit();
 }
 
 pthread_t t;

@@ -163,5 +163,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     ${PLATFORM_DEFINITIONS}
     FONTS_DIR="${THIRDPARTY_DIR}/fonts"
+    SILSERVER_IP_ADDRESS="127.0.0.1"
 )
 

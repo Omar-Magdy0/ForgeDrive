@@ -9,10 +9,6 @@ class IComm
 public:
     virtual ~IComm() = default;
 
-    // Connection management
-    virtual void disconnect() = 0;
-    virtual bool isConnected() const = 0;
-
     // Data transfer
     virtual bool write(std::span<const uint8_t> data) = 0;
     virtual size_t read(std::span<uint8_t> data) = 0;

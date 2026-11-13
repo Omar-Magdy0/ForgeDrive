@@ -63,6 +63,7 @@ add_executable(${PROJECT_NAME}
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
     ${GUI_DIR}/Gui.cpp
+    ${GUI_DIR}/ConnectionsPage.cpp
     App.cpp
     ${IMGUI_SRC}
     ${MIDDLEWARE_SRC}

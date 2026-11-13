@@ -189,12 +189,8 @@ void Sys::init()
     while (true)
         ; // never reach here
 #else
-    std::thread scheduler_thread([]
-                                 { vTaskStartScheduler(); });
-    while (true)
-    {
-        gui_loop();
-    }
+    std::thread scheduler_thread([]{ vTaskStartScheduler(); });
+    gui_loop();
     vTaskEndScheduler();
     scheduler_thread.join();
 #endif

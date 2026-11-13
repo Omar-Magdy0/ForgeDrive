@@ -8,6 +8,9 @@
 #include <cstdint>
 
 using asio::ip::tcp;
+#ifndef SILSERVER_IP_ADDRESS
+#define SILSERVER_IP_ADDRESS "127.0.0.1"
+#endif
 
 class SILServer
 {
@@ -19,9 +22,9 @@ private:
         tcp::acceptor acceptor;
         tcp::socket socket;
         bool connected = false;
-        SILPort(asio::io_context& io, uint16_t p) 
+        SILPort(asio::io_context& io, uint16_t p, const char* address) 
             : port(p), 
-              acceptor(io, tcp::endpoint(tcp::v4(), p)), 
+              acceptor(io, tcp::endpoint(asio::ip::make_address(address), p)), 
               socket(io){}
     };
 
@@ -53,7 +56,7 @@ public:
     bool register_port(uint16_t port, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024) {
         if (ports_.find(port) != ports_.end()) return false;
 
-        auto channel = std::make_unique<SILPort>(io_context_, port);
+        auto channel = std::make_unique<SILPort>(io_context_, port, SILSERVER_IP_ADDRESS);
 
         // Launch background accept coroutine for this specific port
         asio::co_spawn(io_context_, [this, port, rx_buf_kb, tx_buf_kb]() -> asio::awaitable<void> {

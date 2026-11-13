@@ -17,16 +17,12 @@ namespace fd
     public:
         ring_fast(T *buffer, size_t size_) : capacity_(size_), head_(0), tail_(0), buffer_(buffer)
         {
-            assert(capacity_ > 0);
             assert((capacity_ & (capacity_ - 1)) == 0);
-            assert(capacity_ <= 32768);
             mask_ = capacity_ - 1;
         }
         ring_fast(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data())
         {
-            assert(capacity_ > 0);
             assert((capacity_ & (capacity_ - 1)) == 0);
-            assert(capacity_ <= 32768);
             mask_ = capacity_ - 1;
         }
 

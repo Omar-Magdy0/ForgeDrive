@@ -4,6 +4,8 @@
 #include "TCPClient.h"
 #include "Gui.h"
 
+
+
 struct App
 {
 static constexpr uint8_t ABFRX_BUF_SIZE = 255;
@@ -14,7 +16,6 @@ abf::Stream astream = abf::Stream(abf_rx_buf, sizeof(abf_rx_buf), this, onFrame,
 
 Gui gui;
 void run();
-void imgui_init();
 void gui_init();
 void gui_loop();
 void gui_deinit();
