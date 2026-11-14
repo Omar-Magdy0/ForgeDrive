@@ -8,6 +8,7 @@
 //  [x] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset) [Desktop OpenGL only!]
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplOpenGL3_GetRenderState().
+//  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // About WebGL/ES:
 // - You need to '#define IMGUI_IMPL_OPENGL_ES2' or '#define IMGUI_IMPL_OPENGL_ES3' to use WebGL or OpenGL ES.
@@ -24,6 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2026-10-01: OpenGL: Added ImGui_ImplOpenGL3_SetClipOrigin() to specify clip origins (GL_LOWER_LEFT/GL_UPPER_LEFT, or use 0 to autodetect). (#2186, #3998, #3146, #3143, #8640)
 //                      (Breaking): we now default to GL_LOWER_LEFT instead of 0=autodetect. Because 1) detection is not reliable and 2) is slow.
 //  2026-10-01: OpenGL: Avoid querying glGetIntegerv(GL_CLIP_ORIGIN) multiple times when using DrawCallback_ResetRenderState. (#2186, #3998, #3146, #3143, #8640)
@@ -289,6 +291,10 @@ ImGui_ImplOpenGL3_RenderState* ImGui_ImplOpenGL3_GetRenderState()
 {
     return (ImGui_ImplOpenGL3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
 }
+
+// Forward Declarations
+static void ImGui_ImplOpenGL3_InitMultiViewportSupport();
+static void ImGui_ImplOpenGL3_ShutdownMultiViewportSupport();
 
 // OpenGL vertex attribute state (for ES 1.0 and ES 2.0 only)
 #ifndef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
@@ -1113,6 +1119,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;       // We can honor ImGuiPlatformIO::Textures[] requests during render.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;      // We can create multi-viewports on the Renderer side (optional)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_TextureMaxWidth = platform_io.Renderer_TextureMaxHeight = (int)bd->MaxTextureSize;
@@ -1167,6 +1174,8 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 #endif
     bd->ClipOriginCurrent = bd->ClipOriginRequest = GL_LOWER_LEFT;
 
+    ImGui_ImplOpenGL3_InitMultiViewportSupport();
+
     return true;
 }
 
@@ -1177,15 +1186,44 @@ void    ImGui_ImplOpenGL3_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
+    ImGui_ImplOpenGL3_ShutdownMultiViewportSupport();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
-    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
+    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasViewports);
     platform_io.ClearRendererHandlers();
     IM_DELETE(bd);
 
     ImGui_ImplOpenGL3_ShutdownLoader();
+}
+
+//--------------------------------------------------------------------------------------------------------
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
+//--------------------------------------------------------------------------------------------------------
+
+static void ImGui_ImplOpenGL3_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
+    {
+        ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+    ImGui_ImplOpenGL3_RenderDrawData(viewport->DrawData);
+}
+
+static void ImGui_ImplOpenGL3_InitMultiViewportSupport()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_RenderWindow = ImGui_ImplOpenGL3_RenderWindow;
+}
+
+static void ImGui_ImplOpenGL3_ShutdownMultiViewportSupport()
+{
+    ImGui::DestroyPlatformWindows();
 }
 
 //-----------------------------------------------------------------------------

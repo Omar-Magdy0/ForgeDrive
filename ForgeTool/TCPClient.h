@@ -18,7 +18,7 @@ private:
     uint16_t port_;
     std::deque<std::vector<uint8_t>> tx_queue_;
     bool writing_ = false;
-    static inline std::vector<TCPClient*> connections = {};
+    static inline std::vector<TCPClient *> connections = {};
     void startWrite()
     {
         if (tx_queue_.empty() || !socket_.is_open())
@@ -43,7 +43,7 @@ private:
                 startWrite();
             });
     }
-    TCPClient():socket_(io_context_)
+    TCPClient() : socket_(io_context_)
     {
     }
     ~TCPClient() override
@@ -56,15 +56,17 @@ private:
         if (socket_.is_open())
             socket_.close(ec);
         auto it = std::find(connections.begin(), connections.end(), this);
-        if(it != connections.end())
+        if (it != connections.end())
             connections.erase(it);
-        if(onDisconnect)onDisconnect();
+        if (onDisconnect)
+            onDisconnect();
     }
 public:
     static bool init()
     {
         io_context_.restart();
-        io_thread = std::thread([](){io_context_.run();});
+        io_thread = std::thread([]()
+                                { io_context_.run(); });
         return true;
     }
     static bool deinit()
@@ -74,61 +76,61 @@ public:
             io_thread.join();
         return true;
     }
-    static TCPClient* connect(const std::string &host, uint16_t port, std::string &error, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024)
+    static TCPClient *connect(const std::string &host, uint16_t port, std::string &error, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024)
     {
-        auto existing = findConnection(host, port); 
-        if(existing)return existing;
+        auto existing = findConnection(host, port);
+        if (existing)
+            return existing;
         asio::error_code ec;
         auto client = new TCPClient;
         tcp::resolver resolver(io_context_);
         do
         {
             auto endpoints = resolver.resolve(host, std::to_string(port), ec);
-            if(ec)break;
+            if (ec)
+                break;
             asio::connect(client->socket_, endpoints, ec);
-            if(ec)break;        
+            if (ec)
+                break;
             client->socket_.set_option(asio::socket_base::send_buffer_size(tx_buf_kb * 1024), ec);
             client->socket_.set_option(asio::socket_base::receive_buffer_size(rx_buf_kb * 1024), ec);
-        }while(0);
+        } while (0);
         if (ec)
         {
             error = ec.message();
             disconnect(client);
             return nullptr;
         }
-        //if we reach here , all went great
+        // if we reach here , all went great
         client->host_ = host;
         client->port_ = port;
         connections.push_back(client);
         return client;
     }
-
     void getAddress(std::string &host, uint16_t &port)
     {
         host = host_;
         port = port_;
     }
-    
-    static TCPClient* findConnection(const std::string& host, uint16_t port)
+    static TCPClient *findConnection(const std::string &host, uint16_t port)
     {
         auto it = std::find_if(connections.begin(), connections.end(),
-            [&](const TCPClient* client)
-            {
-                return client->host_ == host && client->port_ == port;
-            });
+                               [&](const TCPClient *client)
+                               {
+                                   return client->host_ == host && client->port_ == port;
+                               });
 
         return it != connections.end() ? *it : nullptr;
     }
-
-    static void disconnect(TCPClient* client)
+    static void disconnect(TCPClient *client)
     {
         client->disconnect();
         delete client;
     }
-
     bool write(std::span<const uint8_t> data) override
     {
-        if(data.empty())return true;
+        if (data.empty())
+            return true;
         std::vector<uint8_t> buffer(data.begin(), data.end());
         asio::post(io_context_, [this, buffer = std::move(buffer)]() mutable
                    {
@@ -139,8 +141,6 @@ public:
 
         return true;
     }
-
-    // Non-blocking read poll
     size_t read(std::span<uint8_t> data) override
     {
         size_t n = 0;
@@ -148,15 +148,12 @@ public:
             n = socket_.read_some(asio::buffer(data.data(), data.size()));
         return n;
     }
-
-    // Check bytes available to read immediately
     size_t available() override
     {
         asio::error_code ec;
         return socket_.available(ec);
     }
-
-    static const std::vector<TCPClient*>& getConnections()
+    static const std::vector<TCPClient *> &getConnections()
     {
         return connections;
     }

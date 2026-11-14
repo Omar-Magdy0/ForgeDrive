@@ -7,7 +7,6 @@ namespace
     {
         if (index == 0)
             return {};
-
         unsigned char buffer[256];
         const int length = libusb_get_string_descriptor_ascii(
             handle,
@@ -17,7 +16,6 @@ namespace
 
         if (length <= 0)
             return {};
-
         return {reinterpret_cast<const char *>(buffer), static_cast<std::size_t>(length)};
     }
 }
@@ -26,7 +24,6 @@ Usbxch::~Usbxch()
 {
     disconnect();
 }
-
 int Usbxch::arm_rx()
 {
     const size_t available =
@@ -74,7 +71,6 @@ int Usbxch::arm_rx()
     }
     return true;
 }
-
 int Usbxch::arm_tx()
 {
     bool expected = false;
@@ -120,7 +116,6 @@ int Usbxch::arm_tx()
 
     return true;
 }
-
 std::vector<UsbDeviceInfo> &Usbxch::scan()
 {
     libusb_device **libusb_devices = nullptr;
@@ -196,7 +191,6 @@ std::vector<UsbDeviceInfo> &Usbxch::scan()
     libusb_free_device_list(libusb_devices, 0);
     return devices;
 }
-
 bool Usbxch::init(unsigned int timeout_ms)
 {
     timeout = timeout_ms;
@@ -225,7 +219,6 @@ bool Usbxch::init(unsigned int timeout_ms)
     scan();
     return true;
 }
-
 bool Usbxch::deinit()
 {
     {
@@ -253,7 +246,6 @@ bool Usbxch::deinit()
     context_ = nullptr;
     return true;
 }
-
 Usbxch *Usbxch::connect(UsbDeviceInfo &device, std::string &error)
 {
     if (device.interfaces.empty())
@@ -308,7 +300,6 @@ Usbxch *Usbxch::connect(UsbDeviceInfo &device, std::string &error)
     ret->arm_rx();
     return ret;
 }
-
 void Usbxch::disconnect(Usbxch *device)
 {
     if (device)
@@ -316,22 +307,18 @@ void Usbxch::disconnect(Usbxch *device)
         device->disconnect();
     }
 }
-
 const UsbDeviceInfo &Usbxch::getDeviceInfo() const
 {
     return device_info;
 }
-
 const std::vector<Usbxch *> &Usbxch::getConnectedDevices()
 {
     return connected_devices_;
 }
-
 const std::vector<UsbDeviceInfo> &Usbxch::getDiscoveredDevices()
 {
     return devices;
 }
-
 Usbxch* Usbxch::findConnection(const UsbDeviceInfo& device)
 {
     const auto& connections = getConnectedDevices();
@@ -346,7 +333,6 @@ Usbxch* Usbxch::findConnection(const UsbDeviceInfo& device)
 
     return it != connections.end() ? *it : nullptr;
 }
-
 void Usbxch::disconnect()
 {
     disconnect_req.store(true);
@@ -355,7 +341,6 @@ void Usbxch::disconnect()
     if (tx_transfer)
         libusb_cancel_transfer(tx_transfer);
 }
-
 void Usbxch::finish_disconnect()
 {
     if (rx_active_.load())
@@ -371,7 +356,6 @@ void Usbxch::finish_disconnect()
     if (onDisconnect)
         onDisconnect();
 }
-
 bool Usbxch::write(std::span<const uint8_t> data)
 {
     // Arm using the asynchronous libusb API
@@ -387,7 +371,6 @@ bool Usbxch::write(std::span<const uint8_t> data)
     arm_tx();
     return suc;
 }
-
 size_t Usbxch::read(std::span<uint8_t> data)
 {
     auto c = rx_stream.size();
@@ -416,12 +399,10 @@ size_t Usbxch::read(std::span<uint8_t> data)
     }
     return static_cast<int>(rd);
 }
-
 size_t Usbxch::available()
 {
     return rx_stream.size();
 }
-
 void Usbxch::event_loop()
 {
     while (running)
@@ -456,7 +437,6 @@ void Usbxch::event_loop()
         }
     }
 }
-
 void LIBUSB_CALL Usbxch::rx_callback(libusb_transfer *transfer)
 {
     auto ctx = (Usbxch *)transfer->user_data;
@@ -486,7 +466,6 @@ void LIBUSB_CALL Usbxch::rx_callback(libusb_transfer *transfer)
         ctx->rx_active_.store(false);
     }
 }
-
 void LIBUSB_CALL Usbxch::tx_callback(libusb_transfer *transfer)
 {
     auto ctx = (Usbxch *)transfer->user_data;
@@ -509,7 +488,6 @@ void LIBUSB_CALL Usbxch::tx_callback(libusb_transfer *transfer)
         ctx->tx_active_.store(false);
     }
 }
-
 // TODO: Finalize Hotplug feature and fully implement it
 int LIBUSB_CALL Usbxch::hotplugCallback(libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event, void *user_data)
 {

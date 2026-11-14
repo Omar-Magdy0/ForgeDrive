@@ -6,6 +6,7 @@
 //  [X] Renderer: User texture binding. Use 'MTLTexture.gpuResourceID' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
+//  [X] Renderer: Multi-viewport support (multiple windows).
 // Missing features or Issues:
 //  [ ] Texture view pool support? Reevaluate which type to use for ImtextureID.
 

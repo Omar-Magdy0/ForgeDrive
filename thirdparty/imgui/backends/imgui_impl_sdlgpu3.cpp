@@ -6,6 +6,7 @@
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplSDLGPU3_GetRenderState().
+//  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // The aim of imgui_impl_sdlgpu3.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
@@ -23,6 +24,7 @@
 //   Calling the function is MANDATORY, otherwise the ImGui will not upload neither the vertex nor the index buffer for the GPU. See imgui_impl_sdlgpu3.cpp for more info.
 
 // CHANGELOG
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. Obsoleting samplers from ImGui_ImplSDLGPU3_RenderState. (#9378)
 //  2026-03-19: Fixed issue in ImGui_ImplSDLGPU3_DestroyTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295, #9310)
@@ -659,6 +661,9 @@ void ImGui_ImplSDLGPU3_DestroyDeviceObjects()
     if (bd->Pipeline)           { SDL_ReleaseGPUGraphicsPipeline(v->Device, bd->Pipeline); bd->Pipeline = nullptr; }
 }
 
+static void ImGui_ImplSDLGPU3_InitMultiViewportSupport();
+static void ImGui_ImplSDLGPU3_ShutdownMultiViewportSupport();
+
 bool ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -671,6 +676,7 @@ bool ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info)
     io.BackendRendererName = "imgui_impl_sdlgpu3";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplSDLGPU3_DrawCallback_ResetRenderState;
@@ -682,6 +688,8 @@ bool ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info)
 
     bd->InitInfo = *info;
 
+    ImGui_ImplSDLGPU3_InitMultiViewportSupport();
+
     return true;
 }
 
@@ -692,11 +700,12 @@ void ImGui_ImplSDLGPU3_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
+    ImGui_ImplSDLGPU3_ShutdownMultiViewportSupport();
     ImGui_ImplSDLGPU3_DestroyDeviceObjects();
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
-    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
+    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasViewports);
     platform_io.ClearRendererHandlers();
     IM_DELETE(bd);
 }
@@ -709,5 +718,77 @@ void ImGui_ImplSDLGPU3_NewFrame()
     if (!bd->TexSamplerLinear)
         ImGui_ImplSDLGPU3_CreateDeviceObjects();
 }
+
+//--------------------------------------------------------------------------------------------------------
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
+//--------------------------------------------------------------------------------------------------------
+
+static void ImGui_ImplSDLGPU3_CreateWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplSDLGPU3_Data* data = ImGui_ImplSDLGPU3_GetBackendData();
+    SDL_Window* window = SDL_GetWindowFromID((SDL_WindowID)(intptr_t)viewport->PlatformHandle);
+    SDL_ClaimWindowForGPUDevice(data->InitInfo.Device, window);
+    SDL_SetGPUSwapchainParameters(data->InitInfo.Device, window, data->InitInfo.SwapchainComposition, data->InitInfo.PresentMode);
+    viewport->RendererUserData = (void*)1;
+}
+
+static void ImGui_ImplSDLGPU3_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    ImGui_ImplSDLGPU3_Data* data = ImGui_ImplSDLGPU3_GetBackendData();
+    SDL_Window* window = SDL_GetWindowFromID((SDL_WindowID)(intptr_t)viewport->PlatformHandle);
+
+    ImDrawData* draw_data = viewport->DrawData;
+
+    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(data->InitInfo.Device);
+
+    SDL_GPUTexture* swapchain_texture;
+    SDL_AcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, nullptr, nullptr);
+
+    if (swapchain_texture != nullptr)
+    {
+        ImGui_ImplSDLGPU3_PrepareDrawData(draw_data, command_buffer); // FIXME-OPT: Not optimal, may this be done earlier?
+        SDL_GPUColorTargetInfo target_info = {};
+        target_info.texture = swapchain_texture;
+        target_info.clear_color = SDL_FColor{ 0.0f,0.0f,0.0f,1.0f };
+        target_info.load_op = SDL_GPU_LOADOP_CLEAR;
+        target_info.store_op = SDL_GPU_STOREOP_STORE;
+        target_info.mip_level = 0;
+        target_info.layer_or_depth_plane = 0;
+        target_info.cycle = false;
+        SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &target_info, 1, nullptr);
+        ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer, render_pass);
+        SDL_EndGPURenderPass(render_pass);
+    }
+
+    SDL_SubmitGPUCommandBuffer(command_buffer);
+}
+
+static void ImGui_ImplSDLGPU3_DestroyWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplSDLGPU3_Data* data = ImGui_ImplSDLGPU3_GetBackendData();
+    if (viewport->RendererUserData)
+    {
+        SDL_Window* window = SDL_GetWindowFromID((SDL_WindowID)(intptr_t)viewport->PlatformHandle);
+        SDL_ReleaseWindowFromGPUDevice(data->InitInfo.Device, window);
+    }
+    viewport->RendererUserData = nullptr;
+}
+
+static void ImGui_ImplSDLGPU3_InitMultiViewportSupport()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_RenderWindow = ImGui_ImplSDLGPU3_RenderWindow;
+    platform_io.Renderer_CreateWindow = ImGui_ImplSDLGPU3_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplSDLGPU3_DestroyWindow;
+}
+
+static void ImGui_ImplSDLGPU3_ShutdownMultiViewportSupport()
+{
+    ImGui::DestroyPlatformWindows();
+}
+
+//-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
