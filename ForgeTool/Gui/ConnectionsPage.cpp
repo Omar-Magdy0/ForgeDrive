@@ -6,13 +6,33 @@
 #include <cstdint>
 #include <string>
 #include <algorithm>
-
+#include <functional>
 
 
 // --------------------------------------------------
 // Connections list
 // --------------------------------------------------
-void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, Gui &gui)
+void DrawLaunchBar(float width, float height,
+                   std::function<void()> disconnect,
+                   std::function<void()> about,
+                   std::function<void()> launch)
+{
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float buttonWidth = (width - spacing * 2) / 3.0f;
+    ImGui::PushFont(Gui::fonts.IconM);
+    if (ImGui::Button(ICON_FA_LINK_SLASH, ImVec2(buttonWidth, height)))
+        if (disconnect) disconnect();
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_CIRCLE_INFO, ImVec2(buttonWidth, height)))
+        if (about) about();
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FA_ARROW_UP_RIGHT_FROM_SQUARE, ImVec2(buttonWidth, height)))
+        if (launch) launch();
+    ImGui::PopFont();
+}
+
+
+void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, Gui &gui, bool launchBar = false)
 {
     ImGui::BeginChild(ImGui::GetID(info._libusb_device), dim, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
     // Header
@@ -23,8 +43,8 @@ void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, Gui &gui)
         ImGui::TextWrapped("Unidentified:%d:%d", info.vid, info.pid);
     ImGui::PopFont();
     ImGui::Separator();
-    bool connected = Usbxch::isConnected(info);
-    if(connected)
+    auto device = Usbxch::findConnection(info);
+    if(device)
     {
         ImGui::PushFont(Gui::fonts.S);
         ImGui::TextColored(Gui::colors.True,"Connected");
@@ -35,7 +55,7 @@ void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, Gui &gui)
     ImGui::PushFont(Gui::fonts.S);
     ImGui::Text("%d:%d", info.vid, info.pid);
     ImGui::PopFont();
-    if(!connected)
+    if(!device)
     {
         float button_width = 100.0f;
         float button_height = ImGui::GetFrameHeight();
@@ -52,13 +72,27 @@ void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, Gui &gui)
         }
     }else
     {
-
+        if(launchBar)
+        {
+            auto avail = ImGui::GetContentRegionAvail();
+            float buttonHeight = 40;
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - buttonHeight);
+            DrawLaunchBar(avail.x, buttonHeight, 
+            [&]() {
+                Usbxch::disconnect(device);
+            },
+            [&]() {
+                // Show connection information //TODO:
+            },
+            [&]() {
+                // Launch application
+            });
+        }        
     }
-    ImGui::EndChild();
 }
 
 
-void DrawTCPCard(TCPClient *client, ImVec2 dim, Gui &gui)
+void DrawTCPCard(TCPClient *client, ImVec2 dim, Gui &gui, bool launchBar = false)
 {
     std::string host;
     uint16_t port;
@@ -72,8 +106,30 @@ void DrawTCPCard(TCPClient *client, ImVec2 dim, Gui &gui)
     ImGui::PushFont(Gui::fonts.S);
     ImGui::TextColored(Gui::colors.True,"Connected");
     ImGui::PopFont();
-    ImGui::EndChild();
+
+    if(launchBar)
+    {
+        auto avail = ImGui::GetContentRegionAvail();
+        float buttonHeight = 40;
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - buttonHeight);
+        DrawLaunchBar(avail.x, buttonHeight, 
+        [&]() {
+            TCPClient::disconnect(client);
+        },
+        [&]() {
+            // Show connection information //TODO:
+        },
+        [&]() {
+            // Launch application
+        });
+    }
+
 }
+
+void EndCard()
+{
+    ImGui::EndChild();
+};
 
 void ConnectionsList(Gui &gui)
 {
@@ -82,6 +138,7 @@ void ConnectionsList(Gui &gui)
     ImGui::SetCursorPos(ImVec2(pos.x, pos.y+10));
     ImGui::PushFont(Gui::fonts.H2);
     ImGui::Text("Connections");
+    ImGui::Separator();
     ImGui::PopFont();
     ImGui::Unindent(20.0f);
     //Traverse over active Communication port connections
@@ -95,7 +152,8 @@ void ConnectionsList(Gui &gui)
     {
         if (c % 4 != 0)
             ImGui::SameLine();
-        DrawUsbCard(device->getDeviceInfo(), ImVec2(width, 160), gui);
+        DrawUsbCard(device->getDeviceInfo(), ImVec2(width, 160), gui, true);
+        EndCard();
         c++;
     }
     auto tcp_connections = TCPClient::getConnections();
@@ -103,7 +161,8 @@ void ConnectionsList(Gui &gui)
     {
         if (c % 4 != 0)
             ImGui::SameLine();
-        DrawTCPCard(client, ImVec2(width, 160), gui);
+        DrawTCPCard(client, ImVec2(width, 160), gui, true);
+        EndCard();
         c++;
     }
 }
@@ -131,6 +190,7 @@ void ConnectionSetup_Usb(Gui &gui)
     for(int i = 0; i < devices.size(); i++)
     {
         DrawUsbCard(devices[i], ImVec2(width, 180), gui);
+        EndCard();
         if ((i + 1) % 4 != 0 && i + 1 < devices.size())
             ImGui::SameLine();
     }

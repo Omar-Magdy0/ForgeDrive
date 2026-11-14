@@ -72,7 +72,7 @@ public:
     static void disconnect(Usbxch* device);
     static const std::vector<Usbxch*>& getConnectedDevices();
     static const std::vector<UsbDeviceInfo>& getDiscoveredDevices();
-    static bool isConnected(const UsbDeviceInfo& device);
+    static Usbxch* findConnection(const UsbDeviceInfo& device);
     inline static int timeout = 100;
     const UsbDeviceInfo& getDeviceInfo() const;
     bool write(std::span<const uint8_t> data) override;

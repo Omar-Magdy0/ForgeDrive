@@ -30,7 +30,6 @@ void Gui::render()
     DrawBottomMenu();
     ImGui::End();
 }
-
 void Gui::DrawSideMenu()
 {
     float height = ImGui::GetWindowHeight();
@@ -74,7 +73,6 @@ void Gui::DrawSideMenu()
     }
     ImGui::EndChild();
 }
-
 void Gui::DrawMenuBar()
 {
     if (ImGui::BeginMainMenuBar())
@@ -153,6 +151,69 @@ void Gui::DrawMainPanel()
     ImGui::PopStyleVar();
     ImGui::EndChild();
 }
+void Gui::init()
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImPlot::CreateContext();
+
+    ImGuiStyle &style = ImGui::GetStyle();
+    ApplyGeometry();
+    ApplyDarkTheme();
+    ApplyFonts();
+    ImGui::PushFont(fonts.N);
+
+    exec_running = true;
+    exec_thread = std::thread(&Gui::ExecWorker, this);
+}
+void Gui::deinit()
+{
+    {
+        std::lock_guard lock(exec_mutex);
+        exec_running = false;
+    }
+    exec_cv.notify_one();
+    if (exec_thread.joinable())
+        exec_thread.join();
+}
+void Gui::execute(std::function<void()> task)
+{
+    {
+        std::lock_guard lock(exec_mutex);
+        exec_queue.push(std::move(task));
+    }
+    exec_cv.notify_one();
+}
+void Gui::ExecWorker()
+{
+    while (true)
+    {
+        std::function<void()> task;
+        {
+            std::unique_lock lock(exec_mutex);
+            exec_cv.wait(lock, [this]()
+            {
+                return !exec_queue.empty() || !exec_running;
+            });
+            if (!exec_running && exec_queue.empty())
+                break;
+            task = std::move(exec_queue.front());
+            exec_queue.pop();
+        }
+        if (task)
+        {
+            try
+            {
+                task();
+            }
+            catch (const std::exception &e)
+            {
+                // Log exception
+            }
+        }
+    }
+}
+
 
 void ApplyDarkTheme()
 {
@@ -339,19 +400,4 @@ void ApplyFonts()
     Gui::fonts.IconL = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 24.0f, &icon_config, icon_ranges);
     Gui::fonts.IconM = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 18.0f, &icon_config, icon_ranges);
     Gui::fonts.IconS = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 14.0f, &icon_config, icon_ranges);
-}
-
-void Gui::init()
-{
-    IMGUI_CHECKVERSION();
-
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-
-
-    ImGuiStyle &style = ImGui::GetStyle();
-    ApplyGeometry();
-    ApplyDarkTheme();
-    ApplyFonts();
-    ImGui::PushFont(fonts.N);
 }

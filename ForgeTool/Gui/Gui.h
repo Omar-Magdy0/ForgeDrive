@@ -2,6 +2,12 @@
 #include <imgui.h>
 #include <implot.h>
 #include <string>
+#include <queue>
+#include <thread>
+#include <condition_variable>
+#include <functional>
+#include "IconsFontAwesome7.h"
+
 #define IMGUI_RGB(r, g, b, a) ImVec4( \
     (r) / 255.0f,                     \
     (g) / 255.0f,                     \
@@ -13,10 +19,6 @@
     ((hex >> 8) & 0xFF) / 255.0f,  \
     ((hex) & 0xFF) / 255.0f,       \
     a)
-
-
-
-
 
 
 struct ConnectionsPageState
@@ -32,7 +34,6 @@ struct ConnectionsPageState
     char tcp_address[64] = "192.168.1.100";
     int tcp_port = 5001;
 };
-
 
 class Gui
 {
@@ -120,16 +121,28 @@ public:
 private:
     /* data */
     State state;
+    bool exec_running = false;
+    std::mutex exec_mutex;
+    std::thread exec_thread;
+    std::condition_variable exec_cv;
+    std::queue<std::function<void()>> exec_queue;
+    void ExecWorker();
+    void DrawSideMenu();
+    void DrawMenuBar();
+    void DrawBottomMenu();
+    void DrawMainPanel();
+    void DrawConnectionsPage();
 public:
     static Fonts fonts;
     static ColorPalette colors;
     StatusMessage status;
     ConnectionsPageState connectionPageState;
     void render();
-    void DrawSideMenu();
-    void DrawMenuBar();
-    void DrawBottomMenu();
-    void DrawMainPanel();
-    void DrawConnectionsPage();
     void init();
+    void deinit();
+    void execute(std::function<void()> task);
 };
+
+void ApplyDarkTheme();
+void ApplyGeometry();
+void ApplyFonts();

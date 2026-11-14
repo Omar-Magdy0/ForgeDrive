@@ -332,17 +332,19 @@ const std::vector<UsbDeviceInfo> &Usbxch::getDiscoveredDevices()
     return devices;
 }
 
-bool Usbxch::isConnected(const UsbDeviceInfo &device)
+Usbxch* Usbxch::findConnection(const UsbDeviceInfo& device)
 {
-    const auto &connections = getConnectedDevices();
+    const auto& connections = getConnectedDevices();
 
-    return std::any_of(
+    auto it = std::find_if(
         connections.begin(),
         connections.end(),
-        [&](const Usbxch *conn)
+        [&](const Usbxch* conn)
         {
             return conn && conn->getDeviceInfo() == device;
         });
+
+    return it != connections.end() ? *it : nullptr;
 }
 
 void Usbxch::disconnect()
