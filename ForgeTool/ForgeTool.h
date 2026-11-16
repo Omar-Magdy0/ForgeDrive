@@ -2,105 +2,130 @@
 #include "Usbxch.h"
 #include "TCPClient.h"
 #include "Style.h"
-
 #include <GLFW/glfw3.h>
 #include <string>
 #include <queue>
 #include <thread>
+#include <assert.h>
 #include <condition_variable>
 #include <functional>
-
-
+#include <cstdio>
+#include <cstdint>
 
 // Callback to handle GLFW errors
-static inline void glfw_error_callback(int error, const char* description) { std::cerr << "GLFW Error " << error << ": " << description << std::endl; }
+static inline void glfw_error_callback(int error, const char *description) { std::cerr << "GLFW Error " << error << ": " << description << std::endl; }
+class ForgeTool;
+class ConnectionPage;
+class Launchable;
 
-class Launchable
+
+
+struct ConnectionPage
 {
-    private :
+    enum class Type
+    {
+        USB,
+        TCP,
+        END
+    };
+    const char *typeName[(unsigned int)Type::END] = {"USB", "TCP"};
+    Type type = Type::USB;
+    char tcp_address[64] = "127.0.0.1";
+    int tcp_port = 5001;
+    ForgeTool &fg;
+
+    ConnectionPage(ForgeTool &fg_) : fg(fg_) {};
+    void DrawLaunchBar(std::function<void()> disconnect);
+    void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, bool launchBar);
+    void DrawTCPCard(TCPClient *client, ImVec2 dim, bool launchBar);
+    void ConnectionsList();
+    void ConnectionSetup_Usb();
+    void ConnectionSetup_TCP();
+    void render();
+};
+struct LaunchablePage
+{
+    void render();
+};
+class ForgeTool
+{
+private:
+    enum class MainPage
+    {
+        Connections,
+        Devices,
+        Settings,
+        Launchables,
+        About
+    };
+
+    struct State
+    {
+        std::string statusTxt;
+        ImVec4 statusCol;
+        MainPage current_page = MainPage::Connections;
+    };
+    State pState; //Pending state
+    State cState; //Current populated state
+    std::mutex stateMutex;
+
+    LaunchablePage launchablePage;
+    ConnectionPage connectionPage;
+    std::vector<std::unique_ptr<Launchable>> launchables;
+    ImGuiContext *gui_ctx;
+    ImPlotContext *plt_ctx;
+    GLFWwindow *window;
+    ForgeStyle style;
+    int display_w = 1200;
+    int display_h = 720;
+    void render();
+    void DrawSideMenu();
+    void DrawMenuBar();
+    void DrawBottomMenu();
+    void DrawMainPanel();
+
     bool exec_running = false;
     std::mutex exec_mutex;
     std::thread exec_thread;
     std::condition_variable exec_cv;
     std::queue<std::function<void()>> exec_queue;
-    protected:
-    virtual void onInit() {}
-    virtual void onDeinit() {}
-    GLFWwindow* window = nullptr;
-    public:
-    virtual ~Launchable()
+public:
+    ForgeTool();
+    ~ForgeTool();
+    const ForgeStyle &Style() const { return style; }
+    void SetStatus(const ImVec4 &statusCol, const std::string &statusTxt);
+    void exec(std::function<void()> task);
+    template <typename T, typename... Args>
+    T &Launch(Args &&...args)
     {
-        deinit();
-    }
-    void init()
-    {   
-        onInit();
-        exec_running = true;
-        exec_thread = std::thread([this](){
-            while (exec_running)
-            {
-                std::function<void()> task;
-                {
-                    std::unique_lock lock(exec_mutex);
-                    exec_cv.wait(lock, [this]()
-                    {
-                        return !exec_queue.empty() || !exec_running;
-                    });
-                    if (!exec_running && exec_queue.empty())
-                        break;
-                    task = std::move(exec_queue.front());
-                    exec_queue.pop();
-                }
-                if (task)
-                {
-                    try
-                    {
-                        task();
-                    }
-                    catch (const std::exception &e)
-                    {
-                        // Log exception
-                    }
-                }
-            }
-        });
-    }
-    virtual void render() = 0;
-    void deinit()
-    {
-        {
-            std::lock_guard lock(exec_mutex);
-            exec_running = false;
-        }
-        exec_cv.notify_one();
-        if (exec_thread.joinable())
-        exec_thread.join();
-        onDeinit();
-    }
-    void exec(std::function<void()> task)
-    {
-        {
-            std::lock_guard lock(exec_mutex);
-            exec_queue.push(std::move(task));
-        }
-        exec_cv.notify_one();
-    }
-    bool shouldClose() const
-    {
-        return window && glfwWindowShouldClose(window);
+        auto instance = std::make_unique<T>(*this, std::forward<Args>(args)...);
+        T &ref = *instance;
+        launchables.push_back(std::move(instance));
+        return ref;
     }
 };
-
-
-
-class ForgeTool : public Launchable
+class Launchable
 {
-    std::vector<std::unique_ptr<Launchable>> launchables;
-    ImGuiContext* gui_ctx;
-    ImPlotContext* plt_ctx;
-    void onInit() override;
-    void onDeinit() override;
-    void render() override;
-    public:
-    void run();
+protected:
+    ForgeTool &fg;
+    const std::string window_name;
+    bool open = true;
+    bool visible = true;
+    bool minimized = false;
+    bool docked = false;
+    ImGuiViewport* viewport;
+public:
+    Launchable(ForgeTool &fg_, std::string launchableName_, std::string name_) : fg(fg_), 
+                                window_name(launchableName_ + ":" + name_ + "##" + std::to_string(reinterpret_cast<std::uintptr_t>(this)))
+    {
+
+    }
+    virtual ~Launchable() = default;
+    virtual void renderImpl() = 0;
+    void render();
+    bool shouldClose() const { return !open;}
+    const std::string& getWindowName(){return window_name;}
+    const ForgeStyle &Style() const { return fg.Style(); }
+    void exec(std::function<void()> task) { return fg.exec(task); }
+    
 };

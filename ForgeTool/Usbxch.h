@@ -68,7 +68,7 @@ public:
     static std::vector<UsbDeviceInfo>& scan();
     static bool init(unsigned int timeout_ms);
     static bool deinit();
-    static Usbxch* connect(UsbDeviceInfo& device, std::string &error);
+    static Usbxch* connect(const UsbDeviceInfo& device, std::string &error);
     static void disconnect(Usbxch* device);
     static const std::vector<Usbxch*>& getConnectedDevices();
     static const std::vector<UsbDeviceInfo>& getDiscoveredDevices();

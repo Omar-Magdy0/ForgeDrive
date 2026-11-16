@@ -8,7 +8,6 @@ set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
 set(IMPLOT_DIR ${THIRDPARTY_DIR}/implot)
 set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
-set(GUI_DIR ${CMAKE_SOURCE_DIR}/Gui)
 set(IMGUI_SRC  
     ${IMGUI_DIR}/imgui_draw.cpp
     ${IMGUI_DIR}/imgui_tables.cpp
@@ -62,9 +61,9 @@ add_executable(${PROJECT_NAME}
     ForgeTool.cpp
     # Header files are listed for IDE visibility, not strictly required for build
     Usbxch.cpp
-    ${GUI_DIR}/Gui.cpp
-    ${GUI_DIR}/ConnectionsPage.cpp
-    App.cpp
+    ConnectionPage.cpp
+    LaunchablesPage.cpp
+    ${CMAKE_SOURCE_DIR}/ForgeDriveMC/ForgeDriveMC.cpp
     ${IMGUI_SRC}
     ${MIDDLEWARE_SRC}
     ${CORE_SRC}
@@ -90,7 +89,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${FDLIB_DIR}/middleware
     ${FDLIB_DIR}
-    ${GUI_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/ForgeDriveMC
     ${THIRDPARTY_DIR}/fonts/FontAwesome7
     ${IMGUI_INCLUDES}
 )

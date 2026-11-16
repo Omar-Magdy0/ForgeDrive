@@ -149,44 +149,41 @@ std::vector<UsbDeviceInfo> &Usbxch::scan()
             info.manufacturer = read_string_descriptor(handle, descriptor.iManufacturer);
             info.product = read_string_descriptor(handle, descriptor.iProduct);
             info.serial_number = read_string_descriptor(handle, descriptor.iSerialNumber);
-        }
-        libusb_config_descriptor *configuration = nullptr;
-        if (libusb_get_active_config_descriptor(device, &configuration) == LIBUSB_SUCCESS)
-        {
-            for (uint8_t interface_index = 0; interface_index < configuration->bNumInterfaces; ++interface_index)
+            libusb_config_descriptor *configuration = nullptr;
+            if (libusb_get_active_config_descriptor(device, &configuration) == LIBUSB_SUCCESS)
             {
-                const libusb_interface &interface = configuration->interface[interface_index];
-                if (interface.num_altsetting == 0)
-                    continue;
-                const auto &alt_setting = interface.altsetting[0];
+                for (uint8_t interface_index = 0; interface_index < configuration->bNumInterfaces; ++interface_index)
+                {
+                    const libusb_interface &interface = configuration->interface[interface_index];
+                    if (interface.num_altsetting == 0)
+                        continue;
+                    const auto &alt_setting = interface.altsetting[0];
 
-                UsbInterfaceInfo intf_info{};
-                intf_info.number = alt_setting.bInterfaceNumber;
-                intf_info.bInterfaceClass = alt_setting.bInterfaceClass;
-                intf_info.bInterfaceSubClass = alt_setting.bInterfaceSubClass;
-                intf_info.bInterfaceProtocol = alt_setting.bInterfaceProtocol;
-                if (opened && alt_setting.iInterface != 0) // Read optional human-readable interface name if handle is valid
-                {
-                    intf_info.name = read_string_descriptor(handle, alt_setting.iInterface);
+                    UsbInterfaceInfo intf_info{};
+                    intf_info.number = alt_setting.bInterfaceNumber;
+                    intf_info.bInterfaceClass = alt_setting.bInterfaceClass;
+                    intf_info.bInterfaceSubClass = alt_setting.bInterfaceSubClass;
+                    intf_info.bInterfaceProtocol = alt_setting.bInterfaceProtocol;
+                    if (opened && alt_setting.iInterface != 0) // Read optional human-readable interface name if handle is valid
+                    {
+                        intf_info.name = read_string_descriptor(handle, alt_setting.iInterface);
+                    }
+                    // Avoid duplicate alternate settings for the same interface number
+                    auto it = std::find_if(info.interfaces.begin(), info.interfaces.end(),
+                                           [&intf_info](const UsbInterfaceInfo &existing)
+                                           {
+                                               return existing.number == intf_info.number;
+                                           });
+                    if (it == info.interfaces.end())
+                    {
+                        info.interfaces.push_back(std::move(intf_info));
+                    }
                 }
-                // Avoid duplicate alternate settings for the same interface number
-                auto it = std::find_if(info.interfaces.begin(), info.interfaces.end(),
-                                       [&intf_info](const UsbInterfaceInfo &existing)
-                                       {
-                                           return existing.number == intf_info.number;
-                                       });
-                if (it == info.interfaces.end())
-                {
-                    info.interfaces.push_back(std::move(intf_info));
-                }
+                libusb_free_config_descriptor(configuration);
             }
-            libusb_free_config_descriptor(configuration);
-        }
-        if (opened)
-        {
             libusb_close(handle);
+            devices.push_back(std::move(info));
         }
-        devices.push_back(std::move(info));
     }
     libusb_free_device_list(libusb_devices, 0);
     return devices;
@@ -246,7 +243,7 @@ bool Usbxch::deinit()
     context_ = nullptr;
     return true;
 }
-Usbxch *Usbxch::connect(UsbDeviceInfo &device, std::string &error)
+Usbxch *Usbxch::connect(const UsbDeviceInfo &device, std::string &error)
 {
     if (device.interfaces.empty())
     {

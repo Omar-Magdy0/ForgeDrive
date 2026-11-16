@@ -1,213 +1,271 @@
 #pragma once
 
 #include "IconsFontAwesome7.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 #include <implot.h>
 
-#define IMGUI_RGB(r, g, b, a) ImVec4( \
-    (r) / 255.0f,                     \
-    (g) / 255.0f,                     \
-    (b) / 255.0f,                     \
-    a)
+inline ImVec4 ImRGB(
+    uint8_t r,
+    uint8_t g,
+    uint8_t b,
+    float a = 1.0f)
+{
+    constexpr float INV_255 = 1.0f / 255.0f;
 
-#define IMGUI_HEX(hex, a) ImVec4(  \
-    ((hex >> 16) & 0xFF) / 255.0f, \
-    ((hex >> 8) & 0xFF) / 255.0f,  \
-    ((hex) & 0xFF) / 255.0f,       \
-    a)
+    return ImVec4(
+        r * INV_255,
+        g * INV_255,
+        b * INV_255,
+        a);
+}
+
+inline ImVec4 ImHEX(uint32_t hex, float a = 1.0f)
+{
+    return ImRGB(
+        (hex >> 16) & 0xFF,
+        (hex >> 8) & 0xFF,
+        hex & 0xFF,
+        a);
+}
 
 struct ForgeStyle
 {
     struct Fonts
     {
-        ImFont *H1;
-        ImFont *H2;
-        ImFont *H3;
-        ImFont *N;
-        ImFont *N_bold;
-        ImFont *N_italic;
-        ImFont *S;
-        ImFont *S_bold;
-        ImFont *S_italic;
-        ImFont *IconL;
-        ImFont *IconM;
-        ImFont *IconS;
+        float Scale = 1.0f;
+        ImFont *H1 = nullptr;
+        ImFont *H2 = nullptr;
+        ImFont *H3 = nullptr;
+        ImFont *N = nullptr;
+        ImFont *N_bold = nullptr;
+        ImFont *N_italic = nullptr;
+        ImFont *Mono = nullptr;
+        ImFont *MonoBold = nullptr;
+        ImFont *S = nullptr;
+        ImFont *S_bold = nullptr;
+        ImFont *S_italic = nullptr;
+        ImFont *IconL = nullptr;
+        ImFont *IconM = nullptr;
+        ImFont *IconS = nullptr;
+    };
+    struct Surface
+    {
+        ImVec4 Base;
+        ImVec4 Hover;
+        ImVec4 Selected;
+        ImVec4 Border;
+    };
+    struct CardConfig
+    {
+        ForgeStyle::Surface color;
+        ImVec2 padding = ImVec2(12, 10);
+        bool borderSelect = false;
+        float borderThickness = 3;
+        ImGuiChildFlags cf = ImGuiWindowFlags_None;
+        ImGuiWindowFlags wf = ImGuiWindowFlags_NoScrollbar;
     };
     struct ColorPalette
     {
         // ---------- Boolean ----------
-        ImVec4 True = IMGUI_HEX(0x22C55E, 1);
-        ImVec4 False = IMGUI_HEX(0xEF4444, 1);
-        ImVec4 Unknown = IMGUI_HEX(0x9CA3AF, 1);
+        ImVec4 True = ImHEX(0x22C55E);
+        ImVec4 False = ImHEX(0xEF4444);
+        ImVec4 Unknown = ImHEX(0x9CA3AF);
 
         // ---------- Status ----------
-        ImVec4 Success = IMGUI_HEX(0x22C55E, 1);
-        ImVec4 Error = IMGUI_HEX(0xEF4444, 1);
-        ImVec4 Warning = IMGUI_HEX(0xF59E0B, 1);
-        ImVec4 Info = IMGUI_HEX(0x3B82F6, 1);
-        ImVec4 Neutral = IMGUI_HEX(0x9CA3AF, 1);
+        ImVec4 Success = ImHEX(0x22C55E);
+        ImVec4 Error = ImHEX(0xEF4444);
+        ImVec4 Warning = ImHEX(0xF59E0B);
+        ImVec4 Info = ImHEX(0x3B82F6);
+        ImVec4 Neutral = ImHEX(0x9CA3AF);
 
         // ---------- Connection ----------
-        ImVec4 Connected = IMGUI_HEX(0x22C55E, 1);
-        ImVec4 Disconnected = IMGUI_HEX(0x6B7280, 1);
-        ImVec4 Connecting = IMGUI_HEX(0xF59E0B, 1);
+        ImVec4 Connected = ImHEX(0x22C55E);
+        ImVec4 Disconnected = ImHEX(0x6B7280);
+        ImVec4 Connecting = ImHEX(0xF59E0B);
 
         // ---------- Text ----------
-        ImVec4 TextPrimary = IMGUI_HEX(0xE5E7EB, 1);
-        ImVec4 TextSecondary = IMGUI_HEX(0x9CA3AF, 1);
-        ImVec4 TextMuted = IMGUI_HEX(0x6B7280, 1);
-        ImVec4 TextDisabled = IMGUI_HEX(0x4B5563, 1);
+        ImVec4 TextPrimary = ImHEX(0xE5E7EB);
+        ImVec4 TextSecondary = ImHEX(0x9CA3AF);
+        ImVec4 TextMuted = ImHEX(0x6B7280);
+        ImVec4 TextDisabled = ImHEX(0x4B5563);
+        ImVec4 TextLink = ImHEX(0x60A5FA);
 
         // ---------- Accent ----------
-        ImVec4 Primary = IMGUI_HEX(0x00BFFF, 1);
-        ImVec4 Secondary = IMGUI_HEX(0x8B5CF6, 1);
+        ImVec4 Primary = ImHEX(0x00BFFF);
+        ImVec4 PrimaryHover = ImHEX(0x38CFFF);
+        ImVec4 PrimaryActive = ImHEX(0x009ACB);
+        ImVec4 Secondary = ImHEX(0x1F3042);
+        
 
         // ---------- Interaction ----------
-        ImVec4 Hover = IMGUI_HEX(0xFFFFFF, 0.08);
-        ImVec4 Active = IMGUI_HEX(0xFFFFFF, 0.14);
-        ImVec4 Selected = IMGUI_HEX(0x00BFFF, 0.18);
-        ImVec4 Disabled = IMGUI_HEX(0x6B7280, 0.35);
+        ImVec4 Hover = ImHEX(0xFFFFFF, 0.08f);
+        ImVec4 Active = ImHEX(0xFFFFFF, 0.14f);
+        ImVec4 Selected = ImHEX(0x00BFFF, 0.18f);
+        ImVec4 Disabled = ImHEX(0x6B7280, 0.35f);
+        ImVec4 Focus = ImHEX(0x00BFFF, 0.65f);
+        ImVec4 DragDrop = ImHEX(0x38BDF8);
 
-        // ---------- Surfaces / Cards ----------
-        ImVec4 A1 = IMGUI_HEX(0x18232C, 1.00f);
-        ImVec4 A1Hover = IMGUI_HEX(0x1C2B36, 1.00f);
-        ImVec4 A1Selected = IMGUI_HEX(0x203642, 1.00f);
-        ImVec4 A1Border = IMGUI_HEX(0x29404D, 1.00f);
+        // ---------- Backgrounds ----------
+        ImVec4 Background = ImHEX(0x0C1116);
+        ImVec4 BackgroundElevated = ImHEX(0x121A22);
+        ImVec4 BackgroundPopup = ImHEX(0x18232C);
+        ImVec4 BackgroundModal = ImHEX(0x080C11, 0.75f);
 
-        ImVec4 A2 = IMGUI_HEX(0x202832, 1.00f);
-        ImVec4 A2Hover = IMGUI_HEX(0x26323E, 1.00f);
-        ImVec4 A2Selected = IMGUI_HEX(0x2B3B49, 1.00f);
-        ImVec4 A2Border = IMGUI_HEX(0x354653, 1.00f);
+        // ---------- Surfaces ----------
+        Surface A1{
+            ImHEX(0x0C1116),
+            ImHEX(0x18212A),
+            ImHEX(0x1D2D38),
+            ImHEX(0x263743)};
+
+        Surface A2{
+            ImHEX(0x18232C),
+            ImHEX(0x1E2D38),
+            ImHEX(0x243744),
+            ImHEX(0x304653)};
+
+        Surface A3{
+            ImHEX(0x202832),
+            ImHEX(0x263440),
+            ImHEX(0x2C3C4B),
+            ImHEX(0x3A4C5B)};
+
+        Surface A4{
+            ImHEX(0x005B5C), 
+            ImHEX(0x003B5C), 
+            ImHEX(0x007A8E), 
+            ImHEX(0x40566A)  
+        };
+        // ---------- General borders ----------
+        ImVec4 Border = ImHEX(0x29404D);
+        ImVec4 BorderSubtle = ImHEX(0x202D38);
+        ImVec4 BorderStrong = ImHEX(0x405465);
+
+        // ---------- Separators ----------
+        ImVec4 Separator = ImHEX(0x354653);
+        ImVec4 SeparatorHovered = ImHEX(0x50809B);
+        ImVec4 SeparatorActive = ImHEX(0x00BFFF);
+
+        // ---------- Scrollbars ----------
+        ImVec4 Scrollbar = ImHEX(0x3B4855);
+        ImVec4 ScrollbarHovered = ImHEX(0x526476);
+        ImVec4 ScrollbarActive = ImHEX(0x68839B);
+
+        // ---------- Plots ----------
+        ImVec4 PlotBackground = ImHEX(0x0C1116);
+        ImVec4 PlotGrid = ImHEX(0x354653, 0.45f);
+        ImVec4 PlotAxis = ImHEX(0x9CA3AF);
+
+        // Trace colors
+        ImVec4 Plot1 = ImHEX(0x00BFFF);
+        ImVec4 Plot2 = ImHEX(0xA78BFA);
+        ImVec4 Plot3 = ImHEX(0x22C55E);
+        ImVec4 Plot4 = ImHEX(0xF59E0B);
+        ImVec4 Plot5 = ImHEX(0xEF4444);
+        ImVec4 Plot6 = ImHEX(0xEC4899);
+
+        // ---------- Miscellaneous ----------
+        ImVec4 Shadow = ImHEX(0x000000, 0.25f);
+        ImVec4 TextSelect = ImHEX(0x00BFFF, 0.30f);
+        ImVec4 Unsaved = ImHEX(0xF59E0B);
     };
-    void ApplyDarkTheme()
+    void ApplyTheme()
     {
-        ImGuiStyle &style = ImGui::GetStyle();
-        // --------------------------------------------------
-        // Core surfaces
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_Text] = ImVec4(0.88f, 0.90f, 0.93f, 1.00f);
-        style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.43f, 0.47f, 0.53f, 1.00f);
-        style.Colors[ImGuiCol_WindowBg] = ImVec4(0.075f, 0.085f, 0.105f, 1.00f);
-        style.Colors[ImGuiCol_ChildBg] = IMGUI_HEX(0x202832, 1.00f);
-        style.Colors[ImGuiCol_PopupBg] = ImVec4(0.105f, 0.120f, 0.145f, 0.98f);
-        style.Colors[ImGuiCol_Border] = ImVec4(0.20f, 0.23f, 0.28f, 0.75f);
-        style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-        // --------------------------------------------------
-        // Frames (Input, Checkbox, Slider backgrounds)
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.30f, 0.30f, 1.00f);
-        style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.16f, 0.19f, 0.24f, 1.00f);
-        style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.19f, 0.23f, 0.30f, 1.00f);
-        // --------------------------------------------------
-        // Title bars
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_TitleBg] = ImVec4(0.065f, 0.075f, 0.095f, 1.00f);
-        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.085f, 0.100f, 0.125f, 1.00f);
-        style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.065f, 0.075f, 0.095f, 1.00f);
-        style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.085f, 0.095f, 0.115f, 1.00f);
-        // --------------------------------------------------
-        // Scrollbars
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.065f, 0.075f, 0.090f, 0.50f);
-        style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.24f, 0.28f, 0.34f, 1.00f);
-        style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.32f, 0.38f, 0.46f, 1.00f);
-        style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.40f, 0.48f, 0.58f, 1.00f);
-        // --------------------------------------------------
-        // Interactive accent (Electric Blue)
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_CheckMark] = ImVec4(0.30f, 0.62f, 1.00f, 1.00f);
-        style.Colors[ImGuiCol_CheckboxSelectedBg] = ImVec4(0.18f, 0.38f, 0.65f, 1.00f);
-        style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.25f, 0.53f, 0.88f, 1.00f);
-        style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.35f, 0.66f, 1.00f, 1.00f);
-        // --------------------------------------------------
-        // Buttons
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_Button] = ImVec4(0.2f, 0.2f, 0.5f, 1.00f);
-        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.20f, 0.34f, 0.52f, 1.00f);
-        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.16f, 0.43f, 0.75f, 1.00f);
-        // --------------------------------------------------
-        // Headers / Selectables / Tree nodes
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_Header] = ImVec4(0.15f, 0.20f, 0.27f, 1.00f);
-        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.19f, 0.31f, 0.46f, 1.00f);
-        style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.18f, 0.39f, 0.65f, 1.00f);
-        // --------------------------------------------------
-        // Separators
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_Separator] = ImVec4(0.20f, 0.23f, 0.28f, 0.75f);
-        style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.30f, 0.48f, 0.70f, 1.00f);
-        style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.30f, 0.62f, 1.00f, 1.00f);
-        // --------------------------------------------------
-        // Resize grips
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.20f, 0.35f, 0.52f, 0.35f);
-        style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.25f, 0.53f, 0.85f, 0.75f);
-        style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.30f, 0.62f, 1.00f, 1.00f);
-        // --------------------------------------------------
-        // Input cursor
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_InputTextCursor] = ImVec4(0.35f, 0.67f, 1.00f, 1.00f);
-        // --------------------------------------------------
-        // Tabs
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_Tab] = IMGUI_HEX(0x263440, 1.00f);
-        style.Colors[ImGuiCol_TabHovered] = IMGUI_HEX(0x344957, 1.00f);
-        style.Colors[ImGuiCol_TabSelected] = IMGUI_HEX(0x405070, 1.00f);
-        style.Colors[ImGuiCol_TabSelectedOverline] = IMGUI_HEX(0x00BFFF, 1.00f);
-        style.Colors[ImGuiCol_TabDimmed] = IMGUI_HEX(0x202A34, 1.00f);
-        style.Colors[ImGuiCol_TabDimmedSelected] = IMGUI_HEX(0x263440, 1.00f);
-        style.Colors[ImGuiCol_TabDimmedSelectedOverline] = IMGUI_HEX(0x405070, 1.00f);
-        // --------------------------------------------------
-        // Plots
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.65f, 0.90f, 1.00f);
-        style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.55f, 0.78f, 1.00f, 1.00f);
-        style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.25f, 0.52f, 0.82f, 1.00f);
-        style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.38f, 0.68f, 1.00f, 1.00f);
-        // --------------------------------------------------
-        // Tables
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_TableHeaderBg] = ImVec4(0.13f, 0.16f, 0.20f, 1.00f);
-        style.Colors[ImGuiCol_TableBorderStrong] = ImVec4(0.25f, 0.29f, 0.35f, 1.00f);
-        style.Colors[ImGuiCol_TableBorderLight] = ImVec4(0.17f, 0.20f, 0.25f, 1.00f);
-        style.Colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-        style.Colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.15f, 0.18f, 0.22f, 0.35f);
-        // --------------------------------------------------
-        // Links and text selection
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_TextLink] = ImVec4(0.25f, 0.48f, 0.8f, 1.00f);
-        style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.20f, 0.40f, 0.60f, 0.50f);
-        // --------------------------------------------------
-        // Tree lines and drag/drop
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_TreeLines] = ImVec4(0.25f, 0.30f, 0.37f, 0.60f);
-        style.Colors[ImGuiCol_DragDropTarget] = ImVec4(0.35f, 0.68f, 1.00f, 1.00f);
-        style.Colors[ImGuiCol_DragDropTargetBg] = ImVec4(0.20f, 0.42f, 0.70f, 0.20f);
-        style.Colors[ImGuiCol_UnsavedMarker] = ImVec4(1.00f, 0.65f, 0.20f, 1.00f);
-        // --------------------------------------------------
-        // Navigation
-        // --------------------------------------------------
-        style.Colors[ImGuiCol_NavCursor] = ImVec4(0.35f, 0.68f, 1.00f, 1.00f);
-        style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(0.80f, 0.88f, 1.00f, 0.70f);
-        style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.05f, 0.06f, 0.08f, 0.65f);
-        style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.02f, 0.025f, 0.04f, 0.70f);
+        ImGuiStyle &s = ImGui::GetStyle();
 
-        // ---------- Surfaces / Cards ----------
-        Gui::colors.A1 = IMGUI_HEX(0x0C1116, 1.00f);
-        Gui::colors.A1Hover = IMGUI_HEX(0x1C2B36, 1.00f);
-        Gui::colors.A1Selected = IMGUI_HEX(0x203642, 1.00f);
-        Gui::colors.A1Border = IMGUI_HEX(0x29404D, 1.00f);
-        Gui::colors.A2 = IMGUI_HEX(0x202832, 1.00f);
-        Gui::colors.A2Hover = IMGUI_HEX(0x26323E, 1.00f);
-        Gui::colors.A2Selected = IMGUI_HEX(0x2B3B49, 1.00f);
-        Gui::colors.A2Border = IMGUI_HEX(0x354653, 1.00f);
+        // ---------- Text ----------
+        s.Colors[ImGuiCol_Text] = colors.TextPrimary;
+        s.Colors[ImGuiCol_TextDisabled] = colors.TextDisabled;
+        s.Colors[ImGuiCol_TextLink] = colors.TextLink;
+        s.Colors[ImGuiCol_TextSelectedBg] = colors.TextSelect;
+
+        // ---------- Backgrounds ----------
+        s.Colors[ImGuiCol_WindowBg] = colors.Background;
+        s.Colors[ImGuiCol_ChildBg] = colors.A1.Base;
+        s.Colors[ImGuiCol_PopupBg] = colors.BackgroundPopup;
+        s.Colors[ImGuiCol_ModalWindowDimBg] = colors.BackgroundModal;
+
+        // ---------- Borders ----------
+        s.Colors[ImGuiCol_Border] = colors.Border;
+        s.Colors[ImGuiCol_BorderShadow] = colors.Shadow;
+
+        // ---------- Frames ----------
+        s.Colors[ImGuiCol_FrameBg] = colors.A2.Base;
+        s.Colors[ImGuiCol_FrameBgHovered] = colors.A2.Hover;
+        s.Colors[ImGuiCol_FrameBgActive] = colors.A2.Selected;
+
+        // ---------- Buttons ----------
+        s.Colors[ImGuiCol_Button] = colors.A2.Base;
+        s.Colors[ImGuiCol_ButtonHovered] = colors.A2.Hover;
+        s.Colors[ImGuiCol_ButtonActive] = colors.A2.Selected;
+
+        // ---------- Headers ----------
+        s.Colors[ImGuiCol_Header] = colors.A2.Base;
+        s.Colors[ImGuiCol_HeaderHovered] = colors.A2.Hover;
+        s.Colors[ImGuiCol_HeaderActive] = colors.A2.Selected;
+
+        // ---------- Checkboxes / Sliders ----------
+        s.Colors[ImGuiCol_CheckMark] = colors.Primary;
+        s.Colors[ImGuiCol_CheckboxSelectedBg] = colors.Selected;
+        s.Colors[ImGuiCol_SliderGrab] = colors.Primary;
+        s.Colors[ImGuiCol_SliderGrabActive] = colors.PrimaryHover;
+
+        // ---------- Separators ----------
+        s.Colors[ImGuiCol_Separator] = colors.Separator;
+        s.Colors[ImGuiCol_SeparatorHovered] = colors.SeparatorHovered;
+        s.Colors[ImGuiCol_SeparatorActive] = colors.SeparatorActive;
+
+        // ---------- Scrollbars ----------
+        s.Colors[ImGuiCol_ScrollbarGrab] = colors.Scrollbar;
+        s.Colors[ImGuiCol_ScrollbarGrabHovered] = colors.ScrollbarHovered;
+        s.Colors[ImGuiCol_ScrollbarGrabActive] = colors.ScrollbarActive;
+
+        // ---------- Tabs ----------
+        s.Colors[ImGuiCol_Tab] = colors.A2.Base;
+        s.Colors[ImGuiCol_TabHovered] = colors.A2.Hover;
+        s.Colors[ImGuiCol_TabSelected] = colors.A3.Selected;
+        s.Colors[ImGuiCol_TabSelectedOverline] = colors.Primary;
+        s.Colors[ImGuiCol_TabDimmed] = colors.A1.Base;
+        s.Colors[ImGuiCol_TabDimmedSelected] = colors.A2.Base;
+        s.Colors[ImGuiCol_TabDimmedSelectedOverline] = colors.A3.Border;
+
+        // ---------- Tables ----------
+        s.Colors[ImGuiCol_TableHeaderBg] = colors.A2.Base;
+        s.Colors[ImGuiCol_TableBorderStrong] = colors.BorderStrong;
+        s.Colors[ImGuiCol_TableBorderLight] = colors.BorderSubtle;
+        s.Colors[ImGuiCol_TableRowBg] = colors.A1.Base;
+        s.Colors[ImGuiCol_TableRowBgAlt] = colors.A2.Base;
+
+        // ---------- Plots ----------
+        s.Colors[ImGuiCol_PlotLines] = colors.Plot1;
+        s.Colors[ImGuiCol_PlotLinesHovered] = colors.PrimaryHover;
+        s.Colors[ImGuiCol_PlotHistogram] = colors.Plot2;
+        s.Colors[ImGuiCol_PlotHistogramHovered] = colors.PrimaryHover;
+
+        // ---------- Navigation / Drag Drop ----------
+        s.Colors[ImGuiCol_NavCursor] = colors.Primary;
+        s.Colors[ImGuiCol_NavWindowingHighlight] = colors.Focus;
+        s.Colors[ImGuiCol_DragDropTarget] = colors.DragDrop;
+        s.Colors[ImGuiCol_DragDropTargetBg] = colors.Selected;
+
+        s.Colors[ImGuiCol_UnsavedMarker] = colors.Unsaved;
+
+        // ---------- Title bars ----------
+        s.Colors[ImGuiCol_TitleBg] = colors.A1.Base;
+        s.Colors[ImGuiCol_TitleBgActive] = colors.A2.Base;
+        s.Colors[ImGuiCol_TitleBgCollapsed] = colors.A1.Base;
+        s.Colors[ImGuiCol_MenuBarBg] = colors.A1.Base;
+
+        ApplyPlotTheme();
     }
     void ApplyGeometry()
     {
         ImGuiStyle &style = ImGui::GetStyle();
         // Window / card geometry
-        style.WindowPadding = ImVec2(0, 0);
-        style.WindowRounding = 8.0f;
+        style.WindowMinSize = ImVec2(400, 400);
+        style.WindowPadding = ImVec2(12, 12);
+        style.WindowRounding = 0;
         style.WindowBorderSize = 1.0f;
         // Child panels / cards
         style.ChildRounding = 8.0f;
@@ -215,25 +273,25 @@ struct ForgeStyle
         style.PopupRounding = 7.0f;
         style.PopupBorderSize = 1.0f;
         // Widgets
-        style.FramePadding = ImVec2(10.0f, 6.0f);
+        style.FramePadding = ImVec2(10.0f, 6.0f) * fonts.Scale;
         style.FrameRounding = 5.0f;
         style.FrameBorderSize = 0.0f;
         // Buttons
         style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
         // Layout
-        style.ItemSpacing = ImVec2(10.0f, 8.0f);
+        style.ItemSpacing = ImVec2(10.0f, 8.0f) * fonts.Scale;
         style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
         style.CellPadding = ImVec2(8.0f, 6.0f);
         // Separators
         style.SeparatorTextBorderSize = 1.0f;
         // Scrollbars
-        style.ScrollbarSize = 12.0f;
+        style.ScrollbarSize = 12.0f * fonts.Scale;
         style.ScrollbarRounding = 8.0f;
         // Grab handles
         style.GrabMinSize = 10.0f;
         style.GrabRounding = 5.0f;
         // Selectable
-        style.SelectableTextAlign = ImVec2(0.5f, 0.5f);
+        style.SelectableTextAlign = ImVec2(0, 0.5);
     }
     void ApplyFonts()
     {
@@ -249,21 +307,208 @@ struct ForgeStyle
         auto FONT_REGULAR = FONTS_DIR "/DejaVu/DejaVuSans.ttf";
         auto FONT_BOLD = FONTS_DIR "/DejaVu/DejaVuSans-Bold.ttf";
         auto FONT_ITALIC = FONTS_DIR "/DejaVu/DejaVuSans-Oblique.ttf";
+        auto FONT_MONO = FONTS_DIR "/DejaVu/DejaVuSansMono.ttf";
+        auto FONT_MONO_BOLD = FONTS_DIR "/DejaVu/DejaVuSansMono-Bold.ttf";
 
-        fonts.H1 = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 26.0f);
-        fonts.H2 = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 22.0f);
-        fonts.H3 = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 18.0f);
-        fonts.N = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 16.0f);
-        fonts.N_bold = io.Fonts->AddFontFromFileTTF(FONT_BOLD, 16.0f);
-        fonts.N_italic = io.Fonts->AddFontFromFileTTF(FONT_ITALIC, 16.0f);
-        fonts.S = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 13.0f);
-        fonts.S_bold = io.Fonts->AddFontFromFileTTF(FONT_BOLD, 13.0f);
-        fonts.S_italic = io.Fonts->AddFontFromFileTTF(FONT_ITALIC, 13.0f);
-        fonts.IconL = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 24.0f, &icon_config, icon_ranges);
-        fonts.IconM = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 18.0f, &icon_config, icon_ranges);
-        fonts.IconS = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 14.0f, &icon_config, icon_ranges);
+        fonts.H1 = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 20.0f * fonts.Scale);
+        fonts.H2 = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 18.0f * fonts.Scale);
+        fonts.H3 = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 16.0f * fonts.Scale);
+        fonts.N = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 14.0f * fonts.Scale);
+        fonts.N_bold = io.Fonts->AddFontFromFileTTF(FONT_BOLD, 14.0f * fonts.Scale);
+        fonts.N_italic = io.Fonts->AddFontFromFileTTF(FONT_ITALIC, 14.0f * fonts.Scale);
+        fonts.Mono = io.Fonts->AddFontFromFileTTF(FONT_MONO, 14 * fonts.Scale);
+        fonts.MonoBold = io.Fonts->AddFontFromFileTTF(FONT_MONO_BOLD, 14 * fonts.Scale);
+        fonts.S = io.Fonts->AddFontFromFileTTF(FONT_REGULAR, 12.0f * fonts.Scale);
+        fonts.S_bold = io.Fonts->AddFontFromFileTTF(FONT_BOLD, 12.0f * fonts.Scale);
+        fonts.S_italic = io.Fonts->AddFontFromFileTTF(FONT_ITALIC, 12.0f * fonts.Scale);
+        fonts.IconL = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 24.0f * fonts.Scale, &icon_config, icon_ranges);
+        fonts.IconM = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 18.0f * fonts.Scale, &icon_config, icon_ranges);
+        fonts.IconS = io.Fonts->AddFontFromFileTTF(FONTS_DIR "/FontAwesome7/Font Awesome 7 Free-Solid-900.otf", 14.0f * fonts.Scale, &icon_config, icon_ranges);
+    }
+    void ApplyPlotTheme()
+    {
+        ImPlotStyle &s = ImPlot::GetStyle();
+
+        s.Colors[ImPlotCol_PlotBg] = colors.PlotBackground;
+        s.Colors[ImPlotCol_FrameBg] = colors.A1.Base;
+        s.Colors[ImPlotCol_PlotBorder] = colors.Border;
+        s.Colors[ImPlotCol_LegendBg] = colors.BackgroundElevated;
+        s.Colors[ImPlotCol_LegendBorder] = colors.Border;
+        s.Colors[ImPlotCol_AxisGrid] = colors.PlotGrid;
+        s.Colors[ImPlotCol_AxisText] = colors.TextSecondary;
+        s.Colors[ImPlotCol_AxisTick] = colors.PlotAxis;
+        s.Colors[ImPlotCol_InlayText] = colors.TextPrimary;
+    }
+    void ApplyPlotColors()
+    {
+        ImPlotStyle &style = ImPlot::GetStyle();
+        style.Colors[ImPlotCol_PlotBg] = colors.A1.Base;
+        style.Colors[ImPlotCol_FrameBg] = colors.Background;
+        style.Colors[ImPlotCol_PlotBorder] = colors.Border;
+        style.Colors[ImPlotCol_LegendBg] = colors.BackgroundElevated;
+        style.Colors[ImPlotCol_LegendBorder] = colors.Border;
+        style.Colors[ImPlotCol_AxisGrid] = colors.BorderSubtle;
     }
 
     Fonts fonts;
     ColorPalette colors;
+    CardConfig C1{
+        {ImVec4(0.095f, 0.108f, 0.132f, 1.0f),
+         ImVec4(0.140f, 0.190f, 0.260f, 1.0f),
+         ImVec4(0.140f, 0.220f, 0.320f, 1.0f),
+         ImVec4(0.300f, 0.400f, 0.530f, 1.0f)},
+        ImVec2(12, 10),
+        false,
+        1.0f};
+    CardConfig C2{
+        {ImVec4(0.085f, 0.098f, 0.120f, 1.0f),
+         ImVec4(0.120f, 0.150f, 0.190f, 1.0f),
+         ImVec4(0.150f, 0.200f, 0.270f, 1.0f),
+         ImVec4(0.200f, 0.230f, 0.280f, 0.75f)},
+        ImVec2(10, 8),
+        true,
+        1.0f};
+    CardConfig C3{
+        {ImVec4(0.075f, 0.085f, 0.105f, 1.0f),
+         ImVec4(0.110f, 0.130f, 0.160f, 1.0f),
+         ImVec4(0.150f, 0.200f, 0.270f, 1.0f),
+         ImVec4(0.200f, 0.230f, 0.280f, 0.0f)},
+        ImVec2(8, 6),
+        false,
+        0.0f};
 };
+
+inline bool CardBegin(ImGuiID id, const ForgeStyle &style, bool &selected, ImVec2 size = ImVec2(0, 0), int order = 1, bool autoHeight = false)
+{
+    ForgeStyle::CardConfig cfg;
+    switch (order)
+    {
+    case 1:
+        cfg = style.C1;
+        break;
+    case 2:
+        cfg = style.C2;
+        break;
+    case 3:
+        cfg = style.C3;
+        break;
+    default:
+        break;
+    }
+
+    auto wf = cfg.wf | ImGuiWindowFlags_NoBackground;
+    auto cf = (cfg.cf | ImGuiChildFlags_AlwaysUseWindowPadding) & ~ImGuiChildFlags_Borders;
+    if (autoHeight)
+        cf |= ImGuiChildFlags_AutoResizeY;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, cfg.padding);
+    ImGui::PushStyleColor(ImGuiCol_Button, style.colors.A4.Base);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, style.colors.A4.Hover);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, style.colors.A4.Selected);
+    if (ImGui::BeginChild(id, size, cf, wf))
+    {
+        bool hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+        bool clicked = hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        if (clicked)
+            selected = !selected;
+        ImVec4 color = (selected && !cfg.borderSelect) ? cfg.color.Selected : hovered ? cfg.color.Hover
+                                                                                  : cfg.color.Base;
+        ImVec4 border_color = (selected && cfg.borderSelect) ? cfg.color.Selected : cfg.color.Border;
+
+        ImGui::GetWindowDrawList()->AddRectFilled(
+            ImGui::GetWindowPos(),
+            ImGui::GetWindowPos() + ImGui::GetWindowSize(),
+            ImGui::GetColorU32(color),
+            ImGui::GetStyle().ChildRounding);
+
+        float thickness = cfg.borderThickness;
+        ImGui::GetWindowDrawList()->AddRect(
+            ImGui::GetWindowPos() + ImVec2(thickness * 0.5f, thickness * 0.5f),
+            ImGui::GetWindowPos() + ImGui::GetWindowSize() - ImVec2(thickness * 0.5f, thickness * 0.5f),
+            ImGui::GetColorU32(border_color),
+            ImGui::GetStyle().ChildRounding,
+            0,
+            thickness);
+        
+         return true;
+    }
+    return false;
+}
+
+inline bool CardBegin(
+    ImGuiID id,
+    const ForgeStyle &style,
+    ImVec2 size = ImVec2(0, 0),
+    int order = 1)
+{
+    bool selected = false;
+    return CardBegin(id, style, selected, size, order);
+}
+
+inline void CardEnd()
+{
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor(3);
+    ImGui::EndChild();
+}
+
+#include <algorithm>
+#include <functional>
+struct GridConfig
+{
+    float minItemWidth = 280.0f;
+    float spacingX = 12.0f;
+    float spacingY = 12.0f;
+    int maxColumns = 4;
+};
+
+inline bool GridBegin(const char* id, const GridConfig& cfg)
+{
+    const float available = ImGui::GetContentRegionAvail().x;
+    int columns = std::max(1, static_cast<int>((available + cfg.spacingX) / (cfg.minItemWidth + cfg.spacingX)));
+    columns = std::min(columns, cfg.maxColumns);
+    bool show = ImGui::BeginTable(id, columns, ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoSavedSettings);
+    if(show) 
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(cfg.spacingX * 0.5f, cfg.spacingY * 0.5f));
+    return show;
+}
+inline bool GridItem()
+{
+    return ImGui::TableNextColumn();
+}
+inline void GridEnd()
+{
+    ImGui::EndTable();
+    ImGui::PopStyleVar();
+}
+
+enum class AlignX : uint8_t
+{
+    Left,
+    Center,
+    Right
+};
+
+enum class AlignY : uint8_t
+{
+    Top,
+    Center,
+    Bottom
+};
+
+inline ImVec2 SetNextItemAlignment(float width, float height, AlignX x = AlignX::Left, AlignY y = AlignY::Top)
+{
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+    ImVec2 pos = ImGui::GetCursorPos();
+
+    if (x == AlignX::Center)
+        pos.x += (avail.x - width) * 0.5f;
+    else if (x == AlignX::Right)
+        pos.x += avail.x - width;
+        
+    if (y == AlignY::Center)
+        pos.y += (avail.y - height) * 0.5f;
+    else if (y == AlignY::Bottom)
+        pos.y += avail.y - height;
+    ImGui::SetCursorPos(pos);
+    return pos;
+}

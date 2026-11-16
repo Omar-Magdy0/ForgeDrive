@@ -1,260 +1,210 @@
-#include "Usbxch.h"
-#include "TCPClient.h"
-#include "imgui.h"
-#include <cstdio>
-#include <cstdint>
-#include <string>
-#include <functional>
-
+#include "ForgeTool.h"
+#include "ForgeDriveMC.h"
 
 // --------------------------------------------------
 // Connections list
 // --------------------------------------------------
-void DrawLaunchBar(float width, float height,
-                   std::function<void()> disconnect,
-                   std::function<void()> about,
-                   std::function<void()> launch)
+constexpr GridConfig card_grid = {.minItemWidth = 160, .spacingX = 12, .spacingY = 12, .maxColumns = 6};
+constexpr int card_height = 170;
+
+void ConnectionPage::DrawLaunchBar(std::function<void()> disconnect)
 {
+    auto avail = ImGui::GetContentRegionAvail();
     float spacing = ImGui::GetStyle().ItemSpacing.x;
-    float buttonWidth = (width - spacing * 2) / 3.0f;
-    ImGui::PushFont(Gui::fonts.IconM);
-    if (ImGui::Button(ICON_FA_LINK_SLASH, ImVec2(buttonWidth, height)))
-        if (disconnect) disconnect();
+    float buttonWidth = (avail.x - spacing * 2) / 3.0f;
+    float buttonHeight = ImGui::GetFrameHeight();
+    ImGui::PushFont(fg.Style().fonts.IconM);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - buttonHeight);
+    if (ImGui::Button(ICON_FA_LINK_SLASH, ImVec2(buttonWidth, 0)))
+        fg.exec(disconnect);
     ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_CIRCLE_INFO, ImVec2(buttonWidth, height)))
-        if (about) about();
+    ImGui::Button(ICON_FA_CIRCLE_INFO, ImVec2(buttonWidth, 0));
     ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_ARROW_UP_RIGHT_FROM_SQUARE, ImVec2(buttonWidth, height)))
-        if (launch) launch();
+    if (ImGui::Button(ICON_FA_ARROW_UP_RIGHT_FROM_SQUARE, ImVec2(buttonWidth, 0)))
+    {
+        std::string name = "SAD";
+        auto laun = fg.Launch<ForgeDriveMC>(name);
+        fg.SetStatus(fg.Style().colors.Info, "Launch " + laun.getWindowName());
+    }
     ImGui::PopFont();
 }
 
-
-void DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, Gui &gui, bool launchBar = false)
+void ConnectionPage::DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, bool launchBar = false)
 {
-    ImGui::BeginChild(ImGui::GetID(info._libusb_device), dim, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
-    // Header
-    ImGui::PushFont(Gui::fonts.H3);
-    if(info.product.size() > 0)
-        ImGui::TextWrapped(info.product.c_str());
-    else 
-        ImGui::TextWrapped("Unidentified:%d:%d", info.vid, info.pid);
-    ImGui::PopFont();
-    ImGui::Separator();
-    auto device = Usbxch::findConnection(info);
-    if(device)
+    bool selected = false;
+    if (CardBegin(ImGui::GetID(info._libusb_device), fg.Style(), selected, dim, 1))
     {
-        ImGui::PushFont(Gui::fonts.S);
-        ImGui::TextColored(Gui::colors.True,"Connected");
-        ImGui::PopFont();
-    }
-    ImGui::Text(info.manufacturer.c_str());
-    ImGui::Text(info.serial_number.c_str());
-    ImGui::PushFont(Gui::fonts.S);
-    ImGui::Text("%d:%d", info.vid, info.pid);
-    ImGui::PopFont();
-    if(!device)
-    {
-        float button_width = 100.0f;
-        float button_height = ImGui::GetFrameHeight();
-        ImVec2 avail = ImGui::GetContentRegionAvail();
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - button_height);
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail.x - button_width) * 0.5f);
-        if(ImGui::Button("Connect", ImVec2(button_width, button_height)))
+        // Header
+        ImGui::TextWrapped("%s", info.product.c_str());
+        ImGui::Separator();
+        auto device = Usbxch::findConnection(info);
+        if (device)
         {
-            std::string error;
-            Usbxch::connect(info, error);
-            bool ne = error.empty();
-            gui.status.color = ne ? gui.colors.Success : gui.colors.Error;
-            gui.status.text = "USB CONNECTION : " + (ne? "SUCCESS" : error);
+            ImGui::PushFont(fg.Style().fonts.S);
+            ImGui::TextColored(fg.Style().colors.True, "Connected");
+            ImGui::PopFont();
         }
-    }else
-    {
-        if(launchBar)
+        ImGui::Text(info.manufacturer.c_str());
+        ImGui::Text(info.serial_number.c_str());
+        ImGui::PushFont(fg.Style().fonts.S);
+        ImGui::Text("%d:%d", info.vid, info.pid);
+        ImGui::PopFont();
+        if (!device)
         {
-            auto avail = ImGui::GetContentRegionAvail();
-            float buttonHeight = 40;
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - buttonHeight);
-            DrawLaunchBar(avail.x, buttonHeight, 
-            [&]() {
-                Usbxch::disconnect(device);
-            },
-            [&]() {
-                // Show connection information //TODO:
-            },
-            [&]() {
-                // Launch application
-            });
-        }        
+            float button_width = 100.0f;
+            float button_height = ImGui::GetFrameHeight();
+            SetNextItemAlignment(button_width, button_height, AlignX::Center, AlignY::Bottom);
+            if (ImGui::Button("Connect", ImVec2(button_width, button_height)))
+            {
+                fg.exec([this, info]()
+                {
+                    std::string error;
+                    Usbxch::connect(info, error);
+                    bool ne = error.empty();
+                    auto color = ne ? fg.Style().colors.Success : fg.Style().colors.Error;
+                    auto text = "USB CONNECTION : " + (ne? "SUCCESS" : error);
+                    fg.SetStatus(color, text);
+                });
+            }
+        }
+        else
+        {
+            if (launchBar)
+            {
+                DrawLaunchBar([device]()
+                              { Usbxch::disconnect(device); });
+            }
+        }
     }
+    CardEnd();
 }
 
-
-void DrawTCPCard(TCPClient *client, ImVec2 dim, Gui &gui, bool launchBar = false)
+void ConnectionPage::DrawTCPCard(TCPClient *client, ImVec2 dim, bool launchBar = false)
 {
     std::string host;
     uint16_t port;
     client->getAddress(host, port);
     auto address = (host + ":" + std::to_string(port)).c_str();
-    ImGui::BeginChild(address, dim, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
-    ImGui::PushFont(Gui::fonts.N);
-    ImGui::TextWrapped(address);
-    ImGui::PopFont();
-    ImGui::Separator();
-    ImGui::PushFont(Gui::fonts.S);
-    ImGui::TextColored(Gui::colors.True,"Connected");
-    ImGui::PopFont();
-
-    if(launchBar)
+    bool selected = false;
+    if (CardBegin(ImGui::GetID(address), fg.Style(), selected, dim, 1))
     {
-        auto avail = ImGui::GetContentRegionAvail();
-        float buttonHeight = 40;
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - buttonHeight);
-        DrawLaunchBar(avail.x, buttonHeight, 
-        [&]() {
-            TCPClient::disconnect(client);
-        },
-        [&]() {
-            // Show connection information //TODO:
-        },
-        [&]() {
-            // Launch application
-        });
+        ImGui::PushFont(fg.Style().fonts.N);
+        ImGui::TextWrapped(address);
+        ImGui::PopFont();
+        ImGui::Separator();
+        ImGui::PushFont(fg.Style().fonts.S);
+        ImGui::TextColored(fg.Style().colors.True, "Connected");
+        ImGui::PopFont();
+        if (launchBar)
+        {
+            DrawLaunchBar([client]()
+                          { TCPClient::disconnect(client); });
+        }
     }
-
+    CardEnd();
 }
 
-void EndCard()
+void ConnectionPage::ConnectionsList()
 {
-    ImGui::EndChild();
-};
-
-void ConnectionsList(Gui &gui)
-{
-    ImGui::Indent(20.0f);
-    auto pos = ImGui::GetCursorPos();
-    ImGui::SetCursorPos(ImVec2(pos.x, pos.y+10));
-    ImGui::PushFont(Gui::fonts.H2);
-    ImGui::Text("Connections");
-    ImGui::Separator();
-    ImGui::PopFont();
-    ImGui::Unindent(20.0f);
-    //Traverse over active Communication port connections
-    // USB traverse
-    auto avail = ImGui::GetContentRegionAvail();
-    float spacing = ImGui::GetStyle().ItemSpacing.x;
-    float width = (avail.x - spacing * 3) / 4.0f;
-    int c = 0;
+    // Traverse over active Communication port connections
+    //  USB traverse
     auto usb_devices = Usbxch::getConnectedDevices();
-    for (auto& device : usb_devices)
-    {
-        if (c % 4 != 0)
-            ImGui::SameLine();
-        DrawUsbCard(device->getDeviceInfo(), ImVec2(width, 160), gui, true);
-        EndCard();
-        c++;
-    }
     auto tcp_connections = TCPClient::getConnections();
-    for (auto* client : tcp_connections)
+    if (GridBegin("Connections", card_grid))
     {
-        if (c % 4 != 0)
-            ImGui::SameLine();
-        DrawTCPCard(client, ImVec2(width, 160), gui, true);
-        EndCard();
-        c++;
+        for (auto& device : usb_devices)
+        {
+            if(GridItem())
+                DrawUsbCard(device->getDeviceInfo(), ImVec2(0, card_height), true);
+        }
+        for (auto* client : tcp_connections)
+        {
+            if(GridItem())
+                DrawTCPCard(client, ImVec2(0, card_height), true);
+        }
+        GridEnd();
     }
 }
 // --------------------------------------------------
 // USB connection configuration
 // --------------------------------------------------
-void ConnectionSetup_Usb(Gui &gui)
+void ConnectionPage::ConnectionSetup_Usb()
 {
-    ImGui::Indent(20.0f);
-    ImGui::PushFont(Gui::fonts.H3);
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("USB Devices");
-    ImGui::PopFont();
-    ImGui::SameLine();
     auto devices = Usbxch::getDiscoveredDevices();
     if (ImGui::Button("Scan"))
     {
         devices = Usbxch::scan();
     }
     ImGui::Separator();
-    ImGui::Unindent(20.0f);
-    auto avail = ImGui::GetContentRegionAvail();
-    float spacing = ImGui::GetStyle().ItemSpacing.x;
-    float width = (avail.x - spacing * 3) / 4.0f;
-    for(int i = 0; i < devices.size(); i++)
+    if(GridBegin("UsbConnections", card_grid))
     {
-        DrawUsbCard(devices[i], ImVec2(width, 180), gui);
-        EndCard();
-        if ((i + 1) % 4 != 0 && i + 1 < devices.size())
-            ImGui::SameLine();
+        for (auto &device : devices)
+        {
+            if(GridItem())
+                DrawUsbCard(device, ImVec2(0, card_height));
+        }
+        GridEnd();
     }
 }
 
 // --------------------------------------------------
 // TCP connection configuration
 // --------------------------------------------------
-void ConnectionSetup_TCP(Gui &gui)
+void ConnectionPage::ConnectionSetup_TCP()
 {
-    ImGui::Indent(20.0f);
-    ImGui::Text("TCP Connection");
-    ImGui::Separator();
-    ImGui::SetNextItemWidth(150);
-    ImGui::InputText("IP Address", gui.connectionPageState.tcp_address, sizeof(gui.connectionPageState.tcp_address));
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(150);
-    ImGui::InputInt("Port", &gui.connectionPageState.tcp_port);
-    ImGui::SameLine();
-    gui.connectionPageState.tcp_port = std::clamp(gui.connectionPageState.tcp_port, 1, 65535);
-    if (ImGui::Button("Connect", ImVec2(120, 0)))
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputText("IP Address", tcp_address, sizeof(tcp_address));
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputInt("Port", &tcp_port);
+    tcp_port = std::clamp(tcp_port, 1, 65535);
+    if (ImGui::Button("Connect"))
     {
         std::string error;
-        TCPClient::connect(gui.connectionPageState.tcp_address, static_cast<uint16_t>(gui.connectionPageState.tcp_port), error);
+        TCPClient::connect(tcp_address, static_cast<uint16_t>(tcp_port), error);
         bool ne = error.empty();
-        gui.status.color = ne ? gui.colors.Success : gui.colors.Error;
-        gui.status.text = "TCP CONNECTION : " + (ne? "SUCCESS" : error);
+        auto color = ne ? fg.Style().colors.Success : fg.Style().colors.Error;
+        auto text = "TCP CONNECTION : " + (ne ? "SUCCESS" : error);
+        fg.SetStatus(color, text);
     }
-    ImGui::Unindent(20.0f);
 }
 
 // --------------------------------------------------
 // Connections page
 // --------------------------------------------------
-void Gui::DrawConnectionsPage()
+void ConnectionPage::render()
 {
     // ---------- Connection setup ----------
-    ImVec2 avail;
-    avail = ImGui::GetContentRegionAvail();
-    
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, colors.A1);
-    ImGui::BeginChild("ConnectionSetup", ImVec2(0, avail.y*0.5));
-    ImGui::PopStyleColor();
+    auto avail = ImGui::GetContentRegionAvail();
+    ImGui::PushFont(fg.Style().fonts.H2);
+    ImGui::Text("Connection Setup");
+    ImGui::PopFont();
+    auto size = ImVec2(0, avail.y * 0.4);
     if (ImGui::BeginTabBar("TransportTabs"))
     {
         if (ImGui::BeginTabItem("USB"))
         {
-            connectionPageState.type = ConnectionsPageState::ConnectionType::USB;
-            ConnectionSetup_Usb(*this);
+            type = Type::USB;
+            ImGui::BeginChild("ConnectionSetup", size);
+            ConnectionSetup_Usb();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("TCP"))
         {
-            connectionPageState.type = ConnectionsPageState::ConnectionType::TCP;
-            ConnectionSetup_TCP(*this);
+            type = Type::TCP;
+            ImGui::BeginChild("ConnectionSetup", size);
+            ConnectionSetup_TCP();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
-        
         ImGui::EndTabBar();
     }
-    ImGui::EndChild();
     // ---------- Active connections ----------
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, colors.A1);
+    ImGui::PushFont(fg.Style().fonts.H2);
+    ImGui::Text("Established Connections");
+    ImGui::Separator();
+    ImGui::PopFont();
     ImGui::BeginChild("ConnectionsList", ImVec2(0, 0));
-    ImGui::PopStyleColor();
-    
-    ConnectionsList(*this);
+    ConnectionsList();
     ImGui::EndChild();
 }

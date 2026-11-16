@@ -118,7 +118,7 @@ void gui_init(){
 #endif
 
     window = glfwCreateWindow(
-        display_w, display_h, "ForgeTool", nullptr, nullptr
+        display_w, display_h, "ForgeDriveMC", nullptr, nullptr
     );
 
     if (!window) {
