@@ -551,7 +551,7 @@ struct TCborEncode
         else
             static_assert(!sizeof(U), "Unsupported CBOR type");
     }
-    size_t size()
+    size_t size() const
     {
         return cbor_encoder_get_buffer_size(&it[0], _tx_buf_ptr);
     }

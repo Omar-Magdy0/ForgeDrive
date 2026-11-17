@@ -2,7 +2,6 @@
 
 #include "PmsmControl/PmsmControlCore.h"
 #include "platform.h"
-#include "fd_usbxch.h"
 #include <cstdint>
 #include <array>
 #include <string.h>
@@ -12,6 +11,7 @@
 #include "fd_usbxch.h"
 #include <etl/span.h>
 #include "fd_drv.h"
+#include "RpcSchema.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,3 +45,27 @@ public:
     inline static uint8_t tx_buf[TX_BUF_SIZE];
     inline static uint8_t abf_header_buf[abf::HEADER_SIZE];
 };
+
+namespace ForgeDriveMC
+{
+    class RpcDispatch final : public Rpc::Dispatch<RpcDispatch>
+    {
+    protected:
+        RPC_IMPL(setSetpoint, etl::get<0>(result) = Sys::pmsm1.setSetpoint(etl::get<0>(args), etl::get<1>(args)))
+        RPC_IMPL(setModel, etl::get<0>(result) = Sys::pmsm1.setModel(etl::get<0>(args)))
+        RPC_IMPL(getModel, etl::get<0>(result) = Sys::pmsm1.getModel())
+    public:
+        bool dispatchImpl(uint16_t id)
+        {
+            switch (id)
+            {
+                RPC_DISPATCH_METHOD(setSetpoint)
+                RPC_DISPATCH_METHOD(setModel)
+                RPC_DISPATCH_METHOD(getModel)
+            
+            default:
+                return false;
+            }
+        }
+    };
+}

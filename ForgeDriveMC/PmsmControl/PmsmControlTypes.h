@@ -3,96 +3,86 @@
 #include <cstdint>
 #include <cstddef>
 #include "fd_mc3p.h"
+#include "fd/preprocessor.h"
 #include "math/qmath.h"
 
-enum struct Direction : uint8_t
-{
-    Forward = 0, /** Forward rotation. */
-    Backward = 1 /** Reverse rotation. */
-};
 
-enum struct MechMode : uint8_t
-{
-    SKIP,
-    Torque,
-    Speed,
-    Position
-};
+#define DIRECTION_LIST(X) \
+    X(Forward,  0)        \
+    X(Backward, 1)
 
-enum struct PidType : uint8_t
-{
-    Id = 0,
-    Iq,
-    Speed,
-    Position
-};
+#define MECH_MODE_LIST(X) \
+    X(SKIP,     0)        \
+    X(Torque,   1)        \
+    X(Speed,    2)        \
+    X(Position, 3)
 
-enum struct MCMode : uint8_t
-{
-    SKIP,
-    None = 0,
-    Idle,
-    Fault,
-    Foc,  /** Open-loop V/Hz (V/F) commutation. */
-    SComm /** Self-commissioning / parameter identification. */
-};
+#define PID_TYPE_LIST(X) \
+    X(Id,       0)       \
+    X(Iq,       1)       \
+    X(Speed,    2)       \
+    X(Position, 3)
 
-enum struct ElecMode : uint8_t
-{
-    Voltage = 0,
-    Current
-};
+#define MC_MODE_LIST(X) \
+    X(SKIP,    0)       \
+    X(Idle,    1)       \
+    X(Foc,     2)       \
+    X(SComm,   3)
 
-enum struct RunMode : uint8_t
-{
-    Override,
-    ClosedLoop
-};
+#define ELEC_MODE_LIST(X) \
+    X(Voltage, 0)         \
+    X(Current, 1)
 
-enum struct EStopMode : uint8_t
-{
-    COAST,
-    RAMP,
-    EMERGENCY_PLUG
-};
+#define RUN_MODE_LIST(X) \
+    X(Override,   0)     \
+    X(ClosedLoop, 1)
 
-enum struct PMSM_FAULT : uint32_t
-{
-    OK = 0,
-    UVLO = 1 << 0,
-    OVLO = 1 << 1,
-    OLOAD = 1 << 2,
-    CSFAULT = 1 << 3,
-    OT = 1 << 4,
-    OC = 1 << 5
-};
+#define ESTOP_MODE_LIST(X) \
+    X(COAST,          0)   \
+    X(RAMP,           1)   \
+    X(EMERGENCY_PLUG, 2)
 
-enum struct PMSM_ERR : uint8_t
-{
-    OK = 0,
-    UNKNOWN_ERROR = 1,
-    NOT_INITIALIZED = 2,
-    NOT_IMPLEMENTED = 3,
+#define PMSM_FAULT_LIST(X) \
+    X(OK,     0)           \
+    X(UVLO,   1 << 0)      \
+    X(OVLO,   1 << 1)      \
+    X(OLOAD,  1 << 2)      \
+    X(CSFAULT,1 << 3)      \
+    X(OT,     1 << 4)      \
+    X(OC,     1 << 5)
 
-    CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64,
-    CONFIG_BAD = 65
-};
+#define PMSM_ERR_LIST(X) \
+    X(OK,                                  0)  \
+    X(UNKNOWN_ERROR,                       1)  \
+    X(NOT_INITIALIZED,                     2)  \
+    X(NOT_IMPLEMENTED,                     3)  \
+    X(CONFIG_NOT_ALLOWED_MOTOR_RUNNING,   64)  \
+    X(CONFIG_BAD,                         65)
 
-enum struct IDStage : uint8_t
-{
-    IDLE,
-    RS_ID,           /** Stator resistance identification. */
-    LD_ID,           /** D-axis inductance identification. */
-    REST0,
-    LQ_ID            /** Q-axis inductance identification. */
-};
+#define ID_STAGE_LIST(X) \
+    X(IDLE,           0) \
+    X(RS_ID,          1) \
+    X(LD_ID,          2) \
+    X(REST0,          3) \
+    X(LQ_ID,          4)
 
-enum struct IDSubStage : uint8_t
-{
-    ESettle_Start,
-    ESettle_Wait,
-    Active_Sampling
-};
+#define ID_SUB_STAGE_LIST(X) \
+    X(ESettle_Start,    0)   \
+    X(ESettle_Wait,     1)   \
+    X(Active_Sampling,  2)
+
+FD_ENUM_STRUCT(Direction,    uint8_t,  DIRECTION_LIST)
+FD_ENUM_STRUCT(MechMode,     uint8_t,  MECH_MODE_LIST)
+FD_ENUM_STRUCT(PidType,      uint8_t,  PID_TYPE_LIST)
+FD_ENUM_STRUCT(MCMode,       uint8_t,  MC_MODE_LIST)
+FD_ENUM_STRUCT(ElecMode,     uint8_t,  ELEC_MODE_LIST)
+FD_ENUM_STRUCT(RunMode,      uint8_t,  RUN_MODE_LIST)
+FD_ENUM_STRUCT(EStopMode,    uint8_t,  ESTOP_MODE_LIST)
+FD_ENUM_STRUCT(PMSM_FAULT,   uint32_t, PMSM_FAULT_LIST)
+FD_ENUM_STRUCT(PMSM_ERR,     uint8_t,  PMSM_ERR_LIST)
+FD_ENUM_STRUCT(IDStage,      uint8_t,  ID_STAGE_LIST)
+FD_ENUM_STRUCT(IDSubStage,   uint8_t,  ID_SUB_STAGE_LIST)
+
 
 struct ProfilePoint2D
 {

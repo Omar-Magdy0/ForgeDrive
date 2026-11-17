@@ -1,12 +1,10 @@
 #include "sys.h"
 #include "fd_timer.h"
-#include "RpcDispatch.hpp"
-#include "RpcCall.hpp"
 #ifdef FD_PLATFORM_HOST
 #include <thread>
 #endif
 
-using namespace ForgeDriveMC_RPC;
+using namespace ForgeDriveMC;
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
 {
     (void)task;

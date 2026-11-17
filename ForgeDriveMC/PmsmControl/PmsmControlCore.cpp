@@ -32,8 +32,6 @@ void PmsmControlCore::modelUpdate()
 }
 void PmsmControlCore::xmcLoop()
 {
-    if (control.mc_mode == MCMode::None)
-        return;
     switch (control.mc_mode)
     {
     case MCMode::Foc:
@@ -59,8 +57,6 @@ void PmsmControlCore::pwmConfigUpdate(ConfigPwm cfg)
 }
 void PmsmControlCore::pwmLoop()
 {
-    if (control.mc_mode == MCMode::None)
-        return;
     uint32_t start = fd_dwt_tick();
     fd_mc3p_read_sync(MC3P1, &mc3p_sync_meas);
     switch (control.mc_mode)
