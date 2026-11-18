@@ -10,7 +10,6 @@ set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
 set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
 set(FREERTOS_DIR "${THIRDPARTY_DIR}/FreeRTOS/FreeRTOS-Kernel")
-set(TINYCBOR_DIR "${THIRDPARTY_DIR}/tinycbor")
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "
@@ -74,7 +73,6 @@ target_include_directories(fd_freertos PUBLIC
     ${FREERTOS_DIR}/include
 )
 add_compile_definitions($<$<CONFIG:Debug>:FD_DEBUG>)
-add_compile_definitions(CBOR_TINYCBOR=1)
 add_subdirectory("${FDDRV_DIR}")
 include("platform/${DEVICE_PLATFORM}/platform.cmake")
 # Setup cmake module path and compiler settings
@@ -119,7 +117,6 @@ set(WITH_CBOR2JSON OFF CACHE BOOL "" FORCE)
 set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(WITH_FLOATING_POINT ON CACHE BOOL "" FORCE)
-add_subdirectory(${TINYCBOR_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinycbor)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
 add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp)
 
@@ -157,7 +154,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${PLATFORM_LIBRARIES}
     CMSISDSP
     etl::etl
-    tinycbor
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

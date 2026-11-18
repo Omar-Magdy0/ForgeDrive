@@ -250,39 +250,40 @@ Usbxch *Usbxch::connect(const UsbDeviceInfo &device, std::string &error)
         error = "NO_INTERFACES";
         return nullptr; 
     }
-    libusb_device_handle *handle = nullptr;
-    int interface_number = 0;
+    Usbxch *ret = new Usbxch;
+    ret->device_info = device;
     int ec = LIBUSB_SUCCESS;
     do
     {
         // 1. Open device
-        ec = libusb_open(device._libusb_device, &handle);
+        ec = libusb_open(device._libusb_device, &ret->handle_);
         if (ec != LIBUSB_SUCCESS)
             break;
         // 2. Enable automatic kernel driver detachment (where supported)
-        ec = libusb_set_auto_detach_kernel_driver(handle, 1);
+        ec = libusb_set_auto_detach_kernel_driver(ret->handle_, 1);
         if (ec != LIBUSB_SUCCESS)
             break;
         // 3. Claim interface
-        interface_number = device.interfaces.at(0).number;
-        ec = libusb_claim_interface(handle, interface_number);
+        ret->interface_number_ = device.interfaces.at(0).number;
+        ec = libusb_claim_interface(ret->handle_, ret->interface_number_);
         if (ec != LIBUSB_SUCCESS)
         {
-            libusb_close(handle);
+            libusb_close(ret->handle_);
             break;
         }
+        ret->rx_transfer = libusb_alloc_transfer(0);
+        ret->tx_transfer = libusb_alloc_transfer(0);
+        if (!ret->rx_transfer || !ret->tx_transfer)
+            break;
     } while (0);
     if (ec != LIBUSB_SUCCESS)
     {
         error = libusb_error_name(ec);
+        delete ret;
         return nullptr;
     }
 
     // If we reached here , creation was a success
-    Usbxch *ret = new Usbxch;
-    ret->device_info = device;
-    ret->handle_ = handle;
-    ret->interface_number_ = interface_number;
     ret->rx_stream.clear();
     ret->tx_stream.clear();
     ret->disconnect_req.store(false);

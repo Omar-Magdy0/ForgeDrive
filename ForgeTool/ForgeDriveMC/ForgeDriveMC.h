@@ -1,9 +1,10 @@
 #include "ForgeTool.h"
+#include "RpcPage.h"
 
-
-class ForgeDriveMC : public Launchable
+class LaunchForgeDriveMC : public Launchable
 {
+    RpcPage rpcPage;
     public:
-    ForgeDriveMC(ForgeTool& fg, std::string name): Launchable(fg, "ForgeDriveMC", name){}
+    LaunchForgeDriveMC(ForgeTool& fg, std::string name): Launchable(fg, "ForgeDriveMC", name), rpcPage(fg){}
     void renderImpl() override;
 };

@@ -48,9 +48,7 @@ void Sys::onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
     case ABF_Channel::RPC:
     {
         //dispatch incoming rpc command and respond
-        RpcDispatch rpc;
-        rpc.dispatch(etl::span<const uint8_t>(payload, payload_len), etl::span<uint8_t>(tx_buf, TX_BUF_SIZE));
-        auto size = rpc.size();
+        auto size = 0;
         abfStream.encode(abf_header_buf, tx_buf, (uint8_t)ABF_Channel::RPC, size);
         fd_usbxch_write(USB1, abf_header_buf, abf::HEADER_SIZE);
         fd_usbxch_write(USB1, tx_buf, size);

@@ -8,6 +8,9 @@ set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
 set(IMPLOT_DIR ${THIRDPARTY_DIR}/implot)
 set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
+set(FORGEDRIVEMC_DIR ${CMAKE_SOURCE_DIR}/../ForgeDriveMC)
+set(TINYCBOR_DIR "${THIRDPARTY_DIR}/tinycbor")
+
 set(IMGUI_SRC  
     ${IMGUI_DIR}/imgui_draw.cpp
     ${IMGUI_DIR}/imgui_tables.cpp
@@ -44,7 +47,7 @@ find_package(PkgConfig REQUIRED)
 find_path(ASIO_INCLUDE_DIR asio.hpp REQUIRED)
 pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
-
+add_subdirectory(${TINYCBOR_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinycbor)
 
 file(GLOB_RECURSE MIDDLEWARE_SRC    
     ${FDLIB_DIR}/middleware/*.cpp
@@ -80,6 +83,7 @@ target_link_libraries(${PROJECT_NAME}
     OpenGL::GL 
     glfw
     etl::etl
+    tinycbor
 )
 
 # Include directories for libusb
@@ -88,8 +92,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${LIBUSB_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${FDLIB_DIR}/middleware
+    ${FDLIB_DIR}/fd
     ${FDLIB_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/ForgeDriveMC
+    ${FORGEDRIVEMC_DIR}
     ${THIRDPARTY_DIR}/fonts/FontAwesome7
     ${IMGUI_INCLUDES}
 )

@@ -280,8 +280,7 @@ void ForgeTool::DrawMainPanel()
     float height = ImGui::GetContentRegionAvail().y;
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImRGB(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0);
-    ImGui::BeginChild("MainPanel", ImVec2(0, height - BOTTOM_MENU_H), ImGuiChildFlags_None, ImGuiWindowFlags_NoResize);
-    ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
+    ImGui::BeginChild("MainPanel", ImVec2(0, height - BOTTOM_MENU_H), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground);
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
 

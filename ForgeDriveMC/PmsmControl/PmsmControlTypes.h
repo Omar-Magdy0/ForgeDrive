@@ -2,7 +2,6 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
-#include "fd_mc3p.h"
 #include "fd/preprocessor.h"
 #include "math/qmath.h"
 
@@ -143,7 +142,7 @@ struct ConfigPwm
 
 struct ConfigAnalog
 {
-    float sync_scale[MC3P_SYNC_CHANNELS_MAX][2];
+    float sync_scale[7][2]; //MC3P_SYNC_CHANNELS_MAX
     bool offset_calibration;
 };
 
