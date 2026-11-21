@@ -8,8 +8,14 @@ set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
 set(IMPLOT_DIR ${THIRDPARTY_DIR}/implot)
 set(IMGUIFD_DIR ${THIRDPARTY_DIR}/ImGuiFileDialog)
-set(FORGEDRIVEMC_DIR ${CMAKE_SOURCE_DIR}/../ForgeDriveMC)
-set(TINYCBOR_DIR "${THIRDPARTY_DIR}/tinycbor")
+set(FDMC_DIR ${CMAKE_SOURCE_DIR}/../ForgeDriveMC/fdmc)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+# Set build type to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+endif()
 
 set(IMGUI_SRC  
     ${IMGUI_DIR}/imgui_draw.cpp
@@ -32,22 +38,35 @@ set(IMGUI_INCLUDES
     ${IMPLOT_DIR}
 )
 
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+find_package(Protobuf REQUIRED)
 
-# Set build type to Release if not specified
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+execute_process(
+    COMMAND
+        protoc
+        -I ${FDMC_DIR}
+        --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto
+        fdmc.proto
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE GEN_RESULT
+    OUTPUT_VARIABLE GEN_OUTPUT
+    ERROR_VARIABLE GEN_ERROR
+)
+
+if(NOT GEN_RESULT EQUAL 0)
+    message(FATAL_ERROR
+        "Protobuf generation failed:\n${GEN_ERROR}"
+    )
 endif()
+
+message(STATUS "Protobuf generation successful")
+
+
 
 # Find libusb-1.0
 find_package(PkgConfig REQUIRED)
 find_path(ASIO_INCLUDE_DIR asio.hpp REQUIRED)
 pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
-add_subdirectory(${TINYCBOR_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinycbor)
 
 file(GLOB_RECURSE MIDDLEWARE_SRC    
     ${FDLIB_DIR}/middleware/*.cpp
@@ -66,7 +85,7 @@ add_executable(${PROJECT_NAME}
     Usbxch.cpp
     ConnectionPage.cpp
     LaunchablesPage.cpp
-    ${CMAKE_SOURCE_DIR}/ForgeDriveMC/ForgeDriveMC.cpp
+    ${CMAKE_SOURCE_DIR}/fdmc/fdmc.cpp
     ${IMGUI_SRC}
     ${MIDDLEWARE_SRC}
     ${CORE_SRC}
@@ -83,7 +102,6 @@ target_link_libraries(${PROJECT_NAME}
     OpenGL::GL 
     glfw
     etl::etl
-    tinycbor
 )
 
 # Include directories for libusb
@@ -94,8 +112,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${FDLIB_DIR}/middleware
     ${FDLIB_DIR}/fd
     ${FDLIB_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/ForgeDriveMC
-    ${FORGEDRIVEMC_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/fdmc
+    ${FDMC_DIR}
     ${THIRDPARTY_DIR}/fonts/FontAwesome7
     ${IMGUI_INCLUDES}
 )

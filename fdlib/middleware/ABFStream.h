@@ -90,8 +90,7 @@ namespace abf
          * @param payloadLen Payload length
          * @return Err status
          */
-        Err encode(uint8_t *header, uint8_t *payload,
-                   uint8_t serviceId, uint8_t payloadLen);
+        static Err encode(uint8_t *header, uint8_t *payload, uint8_t serviceId, uint8_t payloadLen);
 
         /**
          * @brief Reset parser state machine

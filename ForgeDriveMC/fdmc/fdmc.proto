@@ -1,0 +1,218 @@
+syntax = "proto3";
+package fdmc.v1;
+
+import "fdrpc.proto";
+
+enum Direction {
+  Direction_UNSPECIFIED = 0;
+  Direction_FORWARD = 1;
+  Direction_BACKWARD = 2;
+}
+
+enum MechMode {
+  MechMode_UNSPECIFIED = 0;
+  MechMode_TORQUE = 1;
+  MechMode_SPEED = 2;
+  MechMode_POSITION = 3;
+}
+
+enum PidType {
+  PidType_UNSPECIFIED = 0;
+  PidType_ID = 1;
+  PidType_IQ = 2;
+  PidType_SPEED = 3;
+  PidType_POSITION = 4;
+}
+
+enum McMode {
+  McMode_UNSPECIFIED = 0;
+  McMode_IDLE = 1;
+  McMode_FAULT = 2;
+  McMode_FOC = 3;
+  McMode_SCOMM = 4;
+}
+
+enum ElecMode {
+  ElecMode_UNSPECIFIED = 0;
+  ElecMode_VOLTAGE = 1;
+  ElecMode_CURRENT = 2;
+}
+
+enum StopMode {
+  StopMode_UNSPECIFIED = 0;
+  StopMode_COAST = 1;
+  StopMode_RAMP = 2;
+  StopMode_EMERGENCY_PLUG = 3;
+}
+
+enum PmsmFault {
+  PmsmFault_UNSPECIFIED = 0;
+  PmsmFault_OK = 1;
+  PmsmFault_UVLO = 2;
+  PmsmFault_OVLO = 3;
+  PmsmFault_OLOAD = 4;
+  PmsmFault_CSFAULT = 8;
+  PmsmFault_OT = 16;
+  PmsmFault_OC = 32;
+}
+
+enum PmsmErr {
+  PmsmErr_UNSPECIFIED = 0;
+  PmsmErr_OK = 1;
+  PmsmErr_UNKNOWN_ERROR = 2;
+  PmsmErr_NOT_INITIALIZED = 3;
+  PmsmErr_NOT_IMPLEMENTED = 4;
+  PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64;
+  PmsmErr_CONFIG_BAD = 65;
+}
+
+enum IdStage {
+  IdStage_UNSPECIFIED = 0;
+  IdStage_IDLE = 1;
+  IdStage_RS_ID = 2;
+  IdStage_LD_ID = 3;
+  IdStage_REST0 = 4;
+  IdStage_LQ_ID = 5;
+}
+
+enum IdSubStage {
+  IdSubStage_UNSPECIFIED = 0;
+  IdSubStage_ESETTLE_START = 1;
+  IdSubStage_ESETTLE_WAIT = 2;
+  IdSubStage_ACTIVE_SAMPLING = 3;
+}
+
+// Profile
+message ProfilePoint2D {
+  float t = 1;
+  float v1 = 2;
+  float v2 = 3;
+}
+
+// PWM configuration
+message ConfigPwm {
+  uint32 pwm_hz = 1;
+  uint32 deadtime_ns = 2;
+  float duty_min = 3;
+  float duty_max = 4;
+}
+
+// Analog configuration
+message ConfigAnalog {
+  repeated float sync_scale = 1 [packed = true];
+  bool offset_calibration = 2;
+}
+
+// Serial communication configuration
+message ConfigSComm {
+  uint32 oversample_bits = 1;
+  uint32 esettle_min_ticks = 2;
+  uint32 hfi_n = 3;
+  float dc_vinj = 4;
+  float hfi_vinj = 5;
+}
+
+// PMSM model
+message PmsmModel {
+  float R = 1;
+  float Ld = 2;
+  float Lq = 3;
+  float psi = 4;
+  float J = 5;
+  float B = 6;
+  uint32 pole_pairs = 7;
+}
+
+// General configuration
+message ConfigGen {
+  uint32 max_freq = 1;
+  uint32 min_freq = 2;
+  uint32 max_deadtime_ns = 3;
+  uint32 min_deadtime_ns = 4;
+  float max_cmag = 5;
+  float min_vbus = 6;
+  float max_vbus = 7;
+  uint32 xtick_freq = 8;
+  uint32 pos_rate_div = 9;
+}
+
+// PID controller
+message Pid {
+  float Kp = 1;
+  float Ki = 2;
+  float Kd = 3;
+}
+
+message SetSetpointArg {
+  float sp = 1;
+  MechMode mech_mode = 2; // Defaults to MechMode_UNSPECIFIED (0) in proto3
+}
+
+message SetControlModeArg {
+  McMode mc_mode = 1;
+  MechMode mech_mode = 2;
+}
+
+message SetPidArg {
+  Pid pid = 1;
+  PidType n = 2;
+}
+
+message GetPidArg {
+  PidType n = 1;
+}
+
+message GetControlModeRet {
+  McMode mc_mode = 1;
+  MechMode mech_mode = 2;
+}
+
+message GetFaultRet {
+  uint32 fault = 1;
+}
+
+message PmsmErrRet {
+  PmsmErr err = 1;
+}
+
+message Empty {}
+
+service Fdmc {
+  rpc SetSetpoint(SetSetpointArg) returns (PmsmErrRet) {
+    option (fdrpc.id) = 1;
+  }
+  rpc SetModel(PmsmModel) returns (PmsmErrRet) {
+    option (fdrpc.id) = 2;
+  }
+  rpc SetControlMode(SetControlModeArg) returns (PmsmErrRet) {
+    option (fdrpc.id) = 3;
+  }
+  rpc SetConfigPwm(ConfigPwm) returns (PmsmErrRet) {
+    option (fdrpc.id) = 4;
+  }
+  rpc SetConfigAnalog(ConfigAnalog) returns (PmsmErrRet) {
+    option (fdrpc.id) = 5;
+  }
+  rpc SetPid(SetPidArg) returns (PmsmErrRet) {
+    option (fdrpc.id) = 6;
+  }
+  rpc SetConfigSComm(ConfigSComm) returns (PmsmErrRet) {
+    option (fdrpc.id) = 7;
+  }
+  rpc ClearFault(Empty) returns (PmsmErrRet) {
+    option (fdrpc.id) = 12;
+  }
+
+  rpc GetControlMode(Empty) returns (GetControlModeRet) {
+    option (fdrpc.id) = 8;
+  }
+  rpc GetModel(Empty) returns (PmsmModel) {
+    option (fdrpc.id) = 9;
+  }
+  rpc GetPid(GetPidArg) returns (Pid) {
+    option (fdrpc.id) = 10;
+  }
+  rpc GetFault(Empty) returns (GetFaultRet) {
+    option (fdrpc.id) = 11;
+  }
+}

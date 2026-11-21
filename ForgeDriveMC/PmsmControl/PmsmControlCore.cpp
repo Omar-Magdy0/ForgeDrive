@@ -1,7 +1,7 @@
 #include "PmsmControlCore.h"
 
 
-PMSM_ERR PmsmControlCore::init()
+PmsmErr PmsmControlCore::init()
 {
     pTicks = 0;
     xTicks = 0;
@@ -17,14 +17,14 @@ PMSM_ERR PmsmControlCore::init()
     POS1.init();
     fd_mc3p_init(MC3P1);
     fd_mc3p_write_float(MC3P1);
-    return PMSM_ERR::OK;
+    return PmsmErr_OK;
 };
 void PmsmControlCore::configGenUpdate()
 {
     control.max_cmag_q31 = FD_MC3P_FLOAT_TO_CS(CLAMP(ABS(conf.max_cmag), 0, FD_MC3P_CS_SCALE));
     control.min_vbus_q31 = FD_MC3P_FLOAT_TO_VS(CLAMP(ABS(conf.min_vbus), 0, FD_MC3P_VS_SCALE));
     control.max_vbus_q31 = FD_MC3P_FLOAT_TO_VS(CLAMP(ABS(conf.max_vbus), 0, FD_MC3P_VS_SCALE));
-    xTicks_period_ns = 1'000'000'000 / conf.xTick_freq;
+    xTicks_period_ns = 1'000'000'000 / conf.xtick_freq;
 }
 void PmsmControlCore::modelUpdate()
 {
@@ -34,10 +34,10 @@ void PmsmControlCore::xmcLoop()
 {
     switch (control.mc_mode)
     {
-    case MCMode::Foc:
+    case McMode_FOC:
         Foc_xmcLoop();
         break;
-    case MCMode::SComm:
+    case McMode_SCOMM:
         SComm_xmcLoop();
         break;
     default:
@@ -47,7 +47,7 @@ void PmsmControlCore::xmcLoop()
 }
 void PmsmControlCore::pwmConfigUpdate(ConfigPwm cfg)
 {
-    pwm_freq_hz = cfg.pwm_Hz;
+    pwm_freq_hz = cfg.pwm_hz;
     pTick_period_ns = static_cast<uint32_t>(1'000'000'000 / static_cast<float>(pwm_freq_hz));
     MC3P1.config.pwm_Hz = pwm_freq_hz;
     MC3P1.config.deadtime_nS = cfg.deadtime_ns;
@@ -61,10 +61,10 @@ void PmsmControlCore::pwmLoop()
     fd_mc3p_read_sync(MC3P1, &mc3p_sync_meas);
     switch (control.mc_mode)
     {
-    case MCMode::Foc:
+    case McMode_FOC:
         Foc_pwmLoop();
         break;
-    case MCMode::SComm:
+    case McMode_SCOMM:
         SComm_pwmLoop();
         break;
     default:
@@ -73,17 +73,17 @@ void PmsmControlCore::pwmLoop()
     pTicks = pTicks + 1;
     volatile uint32_t elapsed = fd_dwt_tick() - start;
 }
-void PmsmControlCore::setControlMode(MCMode mc_mode)
+void PmsmControlCore::setControlMode(McMode mc_mode)
 {
     if (control.mc_mode != mc_mode)
     {
         // Exit current mode
         switch (control.mc_mode)
         {
-        case MCMode::Foc:
+        case McMode_FOC:
             Foc_onExit();
             break;
-        case MCMode::SComm:
+        case McMode_SCOMM:
             SComm_onExit();
             break;
         default:
@@ -92,10 +92,10 @@ void PmsmControlCore::setControlMode(MCMode mc_mode)
         // Enter new mode
         switch (mc_mode)
         {
-        case MCMode::Foc:
+        case McMode_FOC:
             Foc_onEnter(control.mc_mode);
             break;
-        case MCMode::SComm:
+        case McMode_SCOMM:
             SComm_onEnter(control.mc_mode);
             break;
         default:

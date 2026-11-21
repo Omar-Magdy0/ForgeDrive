@@ -1,5 +1,5 @@
 #include "ForgeTool.h"
-#include "ForgeDriveMC.h"
+#include "fdmc.h"
 
 // --------------------------------------------------
 // Connections list
@@ -23,7 +23,7 @@ void ConnectionPage::DrawLaunchBar(std::function<void()> disconnect)
     if (ImGui::Button(ICON_FA_ARROW_UP_RIGHT_FROM_SQUARE, ImVec2(buttonWidth, 0)))
     {
         std::string name = "SAD";
-        auto laun = fg.Launch<LaunchForgeDriveMC>(name);
+        auto laun = fg.Launch<LaunchFdmc>(name);
         fg.SetStatus(fg.Style().colors.Info, "Launch " + laun.getWindowName());
     }
     ImGui::PopFont();

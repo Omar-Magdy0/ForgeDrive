@@ -1,15 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
 
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
-
-# Select target platform
-set(DEVICE "STM32F401xC" CACHE STRING "Target MCU or platform")
-
+set(DEVICE "STM32F401xC" CACHE STRING "Target MCU or platform") # Select target platform
+set(FDMC_DIR ${CMAKE_SOURCE_DIR}/fdmc)
 set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(PMSMCONTROL_DIR ${CMAKE_SOURCE_DIR}/PmsmControl)
 set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
 set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
 set(FREERTOS_DIR "${THIRDPARTY_DIR}/FreeRTOS/FreeRTOS-Kernel")
+set(Python3_DIR "${CMAKE_SOURCE_DIR}/../venv")
+set(Python3_EXECUTABLE "${Python3_DIR}/bin/python3")
+set(GEN_SCRIPT "${FDLIB_DIR}/driver/gen/generate.py")
+set(CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_conf.py")
+set(FDDRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_gen")
+set(NANOPB_DIR ${THIRDPARTY_DIR}/nanopb)
 # Prevent in-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "
@@ -20,11 +24,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 endif()
 
 ###### FD_DRIVER GENERATION START #######
-
-set(Python3_EXECUTABLE "${CMAKE_SOURCE_DIR}/../venv/bin/python3")
-set(GEN_SCRIPT "${FDLIB_DIR}/driver/gen/generate.py")
-set(CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_conf.py")
-set(FDDRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_gen")
 
 # Optional: Glob templates or dependencies inside fdlib or local directory for auto-reconfiguration
 file(GLOB_RECURSE TEMPLATE_FILES 
@@ -47,12 +46,7 @@ execute_process(
     OUTPUT_VARIABLE GEN_OUTPUT
     ERROR_VARIABLE GEN_ERROR
 )
-
-message(STATUS
-    "Result ${GEN_RESULT}\n"
-    "stdout:\n${GEN_OUTPUT}\n"
-    "stderr:\n${GEN_ERROR}\n"
-)
+message(STATUS "Result ${GEN_RESULT}\n" "stdout:\n${GEN_OUTPUT}\n" "stderr:\n${GEN_ERROR}\n")
 
 ########### FD_DRIVER GENERATION END ################
 
@@ -60,90 +54,116 @@ message(STATUS
 # SET TOOLCHAIN BEFORE PROJECT
 
 set(CMAKE_TOOLCHAIN_FILE "${FDDRV_DIR}/toolchain.cmake")
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 include(${FDDRV_DIR}/device.cmake)
 message(STATUS "Target device: ${DEVICE_NAME}")
 message(STATUS "Target platform: ${DEVICE_PLATFORM}")
 project(ForgeDriveMC LANGUAGES C CXX ASM)
+message("Build type: " ${CMAKE_BUILD_TYPE})
 add_library(fd_freertos STATIC
     ${FREERTOS_DIR}/tasks.c
     ${FREERTOS_DIR}/queue.c
     ${FREERTOS_DIR}/list.c
 )
+target_compile_definitions(fd_freertos PRIVATE _GNU_SOURCE)
 target_include_directories(fd_freertos PUBLIC
     ${FREERTOS_DIR}/include
 )
 add_compile_definitions($<$<CONFIG:Debug>:FD_DEBUG>)
 add_subdirectory("${FDDRV_DIR}")
 include("platform/${DEVICE_PLATFORM}/platform.cmake")
-# Setup cmake module path and compiler settings
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-message("Build type: " ${CMAKE_BUILD_TYPE})
 
-# Set C++ standard
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# Control where files go WITHIN the build directory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+########### PROTO_BUF BEGIN #########################
+set(FDRPC_DIR ${FDLIB_DIR}/middleware/fdrpc)
+configure_file(${FDRPC_DIR}/protoc-gen-fdrpc.py ${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-fdrpc @ONLY)
+file(CHMOD ${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-fdrpc PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+find_program(PROTOC_EXECUTABLE protoc REQUIRED)
+execute_process(
+    COMMAND
+        ${PROTOC_EXECUTABLE}
+        -I ${FDRPC_DIR}
+        --python_out=${CMAKE_CURRENT_BINARY_DIR}
+        fdrpc.proto
+    WORKING_DIRECTORY ${FDRPC_DIR}
+    RESULT_VARIABLE FDRPC_PY_RESULT
+)
+if(NOT FDRPC_PY_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate fdrpc_pb2.py")
+endif()
+execute_process(
+    COMMAND
+        ${PROTOC_EXECUTABLE}
+        --plugin=protoc-gen-nanopb=${Python3_DIR}/bin/protoc-gen-nanopb
+        --plugin=protoc-gen-fdrpc=${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-fdrpc
+        -I ${FDMC_DIR} -I ${FDRPC_DIR}
+        --nanopb_out=-f${FDMC_DIR}/fdmc.options:${FDMC_DIR}
+        --nanopb_opt=-s
+        --nanopb_opt=mangle_names:M_STRIP_PACKAGE
+        --fdrpc_out=${FDMC_DIR}
+        fdmc.proto
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    RESULT_VARIABLE GEN_RESULT
+    OUTPUT_VARIABLE GEN_OUTPUT
+    ERROR_VARIABLE GEN_ERROR
+)
+message(STATUS "Result ${GEN_RESULT}\n" "stdout:\n${GEN_OUTPUT}\n" "stderr:\n${GEN_ERROR}\n")
+########### PROTO_BUF END #########################
 
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/PosDriver
     ${FDLIB_DIR}
+    ${FDLIB_DIR}/math
     ${FDLIB_DIR}/middleware
     ${FDDRV_DIR}
+    ${FDMC_DIR}
     ${PMSMCONTROL_DIR}
-    ${PMSMCONTROL_DIR}/PosDriver
     ${CMSIS_DSP_DIR}/Include
     ${CMSIS_CORE_DIR}/Include  
     ${PLATFORM_DIR} 
-    ${CMAKE_SOURCE_DIR}/RPC
+    ${NANOPB_DIR}
     ${THIRDPARTY_DIR}/fonts/FontAwesome7
 )
-target_compile_definitions(fd_drv PUBLIC
-    
-)
-target_include_directories(fd_drv PRIVATE
-    ${PLATFORM_DIR}
-)
-
-set(WITH_CBOR2JSON OFF CACHE BOOL "" FORCE)
-set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
-set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(WITH_FLOATING_POINT ON CACHE BOOL "" FORCE)
+target_compile_definitions(fd_drv PUBLIC SILSERVER_IP_ADDRESS="127.0.0.1")
+target_include_directories(fd_drv PRIVATE ${PLATFORM_DIR})
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
 add_subdirectory(${CMSIS_DSP_DIR}/Source ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp)
 
-file(GLOB_RECURSE MIDDLEWARE_SRC    
-    ${FDLIB_DIR}/middleware/*.cpp
-    ${FDLIB_DIR}/middleware/*.c
-)
-
 if(DEVICE_PLATFORM STREQUAL "HOST")
-list(APPEND POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverSIL.cpp")
+list(APPEND POSDRIVER "${CMAKE_CURRENT_SOURCE_DIR}/PosDriver/PosDriverSIL.cpp")
 else()
-set(POSDRIVER "${PMSMCONTROL_DIR}/PosDriver/PosDriverVIRT.cpp")
+set(POSDRIVER "${CMAKE_CURRENT_SOURCE_DIR}/PosDriver/PosDriverVIRT.cpp")
 endif()
-
 
 set(APPLICATION_SRC
     ${PMSMCONTROL_DIR}/PmsmControlCore.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_Foc.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_SComm.cpp
+    ${PMSMCONTROL_DIR}/sys.cpp
+    ${PMSMCONTROL_DIR}/FdmcRpcDef.cpp
     ${POSDRIVER}
     ${PLATFORM_SRC}
     ${CMAKE_SOURCE_DIR}/main.cpp
-    ${CMAKE_SOURCE_DIR}/sys.cpp
 )
 file(GLOB_RECURSE CORE_SRC
     ${FDLIB_DIR}/fd/*.cpp
     ${FDLIB_DIR}/fd/*.c
+)
+set(MIDDLEWARE_SRC    
+    ${FDLIB_DIR}/middleware/ABFStream.cpp
+    ${FDMC_DIR}/fdmc.pb.c
+    ${NANOPB_DIR}/pb_common.c
+    ${NANOPB_DIR}/pb_decode.c
+    ${NANOPB_DIR}/pb_encode.c
 )
 target_link_libraries(fd_freertos PUBLIC fd_drv)
 add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
@@ -155,9 +175,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     CMSISDSP
     etl::etl
 )
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     ${PLATFORM_DEFINITIONS}
+    PB_NO_ERRMSG
+    PB_BUFFER_ONLY
     FONTS_DIR="${THIRDPARTY_DIR}/fonts"
     SILSERVER_IP_ADDRESS="127.0.0.1"
 )

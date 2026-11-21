@@ -4,7 +4,6 @@
 #include <thread>
 #endif
 
-using namespace ForgeDriveMC;
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
 {
     (void)task;
@@ -16,15 +15,9 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char *name)
     }
 }
 
-void fd_mc3p_MC3P1_sync_postScanCallback(void)
-{
-    Sys::pmsm1.pwmLoop();
-}
+void fd_mc3p_MC3P1_sync_postScanCallback(void){Sys::pmsm1.pwmLoop();}
 void fd_mc3p_MC3P1_bg_postScanCallback(void) {}
-void fd_timer_TIMERxMC_periodCallback(void)
-{
-    Sys::pmsm1.xmcLoop();
-}
+void fd_timer_TIMERxMC_periodCallback(void){Sys::pmsm1.xmcLoop();}
 
 enum class LCOM_Client : uint8_t
 {
@@ -41,42 +34,43 @@ enum class ABF_Channel : uint8_t
     DAQCodec = 127,
 };
 
-void Sys::onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
+//dispatch incoming rpc command and respond
+inline void RpcHandle(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
+{
+    size_t to_write = 0;
+    Rpc::RpcServer server(Fdmc::registry);
+    uint8_t arg_stack[Fdmc::MAX_REQUEST_STRUCT_SIZE];
+    uint8_t ret_stack[Fdmc::MAX_RESPONSE_STRUCT_SIZE];
+    uint8_t tx_buf[Fdmc::MAX_RESPONSE_ENCODED_SIZE + 20];
+    uint8_t abf_header[abf::HEADER_SIZE];
+    Rpc::DispatchStack stack = {0, 0, arg_stack, ret_stack};
+    server.dispatch(etl::span(payload, payload_len), tx_buf, stack, to_write);
+    abf::Stream::encode(abf_header, tx_buf, (uint8_t)ABF_Channel::RPC, to_write);
+    fd_usbxch_write(USB1, abf_header, abf::HEADER_SIZE);
+    fd_usbxch_write(USB1, tx_buf, to_write);
+    fd_usbxch_flush(USB1);
+}
+void onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
 {
     switch ((ABF_Channel)id)
     {
     case ABF_Channel::RPC:
-    {
-        //dispatch incoming rpc command and respond
-        auto size = 0;
-        abfStream.encode(abf_header_buf, tx_buf, (uint8_t)ABF_Channel::RPC, size);
-        fd_usbxch_write(USB1, abf_header_buf, abf::HEADER_SIZE);
-        fd_usbxch_write(USB1, tx_buf, size);
-        fd_usbxch_flush(USB1);
-        break;
-    }
+        return RpcHandle(ctx, id, payload, payload_len);
     case ABF_Channel::DAQStream:
-    {
-
-        break;
-    }
+        return;
     default:
-        break;
+        return;
     }
-
 }
-void Sys::onError(void *ctx, uint8_t id)
-{
-}
-void Sys::onPmsmFault(void *ctx, PMSM_FAULT f)
-{
-}
-
-void lcom(void *arg)
+void onError(void *ctx, uint8_t id){}
+void onPmsmFault(void *, PmsmFault err){}
+void lcom(void *_ctx)
 {
     TickType_t last_wake = xTaskGetTickCount();
     constexpr unsigned int LCOM_PERIOD = 1; // 1ms
     constexpr TickType_t period = pdMS_TO_TICKS(LCOM_PERIOD);
+    uint8_t rx_buf[255];
+    abf::Stream abfStream = abf::Stream(rx_buf, sizeof(rx_buf), nullptr, onFrame, onError);
     for (;;)
     {
         //Reading here 
@@ -86,13 +80,12 @@ void lcom(void *arg)
             void *r1, *r2;
             uint16_t c1, c2;
             fd_usbxch_read_reserve(USB1, &r1, &c1, &r2, &c2);
-            if(c1)Sys::abfStream.process(static_cast<const uint8_t*>(r1), c1);
-            if(c2)Sys::abfStream.process(static_cast<const uint8_t*>(r2), c2);
+            if(c1)abfStream.process(static_cast<const uint8_t*>(r1), c1);
+            if(c2)abfStream.process(static_cast<const uint8_t*>(r2), c2);
             fd_usbxch_read_commit(USB1, c1+c2);
         }
         //Check for writers requests
         //TODO: add daq stream / codec processing and writing
-
         vTaskDelayUntil(&last_wake, period); 
     }
 }
@@ -105,7 +98,7 @@ ConfigGen Sys::configGen =
              .max_cmag = 20,
              .min_vbus = 30,
              .max_vbus = 40,
-             .xTick_freq = 4000,
+             .xtick_freq = 4000,
              .pos_rate_div = 10};
 
 void Sys::init()
@@ -113,7 +106,7 @@ void Sys::init()
     fd_drv_init(&DRV); // Driver initialization
     platform_init();
     fd_usbxch_init(USB1);
-    fd_timer_init(TIMERxMC, configGen.xTick_freq);
+    fd_timer_init(TIMERxMC, configGen.xtick_freq);
     fd_timer_enable(TIMERxMC, true);
     lcom_handle = xTaskCreateStatic(lcom,
                                     "lcom",
@@ -125,27 +118,27 @@ void Sys::init()
     bool config_ok = true;
     // enable motor control
     {
-        PMSM_ERR err[8];
+        PmsmErr err[8];
         uint8_t i = 0;
         ConfigPwm pwm = {
-            .pwm_Hz = 20000,
+            .pwm_hz = 20000,
             .deadtime_ns = 300,
             .duty_min = 0,
             .duty_max = 0.95};
         ConfigAnalog analog = {
             .sync_scale = {
-                {1, 1},
-                {1, 1},
-                {1, 1},
-                {1, 1},
-                {1, 1},
-                {1, 1},
-                {1, 1}},
+                1, 1,
+                1, 1,
+                1, 1,
+                1, 1,
+                1, 1,
+                1, 1,
+                1, 1},
             .offset_calibration = true};
         ConfigSComm scomm = {
             .oversample_bits = 10,
             .esettle_min_ticks = 100,
-            .hfi_N = 20,
+            .hfi_n = 20,
             .dc_vinj = 2.5,
             .hfi_vinj = 2};
         PmsmModel model = {
@@ -161,18 +154,18 @@ void Sys::init()
         pid_Iq = {.Kp = 0.1, .Ki = 0.01, .Kd = 0};
         pid_pos = {.Kp = 0.1, .Ki = 1e-5, .Kd = 1e-5};
         pid_speed = {.Kp = 0.1, .Ki = 0.5, .Kd = 0};
-        pmsm1.setControlMode(MCMode::Idle, MechMode::Torque);
+        pmsm1.setControlMode(McMode_IDLE, MechMode_TORQUE);
         /*0*/ err[i++] = pmsm1.setConfigPwm(pwm);
         /*1*/ err[i++] = pmsm1.setConfigAnalog(analog);
         /*2*/ err[i++] = pmsm1.setConfigSComm(scomm);
-        /*3*/ err[i++] = pmsm1.setPid(pid_Id, PidType::Id);
-        /*4*/ err[i++] = pmsm1.setPid(pid_Iq, PidType::Iq);
-        /*5*/ err[i++] = pmsm1.setPid(pid_pos, PidType::Position);
-        /*6*/ err[i++] = pmsm1.setPid(pid_speed, PidType::Speed);
-        /*7*/ err[i++] = pmsm1.setControlMode(MCMode::Foc, MechMode::Torque);
+        /*3*/ err[i++] = pmsm1.setPid(pid_Id, PidType_ID);
+        /*4*/ err[i++] = pmsm1.setPid(pid_Iq, PidType_IQ);
+        /*5*/ err[i++] = pmsm1.setPid(pid_pos, PidType_POSITION);
+        /*6*/ err[i++] = pmsm1.setPid(pid_speed, PidType_SPEED);
+        /*7*/ err[i++] = pmsm1.setControlMode(McMode_FOC, MechMode_TORQUE);
         /*8*/ err[i++] = pmsm1.setModel(model);
         for (int i = 0; i < 8; i++)
-            if (err[i] != PMSM_ERR::OK)
+            if (err[i] != PmsmErr_OK)
                 config_ok = false;
     }
     while (!config_ok)
@@ -191,3 +184,6 @@ void Sys::init()
     scheduler_thread.join();
 #endif
 }
+
+
+

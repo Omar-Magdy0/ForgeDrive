@@ -14,8 +14,8 @@ struct SComm
     q31_t hfi_Angv_RPT_q31;
     q31_t hfi_angle_q31;              /** High-frequency injection angle */
     volatile uint32_t eSettle_start_tick = 0;
-    volatile IDStage idstage;
-    volatile IDSubStage idsub;
+    volatile IdStage idstage;
+    volatile IdSubStage idsub;
     volatile uint16_t samples_counter; /** Remaining samples for current step. */
     
     
@@ -24,7 +24,7 @@ struct SComm
 } scomm;
 
 void SComm_init();    /** Initialize self-commissioning. */
-void SComm_onEnter(MCMode prev_mct);    /** Initialize self-commissioning. */
+void SComm_onEnter(McMode prev_mct);    /** Initialize self-commissioning. */
 void SComm_onExit();
 void SComm_pwmLoop(); /** Self-commissioning PWM loop. */
 void SComm_xmcLoop(); /** Self-commissioning slow loop. */

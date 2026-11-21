@@ -3,13 +3,12 @@
 void PmsmControlCore::SComm_init()
 {
 }
-void PmsmControlCore::SComm_onEnter(MCMode prev_mct)
+void PmsmControlCore::SComm_onEnter(McMode prev_mct)
 {
-    scomm.idstage = IDStage::RS_ID;
-    control.run_mode = RunMode::Override;
-    control.elec_mode = ElecMode::Voltage;
+    scomm.idstage = IdStage_RS_ID;
+    control.elec_mode = ElecMode_VOLTAGE;
 
-    scomm.hfi_Angv_RPT_q31 = static_cast<q31_t>((scomm.HFI_ANGLE_SCALE / scomm.conf.hfi_N) * INT32_MAX);
+    scomm.hfi_Angv_RPT_q31 = static_cast<q31_t>((scomm.HFI_ANGLE_SCALE / scomm.conf.hfi_n) * INT32_MAX);
     scomm.dc_vinj_q31 = FD_MC3P_FLOAT_TO_VS(scomm.conf.dc_vinj);
     scomm.hfi_vinj_q31 = FD_MC3P_FLOAT_TO_VS(scomm.conf.hfi_vinj);
 }
@@ -22,21 +21,21 @@ void PmsmControlCore::SComm_pwmLoop()
     // Hfi added logic here......
     switch (scomm.idstage)
     {
-    case IDStage::RS_ID:
+    case IdStage_RS_ID:
     {
-        if (scomm.samples_counter && scomm.idsub == IDSubStage::Active_Sampling)
+        if (scomm.samples_counter && scomm.idsub == IdSubStage_ACTIVE_SAMPLING)
         {
             scomm.accumulate0 += foc.state.Id_q31;
             scomm.samples_counter = scomm.samples_counter - 1;
         }
         break;
     }
-    case IDStage::LD_ID:
+    case IdStage_LD_ID:
     {
         arm_sin_cos_q31(scomm.hfi_angle_q31, &sin, &cos);
         foc.state.ECd_sp_q31 = ((int64_t)scomm.hfi_vinj_q31 * sin) >> 31;
         foc.state.ECq_sp_q31 = 0;
-        if (scomm.samples_counter && scomm.idsub == IDSubStage::Active_Sampling)
+        if (scomm.samples_counter && scomm.idsub == IdSubStage_ACTIVE_SAMPLING)
         {
             // Heterodyne the read current.....
             q31_t hfid = ((int64_t)foc.state.Id_q31 * sin) >> 31;
@@ -48,12 +47,12 @@ void PmsmControlCore::SComm_pwmLoop()
         scomm.hfi_angle_q31 += scomm.hfi_Angv_RPT_q31;
         break;
     }
-    case IDStage::LQ_ID:
+    case IdStage_LQ_ID:
     {
         arm_sin_cos_q31(scomm.hfi_angle_q31, &sin, &cos);
         foc.state.ECd_sp_q31 = 0;
         foc.state.ECq_sp_q31 = ((int64_t)scomm.hfi_vinj_q31 * sin) >> 31;
-        if (scomm.samples_counter && scomm.idsub == IDSubStage::Active_Sampling)
+        if (scomm.samples_counter && scomm.idsub == IdSubStage_ACTIVE_SAMPLING)
         {
             // Heterodyne the read current.....
             q31_t hfid = ((int64_t)foc.state.Iq_q31 * sin) >> 31;
@@ -76,7 +75,7 @@ void PmsmControlCore::SComm_xmcLoop()
     // First Identify DC resistance
     switch (scomm.idstage)
     {
-    case IDStage::RS_ID:
+    case IdStage_RS_ID:
     {
         // Apply constant dc voltage on d-axis
         // Force angle and speed to 0
@@ -86,24 +85,24 @@ void PmsmControlCore::SComm_xmcLoop()
         // wait for electrical settling
         switch (scomm.idsub)
         {
-        case IDSubStage::ESettle_Start:
+        case IdSubStage_ESETTLE_START:
             scomm.eSettle_start_tick = pTicks;
-            scomm.idsub = IDSubStage::ESettle_Wait;
+            scomm.idsub = IdSubStage_ESETTLE_WAIT;
             scomm.accumulate0 = 0;
             scomm.samples_counter = 1 << scomm.conf.oversample_bits;
             break;
-        case IDSubStage::ESettle_Wait:
+        case IdSubStage_ESETTLE_WAIT:
             if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks)
             {
-                scomm.idsub = IDSubStage::Active_Sampling;
+                scomm.idsub = IdSubStage_ACTIVE_SAMPLING;
             }
             break;
-        case IDSubStage::Active_Sampling:
+        case IdSubStage_ACTIVE_SAMPLING:
             if (scomm.samples_counter == 0)
             {
                 scomm.model.R = FD_MC3P_VS_TO_FLOAT(scomm.dc_vinj_q31) / FD_MC3P_CS_TO_FLOAT((scomm.accumulate0 >> scomm.conf.oversample_bits));
-                scomm.idstage = IDStage::LD_ID;
-                scomm.idsub = IDSubStage::ESettle_Start;
+                scomm.idstage = IdStage_LD_ID;
+                scomm.idsub = IdSubStage_ESETTLE_START;
             }
             break;
         default:
@@ -111,26 +110,26 @@ void PmsmControlCore::SComm_xmcLoop()
         }
         break;
     }
-    case IDStage::LD_ID:
+    case IdStage_LD_ID:
     {
         state.eTheta_q31 = 0;
         // wait for electrical settling
         switch (scomm.idsub)
         {
-        case IDSubStage::ESettle_Start:
+        case IdSubStage_ESETTLE_START:
             scomm.eSettle_start_tick = pTicks;
-            scomm.idsub = IDSubStage::ESettle_Wait;
+            scomm.idsub = IdSubStage_ESETTLE_WAIT;
             scomm.accumulate0 = 0;
             scomm.accumulate1 = 0;
             scomm.samples_counter = 1 << scomm.conf.oversample_bits;
             break;
-        case IDSubStage::ESettle_Wait:
+        case IdSubStage_ESETTLE_WAIT:
             if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks)
             {
-                scomm.idsub = IDSubStage::Active_Sampling;
+                scomm.idsub = IdSubStage_ACTIVE_SAMPLING;
             }
             break;
-        case IDSubStage::Active_Sampling:
+        case IdSubStage_ACTIVE_SAMPLING:
             if (scomm.samples_counter == 0)
             {
                 q31_t Idd = scomm.accumulate0 >> scomm.conf.oversample_bits;
@@ -141,21 +140,21 @@ void PmsmControlCore::SComm_xmcLoop()
                 float Zd = voltage_q31_to_float(scomm.hfi_vinj_q31) / (current_q31_to_float(2 * Imag));
                 float Xd = sqrt(Zd * Zd - scomm.model.R * scomm.model.R);
                 scomm.model.Ld = (Xd) / (angle_q31_to_float(scomm.hfi_Angv_RPT_q31) * pwm_freq_hz);
-                scomm.idsub = IDSubStage::ESettle_Start;
-                scomm.idstage = IDStage::REST0;
+                scomm.idsub = IdSubStage_ESETTLE_START;
+                scomm.idstage = IdStage_REST0;
             }
             break;
         default:
             break;
         }
     }
-    case IDStage::REST0:
+    case IdStage_REST0:
     {
         switch (scomm.idsub)
         {
-        case IDSubStage::ESettle_Start:
+        case IdSubStage_ESETTLE_START:
             scomm.eSettle_start_tick = pTicks;
-            scomm.idsub = IDSubStage::ESettle_Wait;
+            scomm.idsub = IdSubStage_ESETTLE_WAIT;
             scomm.accumulate0 = 0;
             scomm.accumulate1 = 0;
             scomm.samples_counter = 1 << scomm.conf.oversample_bits;
@@ -163,38 +162,38 @@ void PmsmControlCore::SComm_xmcLoop()
             foc.state.ECd_sp_q31 = 0;
             foc.state.ECq_sp_q31 = 0;
             break;
-        case IDSubStage::ESettle_Wait:
+        case IdSubStage_ESETTLE_WAIT:
             if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks)
             {
-                scomm.idsub = IDSubStage::ESettle_Start;
-                scomm.idstage = IDStage::LQ_ID;
+                scomm.idsub = IdSubStage_ESETTLE_START;
+                scomm.idstage = IdStage_LQ_ID;
             }
             break;
         default:
             break;
         }
     }
-    case IDStage::LQ_ID:
+    case IdStage_LQ_ID:
     {
         state.eTheta_q31 = 0;
         // wait for electrical settling
         switch (scomm.idsub)
         {
-        case IDSubStage::ESettle_Start:
+        case IdSubStage_ESETTLE_START:
             scomm.eSettle_start_tick = pTicks;
-            scomm.idsub = IDSubStage::ESettle_Wait;
+            scomm.idsub = IdSubStage_ESETTLE_WAIT;
             scomm.accumulate0 = 0;
             scomm.accumulate1 = 0;
             scomm.samples_counter = 1 << scomm.conf.oversample_bits;
             break;
-        case IDSubStage::ESettle_Wait:
+        case IdSubStage_ESETTLE_WAIT:
             if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks)
             {
                 scomm.eSettle_start_tick = pTicks;
-                scomm.idsub = IDSubStage::Active_Sampling;
+                scomm.idsub = IdSubStage_ACTIVE_SAMPLING;
             }
             break;
-        case IDSubStage::Active_Sampling:
+        case IdSubStage_ACTIVE_SAMPLING:
             if (scomm.samples_counter == 0)
             {
                 q31_t Iqd = scomm.accumulate0 >> (scomm.conf.oversample_bits);
@@ -205,8 +204,8 @@ void PmsmControlCore::SComm_xmcLoop()
                 float Zq = voltage_q31_to_float(scomm.hfi_vinj_q31) / (current_q31_to_float(2 * Imag));
                 float Xq = sqrt(Zq * Zq - scomm.model.R * scomm.model.R);
                 scomm.model.Lq = (Xq) / (angle_q31_to_float(scomm.hfi_Angv_RPT_q31) * pwm_freq_hz);
-                scomm.idsub = IDSubStage::ESettle_Start;
-                scomm.idstage = IDStage::RS_ID;
+                scomm.idsub = IdSubStage_ESETTLE_START;
+                scomm.idstage = IdStage_RS_ID;
             }
             break;
         default:

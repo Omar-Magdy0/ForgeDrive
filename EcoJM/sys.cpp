@@ -1,5 +1,6 @@
 #include "sys.h"
 #include "fd_usbxch.h"
+#include "sys.h"
 
 void usb_task(void *ctx)
 {

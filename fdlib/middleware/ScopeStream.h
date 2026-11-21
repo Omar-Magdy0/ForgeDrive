@@ -36,7 +36,6 @@ public:
         write_idx = 0;
         triggered = false;
         frozen = false;
-        //last_sample = 0;
     }
 
     void write(const T *data)
@@ -75,7 +74,6 @@ public:
                 }
             }
         }
-       // last_sample = data[0];
     }
 
     /**
