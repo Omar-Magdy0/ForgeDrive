@@ -54,7 +54,7 @@ message(STATUS "Result ${GEN_RESULT}\n" "stdout:\n${GEN_OUTPUT}\n" "stderr:\n${G
 # SET TOOLCHAIN BEFORE PROJECT
 
 set(CMAKE_TOOLCHAIN_FILE "${FDDRV_DIR}/toolchain.cmake")
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 23)
@@ -159,7 +159,7 @@ file(GLOB_RECURSE CORE_SRC
     ${FDLIB_DIR}/fd/*.c
 )
 set(MIDDLEWARE_SRC    
-    ${FDLIB_DIR}/middleware/ABFStream.cpp
+    ${FDLIB_DIR}/middleware/AbfStream.c
     ${FDMC_DIR}/fdmc.pb.c
     ${NANOPB_DIR}/pb_common.c
     ${NANOPB_DIR}/pb_decode.c

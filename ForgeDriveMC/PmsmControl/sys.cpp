@@ -1,5 +1,7 @@
 #include "sys.h"
 #include "fd_timer.h"
+#include <stddef.h>
+#include <stdalign.h>
 #ifdef FD_PLATFORM_HOST
 #include <thread>
 #endif
@@ -34,35 +36,38 @@ enum class ABF_Channel : uint8_t
     DAQCodec = 127,
 };
 
+
+
+
 //dispatch incoming rpc command and respond
-inline void RpcHandle(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
+inline void RpcHandle(etl::span<uint8_t> data)
 {
     size_t to_write = 0;
-    Rpc::RpcServer server(Fdmc::registry);
-    uint8_t arg_stack[Fdmc::MAX_REQUEST_STRUCT_SIZE];
-    uint8_t ret_stack[Fdmc::MAX_RESPONSE_STRUCT_SIZE];
+    alignas(max_align_t) uint8_t arg_stack[Fdmc::MAX_REQUEST_STRUCT_SIZE];
+    alignas(max_align_t) uint8_t ret_stack[Fdmc::MAX_RESPONSE_STRUCT_SIZE];
     uint8_t tx_buf[Fdmc::MAX_RESPONSE_ENCODED_SIZE + 20];
-    uint8_t abf_header[abf::HEADER_SIZE];
+    uint8_t abf_header[ABF_HEADER_SIZE];
     Rpc::DispatchStack stack = {0, 0, arg_stack, ret_stack};
-    server.dispatch(etl::span(payload, payload_len), tx_buf, stack, to_write);
-    abf::Stream::encode(abf_header, tx_buf, (uint8_t)ABF_Channel::RPC, to_write);
-    fd_usbxch_write(USB1, abf_header, abf::HEADER_SIZE);
-    fd_usbxch_write(USB1, tx_buf, to_write);
-    fd_usbxch_flush(USB1);
+    Sys::rpcServer.dispatch(data, tx_buf, stack, to_write);
+    if(abf_write(abf_header, tx_buf, to_write, (uint8_t)ABF_Channel::RPC) == AbfErr_OK)
+    {
+        fd_usbxch_write(USB1, abf_header, ABF_HEADER_SIZE);
+        fd_usbxch_write(USB1, tx_buf, to_write);
+        fd_usbxch_flush(USB1);
+    }
 }
-void onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len)
+void FrameHandle(uint8_t id, etl::span<uint8_t> data)
 {
     switch ((ABF_Channel)id)
     {
     case ABF_Channel::RPC:
-        return RpcHandle(ctx, id, payload, payload_len);
+        return RpcHandle(data);
     case ABF_Channel::DAQStream:
         return;
     default:
         return;
     }
 }
-void onError(void *ctx, uint8_t id){}
 void onPmsmFault(void *, PmsmFault err){}
 void lcom(void *_ctx)
 {
@@ -70,7 +75,11 @@ void lcom(void *_ctx)
     constexpr unsigned int LCOM_PERIOD = 1; // 1ms
     constexpr TickType_t period = pdMS_TO_TICKS(LCOM_PERIOD);
     uint8_t rx_buf[255];
-    abf::Stream abfStream = abf::Stream(rx_buf, sizeof(rx_buf), nullptr, onFrame, onError);
+    AbfReader_t frame_reader;
+    AbfRead_t frame;
+    frame.b_buf = rx_buf;
+    frame.b_buf_sz = sizeof(rx_buf);
+    abf_init_reader(&frame_reader);
     for (;;)
     {
         //Reading here 
@@ -80,8 +89,26 @@ void lcom(void *_ctx)
             void *r1, *r2;
             uint16_t c1, c2;
             fd_usbxch_read_reserve(USB1, &r1, &c1, &r2, &c2);
-            if(c1)abfStream.process(static_cast<const uint8_t*>(r1), c1);
-            if(c2)abfStream.process(static_cast<const uint8_t*>(r2), c2);
+            auto process = [&](const uint8_t *data, size_t length)
+            {
+                size_t offset = 0;
+                while (offset < length)
+                {       
+                    AbfReadEvent e = abf_read(&frame_reader, data + offset, length - offset, &frame);
+                    offset += frame.pos;
+                    if (e == AbfReadEvent_FRAME)
+                    {
+                        AbfHeader_t h = abf_header_decode(frame.header);
+                        FrameHandle(h.id, etl::span<uint8_t>(frame.b_buf, h.size));
+                    }
+                    else if (e == AbfReadEvent_ERROR)
+                    {
+
+                    }
+                }
+            };
+            if (c1)process(static_cast<const uint8_t *>(r1), c1);
+            if (c2)process(static_cast<const uint8_t *>(r2), c2);
             fd_usbxch_read_commit(USB1, c1+c2);
         }
         //Check for writers requests

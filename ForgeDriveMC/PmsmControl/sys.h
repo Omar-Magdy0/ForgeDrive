@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 //=======================================================
-#include "ABFStream.h"
+#include "AbfStream.h"
 #include "fd_usbxch.h"
 #include <etl/span.h>
 #include "fd_drv.h"
@@ -22,8 +22,6 @@ extern "C" {
 }
 #endif 
 
-void onFrame(void *ctx, uint8_t id, uint8_t *payload, uint8_t payload_len);
-void onError(void *ctx, uint8_t id);
 void onPmsmFault(void *, PmsmFault err);
 
 class Sys
@@ -39,4 +37,5 @@ public:
     inline static PmsmControlCore pmsm1 = PmsmControlCore(onPmsmFault, configGen);
     static void init(void);
     inline static TaskHandle_t lcom_handle = nullptr;
+    inline static Rpc::RpcServer<> rpcServer = Rpc::RpcServer(Fdmc::registry);
 };
