@@ -81,7 +81,21 @@ PmsmErr setConfigAnalog(ConfigAnalog cfg)
     {
         return PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
     } // don't allow pwm reconfiguring during self commissioning
-    fd_mc3p_set_sync_scale(MC3P1, reinterpret_cast<const float (*)[2]>(cfg.sync_scale));
+    float sync_scale[MC3P_SYNC_CHANNELS_MAX][2];
+    #define SET_SCALE(id, cfg) \
+    sync_scale[id][0] = cfg.offset; \
+    sync_scale[id][1] = cfg.gain
+
+    SET_SCALE(FD_MC3P_VSBUS, cfg.vsbus);
+    SET_SCALE(FD_MC3P_VSU,   cfg.vsu);
+    SET_SCALE(FD_MC3P_VSV,   cfg.vsv);
+    SET_SCALE(FD_MC3P_VSW,   cfg.vsw);
+    SET_SCALE(FD_MC3P_CSU,   cfg.csu_csbus);
+    SET_SCALE(FD_MC3P_CSV,   cfg.csv);
+    SET_SCALE(FD_MC3P_CSW,   cfg.csw);
+
+    #undef SET_SCALE
+    fd_mc3p_set_sync_scale(MC3P1, sync_scale);
     MC3P1.offset_calibration = cfg.offset_calibration;
     return PmsmErr_OK;
 }

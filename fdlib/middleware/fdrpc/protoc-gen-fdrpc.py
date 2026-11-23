@@ -40,7 +40,8 @@ def generate_service_registry(service, methods):
     ]
     for method in methods: lines.append(f"Rpc::DispatchStatus {method['name']}(DispatchStack);")
     lines.append("inline constexpr Method registry[] = {")
-    for method in methods: lines.append(f"  {{ Id_{method['name']}, &{method['input']}_msg, &{method['output']}_msg, {method['name']} }},")
+    for method in sorted(methods, key=lambda m: m["id"]):
+        lines.append(f"  {{ Id_{method['name']}, &{method['input']}_msg, &{method['output']}_msg, {method['name']} }},")
     lines.append("};")
     for method in methods:
         lines.append(

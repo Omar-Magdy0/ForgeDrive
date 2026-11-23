@@ -9,7 +9,7 @@ set(CMSIS_DSP_DIR ${THIRDPARTY_DIR}/CMSIS-DSP)
 set(CMSIS_CORE_DIR ${THIRDPARTY_DIR}/CMSIS)
 set(FREERTOS_DIR "${THIRDPARTY_DIR}/FreeRTOS/FreeRTOS-Kernel")
 set(Python3_DIR "${CMAKE_SOURCE_DIR}/../venv")
-set(Python3_EXECUTABLE "${Python3_DIR}/bin/python3")
+set(Python3_EXECUTABLE "${Python3_DIR}/bin/python")
 set(GEN_SCRIPT "${FDLIB_DIR}/driver/gen/generate.py")
 set(CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_conf.py")
 set(FDDRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fd_driver_gen")
@@ -82,31 +82,21 @@ add_subdirectory("${FDDRV_DIR}")
 include("platform/${DEVICE_PLATFORM}/platform.cmake")
 
 ########### PROTO_BUF BEGIN #########################
+
 set(FDRPC_DIR ${FDLIB_DIR}/middleware/fdrpc)
+file(COPY ${FDRPC_DIR}/fdrpc_pb2.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 configure_file(${FDRPC_DIR}/protoc-gen-fdrpc.py ${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-fdrpc @ONLY)
 file(CHMOD ${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-fdrpc PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 find_program(PROTOC_EXECUTABLE protoc REQUIRED)
 execute_process(
     COMMAND
         ${PROTOC_EXECUTABLE}
-        -I ${FDRPC_DIR}
-        --python_out=${CMAKE_CURRENT_BINARY_DIR}
-        fdrpc.proto
-    WORKING_DIRECTORY ${FDRPC_DIR}
-    RESULT_VARIABLE FDRPC_PY_RESULT
-)
-if(NOT FDRPC_PY_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to generate fdrpc_pb2.py")
-endif()
-execute_process(
-    COMMAND
-        ${PROTOC_EXECUTABLE}
         --plugin=protoc-gen-nanopb=${Python3_DIR}/bin/protoc-gen-nanopb
         --plugin=protoc-gen-fdrpc=${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-fdrpc
         -I ${FDMC_DIR} -I ${FDRPC_DIR}
-        --nanopb_out=-f${FDMC_DIR}/fdmc.options:${FDMC_DIR}
-        --nanopb_opt=-s
-        --nanopb_opt=mangle_names:M_STRIP_PACKAGE
+        --nanopb_out=${FDMC_DIR}
+        --nanopb_opt=-s,mangle_names:M_STRIP_PACKAGE
+        --nanopb_opt=-s,long_names:false
         --fdrpc_out=${FDMC_DIR}
         fdmc.proto
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -125,6 +115,7 @@ include_directories(
     ${FDLIB_DIR}/math
     ${FDLIB_DIR}/middleware
     ${FDDRV_DIR}
+    ${FDRPC_DIR}
     ${FDMC_DIR}
     ${PMSMCONTROL_DIR}
     ${CMSIS_DSP_DIR}/Include
@@ -154,10 +145,7 @@ set(APPLICATION_SRC
     ${PLATFORM_SRC}
     ${CMAKE_SOURCE_DIR}/main.cpp
 )
-file(GLOB_RECURSE CORE_SRC
-    ${FDLIB_DIR}/fd/*.cpp
-    ${FDLIB_DIR}/fd/*.c
-)
+
 set(MIDDLEWARE_SRC    
     ${FDLIB_DIR}/middleware/AbfStream.c
     ${FDMC_DIR}/fdmc.pb.c
@@ -165,6 +153,7 @@ set(MIDDLEWARE_SRC
     ${NANOPB_DIR}/pb_decode.c
     ${NANOPB_DIR}/pb_encode.c
 )
+
 target_link_libraries(fd_freertos PUBLIC fd_drv)
 add_executable(${PROJECT_NAME} ${APPLICATION_SRC} ${CORE_SRC} ${MIDDLEWARE_SRC})
 include(${FDDRV_DIR}/post_build.cmake OPTIONAL)

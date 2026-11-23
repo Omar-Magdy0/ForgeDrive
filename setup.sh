@@ -26,7 +26,7 @@ sudo apt install -y libboost-system-dev libboost-thread-dev libboost-date-time-d
 # ============================================================
 
 sudo apt install -y libglfw3-dev libgl1-mesa-dev libhdf5-dev libusb-1.0-0-dev
-sudo apt install libprotobuf-dev protobuf-compiler
+sudo apt install libprotobuf-dev protobuf-compiler libprotoc-dev
 # ============================================================
 # Python environment
 # ============================================================

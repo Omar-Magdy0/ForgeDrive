@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 
 # Project name and version
 project(ForgeTool VERSION 1.0.0 LANGUAGES CXX)
-
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/../thirdparty)
 set(FDLIB_DIR ${CMAKE_SOURCE_DIR}/../fdlib)
 set(IMGUI_DIR ${THIRDPARTY_DIR}/imgui)
@@ -38,63 +37,34 @@ set(IMGUI_INCLUDES
     ${IMPLOT_DIR}
 )
 
-find_package(Protobuf REQUIRED)
-
-execute_process(
-    COMMAND
-        protoc
-        -I ${FDMC_DIR}
-        --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto
-        fdmc.proto
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    RESULT_VARIABLE GEN_RESULT
-    OUTPUT_VARIABLE GEN_OUTPUT
-    ERROR_VARIABLE GEN_ERROR
-)
-
-if(NOT GEN_RESULT EQUAL 0)
-    message(FATAL_ERROR
-        "Protobuf generation failed:\n${GEN_ERROR}"
-    )
-endif()
-
-message(STATUS "Protobuf generation successful")
-
-
-
-# Find libusb-1.0
-find_package(PkgConfig REQUIRED)
 find_path(ASIO_INCLUDE_DIR asio.hpp REQUIRED)
-pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
-add_subdirectory(${THIRDPARTY_DIR}/etl etl)
-
-file(GLOB_RECURSE MIDDLEWARE_SRC    
-    ${FDLIB_DIR}/middleware/*.cpp
-    ${FDLIB_DIR}/middleware/*.c
-)
-
-file(GLOB_RECURSE CORE_SRC    
-    ${FORGELIB}/fd/*.cpp
-    ${FORGELIB}/fd/*.c
-)
-
-# Add executable
-add_executable(${PROJECT_NAME}
-    ForgeTool.cpp
-    # Header files are listed for IDE visibility, not strictly required for build
-    Usbxch.cpp
-    ConnectionPage.cpp
-    LaunchablesPage.cpp
-    ${CMAKE_SOURCE_DIR}/fdmc/fdmc.cpp
-    ${IMGUI_SRC}
-    ${MIDDLEWARE_SRC}
-    ${CORE_SRC}
-)
-
+find_package(Protobuf REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(Threads REQUIRED)
+
+pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
+add_subdirectory(${THIRDPARTY_DIR}/etl etl)
+
+set(MIDDLEWARE_SRC    
+    ${FDLIB_DIR}/middleware/AbfStream.c
+    ${FDLIB_DIR}/middleware/fdrpc/fdrpc.pb.cc
+)
+
+# Add executable
+add_executable(${PROJECT_NAME}
+    ${CMAKE_SOURCE_DIR}/ForgeTool.cpp
+    ${CMAKE_SOURCE_DIR}/Usbxch.cpp
+    ${CMAKE_SOURCE_DIR}/ConnectionPage.cpp
+    ${CMAKE_SOURCE_DIR}/LaunchablesPage.cpp
+    ${CMAKE_SOURCE_DIR}/fdrpcTool.cpp
+    ${CMAKE_SOURCE_DIR}/fdmc/fdmc.cpp
+    ${MIDDLEWARE_SRC}
+    ${IMGUI_SRC}
+    ${CORE_SRC}
+)
+
 # Link libusb and threads
 target_link_libraries(${PROJECT_NAME}
     ${LIBUSB_LIBRARIES}
@@ -102,17 +72,20 @@ target_link_libraries(${PROJECT_NAME}
     OpenGL::GL 
     glfw
     etl::etl
+    protobuf::libprotobuf
+    protobuf::libprotoc
 )
 
 # Include directories for libusb
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${ASIO_INCLUDE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/fdmc
     ${LIBUSB_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${ASIO_INCLUDE_DIR}
     ${FDLIB_DIR}/middleware
+    ${FDLIB_DIR}/middleware/fdrpc
     ${FDLIB_DIR}/fd
     ${FDLIB_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/fdmc
     ${FDMC_DIR}
     ${THIRDPARTY_DIR}/fonts/FontAwesome7
     ${IMGUI_INCLUDES}

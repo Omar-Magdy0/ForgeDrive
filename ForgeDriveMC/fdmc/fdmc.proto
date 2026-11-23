@@ -97,10 +97,21 @@ message ConfigPwm {
   float duty_max = 4;
 }
 
+message ElecSensorConfig {
+  float offset = 2;
+  float gain = 3;
+}
+
 // Analog configuration
 message ConfigAnalog {
-  repeated float sync_scale = 1 [packed = true];
-  bool offset_calibration = 2;
+  ElecSensorConfig vsbus = 1;
+  ElecSensorConfig vsu = 2;
+  ElecSensorConfig vsv = 3;
+  ElecSensorConfig vsw = 4;
+  ElecSensorConfig csu_csbus = 5;
+  ElecSensorConfig csv = 6;
+  ElecSensorConfig csw = 7;
+  bool offset_calibration = 8;
 }
 
 // Serial communication configuration

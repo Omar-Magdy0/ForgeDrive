@@ -26,22 +26,20 @@ private:
 
         writing_ = true;
 
-        asio::async_write(
-            socket_,
-            asio::buffer(tx_queue_.front()),
-            [this](const asio::error_code &ec, std::size_t bytes)
-            {
-                writing_ = false;
+        asio::async_write(socket_, asio::buffer(tx_queue_.front()),
+                          [this](const asio::error_code &ec, std::size_t)
+                          {
+                              writing_ = false;
 
-                if (ec)
-                {
-                    // Handle disconnection / transmission error
-                    tx_queue_.clear();
-                    return;
-                }
-                tx_queue_.pop_front();
-                startWrite();
-            });
+                              if (ec)
+                              {
+                                  // Handle disconnection / transmission error
+                                  tx_queue_.clear();
+                                  return;
+                              }
+                              tx_queue_.pop_front();
+                              startWrite();
+                          });
     }
     TCPClient() : socket_(io_context_)
     {
@@ -61,6 +59,7 @@ private:
         if (onDisconnect)
             onDisconnect();
     }
+
 public:
     static bool init()
     {

@@ -49,11 +49,11 @@ inline constexpr Method registry[] = {
   { Id_SetConfigAnalog, &ConfigAnalog_msg, &PmsmErrRet_msg, SetConfigAnalog },
   { Id_SetPid, &SetPidArg_msg, &PmsmErrRet_msg, SetPid },
   { Id_SetConfigSComm, &ConfigSComm_msg, &PmsmErrRet_msg, SetConfigSComm },
-  { Id_ClearFault, &Empty_msg, &PmsmErrRet_msg, ClearFault },
   { Id_GetControlMode, &Empty_msg, &GetControlModeRet_msg, GetControlMode },
   { Id_GetModel, &Empty_msg, &PmsmModel_msg, GetModel },
   { Id_GetPid, &GetPidArg_msg, &Pid_msg, GetPid },
   { Id_GetFault, &Empty_msg, &GetFaultRet_msg, GetFault },
+  { Id_ClearFault, &Empty_msg, &PmsmErrRet_msg, ClearFault },
 };
 template<> struct MethodTraits<Fdmc::Id::Id_SetSetpoint> {
     using Arg = SetSetpointArg;

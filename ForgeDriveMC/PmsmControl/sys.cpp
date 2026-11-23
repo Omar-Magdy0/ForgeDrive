@@ -153,15 +153,15 @@ void Sys::init()
             .duty_min = 0,
             .duty_max = 0.95};
         ConfigAnalog analog = {
-            .sync_scale = {
-                1, 1,
-                1, 1,
-                1, 1,
-                1, 1,
-                1, 1,
-                1, 1,
-                1, 1},
-            .offset_calibration = true};
+            .vsbus = {.offset = 1, .gain = 1},
+            .vsu = {.offset = 1, .gain = 1},
+            .vsv = {.offset = 1, .gain = 1},
+            .vsw = {.offset = 1, .gain = 1},
+            .csu_csbus = {.offset = 1, .gain = 1},
+            .csv = {.offset = 1, .gain = 1},
+            .csw = {.offset = 1, .gain = 1},
+            .offset_calibration = true
+        };
         ConfigSComm scomm = {
             .oversample_bits = 10,
             .esettle_min_ticks = 100,

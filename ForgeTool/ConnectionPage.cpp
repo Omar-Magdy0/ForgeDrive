@@ -23,7 +23,7 @@ void ConnectionPage::DrawLaunchBar(std::function<void()> disconnect)
     if (ImGui::Button(ICON_FA_ARROW_UP_RIGHT_FROM_SQUARE, ImVec2(buttonWidth, 0)))
     {
         std::string name = "SAD";
-        auto laun = fg.Launch<LaunchFdmc>(name);
+        Launchable& laun = fg.Launch<LaunchFdmc>(name);
         fg.SetStatus(fg.Style().colors.Info, "Launch " + laun.getWindowName());
     }
     ImGui::PopFont();
@@ -44,8 +44,8 @@ void ConnectionPage::DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, bool launchBar 
             ImGui::TextColored(fg.Style().colors.True, "Connected");
             ImGui::PopFont();
         }
-        ImGui::Text(info.manufacturer.c_str());
-        ImGui::Text(info.serial_number.c_str());
+        ImGui::Text("%s", info.manufacturer.c_str());
+        ImGui::Text("%s", info.serial_number.c_str());
         ImGui::PushFont(fg.Style().fonts.S);
         ImGui::Text("%d:%d", info.vid, info.pid);
         ImGui::PopFont();
@@ -89,7 +89,7 @@ void ConnectionPage::DrawTCPCard(TCPClient *client, ImVec2 dim, bool launchBar =
     if (CardBegin(ImGui::GetID(address), fg.Style(), selected, dim, 1))
     {
         ImGui::PushFont(fg.Style().fonts.N);
-        ImGui::TextWrapped(address);
+        ImGui::TextWrapped("%s", address);
         ImGui::PopFont();
         ImGui::Separator();
         ImGui::PushFont(fg.Style().fonts.S);

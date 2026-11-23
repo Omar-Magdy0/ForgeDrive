@@ -11,6 +11,7 @@ PmsmErr PmsmControlCore::init()
     voltage_q31_to_float(state.Vbus_q31);
     current_q31_to_float(state.Ibus_q31);
     angle_q31_to_float(state.eTheta_q31);
+    state.fault = PmsmFault_OK;
     SComm_init();
     Foc_init();
     /* hardware initialization */

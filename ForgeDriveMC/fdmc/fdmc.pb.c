@@ -12,6 +12,9 @@ PB_BIND(ProfilePoint2D, ProfilePoint2D, AUTO)
 PB_BIND(ConfigPwm, ConfigPwm, AUTO)
 
 
+PB_BIND(ElecSensorConfig, ElecSensorConfig, AUTO)
+
+
 PB_BIND(ConfigAnalog, ConfigAnalog, AUTO)
 
 

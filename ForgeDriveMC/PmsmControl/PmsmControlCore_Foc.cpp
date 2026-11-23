@@ -101,11 +101,6 @@ void PmsmControlCore::Foc_pwmLoop()
     state.Vbus_q31 = mc3p_sync_meas.svm.vbus_q31;
     if(state.Vbus_q31 > control.max_vbus_q31)state.fault |= (uint32_t)PmsmFault_OVLO;
     else if(state.Vbus_q31 < control.min_vbus_q31)state.fault |= (uint32_t)PmsmFault_UVLO;
-    if(state.fault != (uint32_t)PmsmFault_OK)
-    {
-        fd_mc3p_write_float(MC3P1);
-        return;
-    }
     POS1.pTick_enter(pTicks);
     POS1.get_eTheta(state.eTheta_q31, model.pole_pairs);
     q31_t sin, cos;
@@ -116,6 +111,12 @@ void PmsmControlCore::Foc_pwmLoop()
     arm_park_q31(Ialpha_q31, Ibeta_q31, &foc.state.Id_q31, &foc.state.Iq_q31, sin, cos);
     int64_t temp0 = (((int64_t)foc.state.Id_q31 * foc.state.Vd_q31 + (int64_t)foc.state.Iq_q31 * foc.state.Vq_q31) >> 1) / (state.Vbus_q31);
     state.Ibus_q31 = temp0 * 3;
+    if(state.Ibus_q31 > control.max_cmag_q31 || state.Ibus_q31 < -control.max_cmag_q31)state.fault |= (uint32_t)PmsmFault_OC;
+    if(state.fault != (uint32_t)PmsmFault_OK)
+    {
+        fd_mc3p_write_float(MC3P1);
+        return;
+    }
 
     if (control.elec_mode == ElecMode_CURRENT)
     {
