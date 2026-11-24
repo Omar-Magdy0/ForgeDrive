@@ -4,7 +4,33 @@
 
 ForgeDrive brings together motor-control firmware, portable driver generation, reusable embedded libraries, and desktop tools for working with ForgeDrive devices. The project aims to make drive development easier to understand, adapt, simulate, and extend across hardware platforms.
 
-The repository is open to contributions, ideas, bug reports, and platform ports.
+> “Engineering should be understandable, modular, and reusable.”
+
+## Vision
+
+ForgeDrive software is one half of a wider hardware and software ecosystem. Its purpose is to turn sound control and embedded engineering ideas into software that can be understood, tested, reused, and adapted to real drive hardware. Simulation, documentation, and practical hardware work belong in the same development loop.
+
+The companion [ForgeDriveHW project](https://github.com/Omar-Magdy0/ForgeDriveHW) focuses on the physical designs: power electronics, boards, interfaces, manufacturing, and hardware validation. This repository focuses on firmware, control software, portable drivers, simulation, and desktop tooling. Together, the projects support development from circuit and board design through firmware integration and system validation.
+
+## Principles
+
+- **Modular by design:** give subsystems clear responsibilities and interfaces so they can be understood, tested, and reused.
+- **Portable where it matters:** keep control and application logic separable from target-specific hardware details.
+- **Deterministic and debuggable:** make timing, data flow, configuration, and behavior visible to developers.
+- **Simulation in the development loop:** use the Host SIL platform to exercise software before and alongside hardware bring-up.
+- **Document the reasoning:** explain design choices, trade-offs, configuration, and validation—not only how to build.
+- **Improve through collaboration:** welcome review, experimentation, platform support, and contributions from the community.
+
+## The ForgeDrive ecosystem
+
+| Project | Focus |
+| --- | --- |
+| [ForgeDriveHW](https://github.com/Omar-Magdy0/ForgeDriveHW) | Hardware-oriented designs and documentation: power stages, PCBs, electrical interfaces, manufacturing, and validation. |
+| **ForgeDrive software** | Software-oriented development: motor-control firmware, generated drivers, shared libraries, Host SIL, and desktop tooling. |
+
+The two repositories are developed as companion projects. Hardware documentation should point here for firmware and software tooling; software documentation should point to ForgeDriveHW for board designs, electrical details, and hardware bring-up information.
+
+This repository is open to contributions, ideas, bug reports, and platform ports.
 
 ## Project areas
 
@@ -34,6 +60,8 @@ cmake --build ForgeDriveMC/build-host --parallel
 ```
 
 Use the Host build to develop and exercise control logic in simulation without an STM32 target. It does not replace validation on the intended hardware.
+
+When moving from SIL to a physical drive, use the companion [ForgeDriveHW repository](https://github.com/Omar-Magdy0/ForgeDriveHW) for board documentation, electrical interfaces, manufacturing notes, and hardware bring-up information.
 
 ## Getting started
 
