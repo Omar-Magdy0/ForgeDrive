@@ -12,7 +12,7 @@ def c_type_name(proto_type):
     return proto_type.rsplit(".", 1)[-1]
 
 def generate_service_enum(service):
-    lines = [f"enum Id : Rpc::idType {{"]
+    lines = [f"enum Id : uint16_t {{"]
     for method in service.method: lines.append(f"    Id_{method.name} = {method.options.Extensions[fdrpc_pb2.id]},")
     lines.append("};")
     return "\n".join(lines)

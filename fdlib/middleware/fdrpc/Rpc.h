@@ -11,6 +11,7 @@ namespace Rpc
 struct DispatchStack
 {
     uint16_t id;
+    uint16_t rid;
     etl::span<uint8_t> arg;
     etl::span<uint8_t> ret;
 };
@@ -62,34 +63,35 @@ public:
     }
     DispatchStatus dispatch(etl::span<uint8_t> rx, etl::span<uint8_t> tx, DispatchStack stack, size_t& written)
     {
-        size_t rx_pos = 0;
         written = 0;
-        auto &id = stack.id;
-        auto &req_id = stack.req_id;
+        uint16_t &id = stack.id;
+        uint16_t &rid = stack.rid;
         DispatchStatus sts;
-        readRaw(rx, rx_pos, id);
-        readRaw(rx, rx_pos, req_id);
+        if(rx.size() < 4)
+            return DispatchStatus_EXECUTION_ERROR;
+        id = static_cast<uint16_t>(rx[0]) |  static_cast<uint16_t>(rx[1] << 8); 
+        rid = static_cast<uint16_t>(rx[2]) |  static_cast<uint16_t>(rx[3] << 8); 
         const Method* method = SearchPolicy::find(registry, id);
         if(!method)
             sts = DispatchStatus_NOT_FOUND;
         else
         {
-            sts = decode(method->arg, rx.subspan(rx_pos), stack.arg.data());
+            sts = decode(method->arg, rx.subspan(4), stack.arg.data());
             if(sts == DispatchStatus_OK)
                 sts = method->cb(stack); 
             if(sts == DispatchStatus_OK)
             {
-                size_t tx_pos = 0;
-                writeRaw(tx, tx_pos, id);
-                writeRaw(tx, tx_pos, req_id);
-                uint8_t header_sz = tx_pos;
+                tx[0] = static_cast<uint8_t>(id);
+                tx[1] = static_cast<uint8_t>(id >> 8);
+                tx[2] = static_cast<uint8_t>(rid);
+                tx[3] = static_cast<uint8_t>(rid >> 8);
                 size_t ret_sz = 0;
-                sts = encode(method->ret, stack.ret.data(), tx.subspan(tx_pos), ret_sz);
-                written = header_sz + ret_sz;
+                sts = encode(method->ret, stack.ret.data(), tx.subspan(4), ret_sz);
+                written = 4 + ret_sz;
             }
         }
         if(sts != DispatchStatus_OK)
-            sts = error(id, req_id, sts, tx, written);
+            sts = error(id, rid, sts, tx, written);
         return sts;
     };
     DispatchStatus encode(const pb_msgdesc_t* desc, const void* src, etl::span<uint8_t> output, size_t& written)
@@ -105,16 +107,19 @@ public:
         bool status = pb_decode(&stream, desc, dst);
         return status ? DispatchStatus_OK : DispatchStatus_INVALID_ARGUMENTS;
     }
-    DispatchStatus error(uint16_t id, uint16_t req_id, DispatchStatus err, etl::span<uint8_t> buf, size_t &written)
+    DispatchStatus error(uint16_t id, uint16_t rid, DispatchStatus err, etl::span<uint8_t> buf, size_t &written)
     {
-        constexpr size_t header_size = sizeof(uint16_t) * 3 + sizeof(DispatchStatus);
+        constexpr size_t header_size = sizeof(uint16_t) * 3 + sizeof(uint8_t);
         if (buf.size() < header_size)
             return DispatchStatus_INTERNAL_ERROR;
-        writeRaw(buf, offset, zero);
-        writeRaw(buf, offset, id);
-        writeRaw(buf, offset, req_id);
-        writeRaw(buf, offset, err);
-        written = offset;
+        buf[0] = 0;
+        buf[1] = 0;
+        buf[2] = static_cast<uint8_t>(id);
+        buf[3] = static_cast<uint8_t>(id >> 8);
+        buf[4] = static_cast<uint8_t>(rid);
+        buf[5] = static_cast<uint8_t>(rid >> 8);
+        buf[6] = static_cast<uint8_t>(err);
+        written = header_size;
         return err;
     }
 };

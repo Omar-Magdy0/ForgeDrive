@@ -13,7 +13,7 @@ constexpr uint16_t MAX_REQUEST_ENCODED_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRP
 constexpr uint16_t MAX_RESPONSE_ENCODED_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), ControlMode_size), PmsmModel_size), Pid_size), PmsmFaultRet_size);
 constexpr uint16_t MAX_REQUEST_STRUCT_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, sizeof(Setpoint)), sizeof(PmsmModel)), sizeof(ControlMode)), sizeof(ConfigPwm)), sizeof(ConfigAnalog)), sizeof(Pid)), sizeof(ConfigSComm)), sizeof(Empty)), sizeof(Empty)), sizeof(Empty)), sizeof(GetPidArg)), sizeof(Empty));
 constexpr uint16_t MAX_RESPONSE_STRUCT_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(ControlMode)), sizeof(PmsmModel)), sizeof(Pid)), sizeof(PmsmFaultRet));
-enum Id : Rpc::idType {
+enum Id : uint16_t {
     Id_SetSetpoint = 1,
     Id_SetModel = 2,
     Id_SetControlMode = 3,
