@@ -177,19 +177,21 @@ void Sys::init()
             .B = 0.1,
             .pole_pairs = 1};
         Pid pid_Id, pid_Iq, pid_pos, pid_speed;
-        pid_Id = {.Kp = 0.1, .Ki = 0.01, .Kd = 0};
-        pid_Iq = {.Kp = 0.1, .Ki = 0.01, .Kd = 0};
-        pid_pos = {.Kp = 0.1, .Ki = 1e-5, .Kd = 1e-5};
-        pid_speed = {.Kp = 0.1, .Ki = 0.5, .Kd = 0};
-        pmsm1.setControlMode(McMode_IDLE, MechMode_TORQUE);
+        pid_Id = {.Kp = 0.1, .Ki = 0.01, .Kd = 0, .type = PidType_ID};
+        pid_Iq = {.Kp = 0.1, .Ki = 0.01, .Kd = 0, .type = PidType_IQ};
+        pid_pos = {.Kp = 0.1, .Ki = 1e-5, .Kd = 1e-5, .type = PidType_POSITION};
+        pid_speed = {.Kp = 0.1, .Ki = 0.5, .Kd = 0, .type = PidType_SPEED};
+        ControlMode ctrl = {McMode_IDLE, MechMode_TORQUE};
+        pmsm1.setControlMode(ctrl);
         /*0*/ err[i++] = pmsm1.setConfigPwm(pwm);
         /*1*/ err[i++] = pmsm1.setConfigAnalog(analog);
         /*2*/ err[i++] = pmsm1.setConfigSComm(scomm);
-        /*3*/ err[i++] = pmsm1.setPid(pid_Id, PidType_ID);
-        /*4*/ err[i++] = pmsm1.setPid(pid_Iq, PidType_IQ);
-        /*5*/ err[i++] = pmsm1.setPid(pid_pos, PidType_POSITION);
-        /*6*/ err[i++] = pmsm1.setPid(pid_speed, PidType_SPEED);
-        /*7*/ err[i++] = pmsm1.setControlMode(McMode_FOC, MechMode_TORQUE);
+        /*3*/ err[i++] = pmsm1.setPid(pid_Id);
+        /*4*/ err[i++] = pmsm1.setPid(pid_Iq);
+        /*5*/ err[i++] = pmsm1.setPid(pid_pos);
+        /*6*/ err[i++] = pmsm1.setPid(pid_speed);
+        ctrl.mc_mode = McMode_FOC;
+        /*7*/ err[i++] = pmsm1.setControlMode(ctrl);
         /*8*/ err[i++] = pmsm1.setModel(model);
         for (int i = 0; i < 8; i++)
             if (err[i] != PmsmErr_OK)

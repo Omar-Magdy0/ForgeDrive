@@ -4,9 +4,8 @@ package fdmc.v1;
 import "fdrpc.proto";
 
 enum Direction {
-  Direction_UNSPECIFIED = 0;
-  Direction_FORWARD = 1;
-  Direction_BACKWARD = 2;
+  Direction_FORWARD = 0;
+  Direction_BACKWARD = 1;
 }
 
 enum MechMode {
@@ -17,11 +16,10 @@ enum MechMode {
 }
 
 enum PidType {
-  PidType_UNSPECIFIED = 0;
-  PidType_ID = 1;
-  PidType_IQ = 2;
-  PidType_SPEED = 3;
-  PidType_POSITION = 4;
+  PidType_ID = 0;
+  PidType_IQ = 1;
+  PidType_SPEED = 2;
+  PidType_POSITION = 3;
 }
 
 enum McMode {
@@ -33,23 +31,20 @@ enum McMode {
 }
 
 enum ElecMode {
-  ElecMode_UNSPECIFIED = 0;
-  ElecMode_VOLTAGE = 1;
-  ElecMode_CURRENT = 2;
+  ElecMode_VOLTAGE = 0;
+  ElecMode_CURRENT = 1;
 }
 
 enum StopMode {
-  StopMode_UNSPECIFIED = 0;
-  StopMode_COAST = 1;
-  StopMode_RAMP = 2;
-  StopMode_EMERGENCY_PLUG = 3;
+  StopMode_COAST = 0;
+  StopMode_RAMP = 1;
+  StopMode_EMERGENCY_PLUG = 2;
 }
 
 enum PmsmFault {
-  PmsmFault_UNSPECIFIED = 0;
-  PmsmFault_OK = 1;
-  PmsmFault_UVLO = 2;
-  PmsmFault_OVLO = 3;
+  PmsmFault_OK = 0;
+  PmsmFault_UVLO = 1;
+  PmsmFault_OVLO = 2;
   PmsmFault_OLOAD = 4;
   PmsmFault_CSFAULT = 8;
   PmsmFault_OT = 16;
@@ -57,29 +52,26 @@ enum PmsmFault {
 }
 
 enum PmsmErr {
-  PmsmErr_UNSPECIFIED = 0;
-  PmsmErr_OK = 1;
-  PmsmErr_UNKNOWN_ERROR = 2;
-  PmsmErr_NOT_INITIALIZED = 3;
-  PmsmErr_NOT_IMPLEMENTED = 4;
+  PmsmErr_OK = 0;
+  PmsmErr_UNKNOWN_ERROR = 1;
+  PmsmErr_NOT_INITIALIZED = 2;
+  PmsmErr_NOT_IMPLEMENTED = 3;
   PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64;
   PmsmErr_CONFIG_BAD = 65;
 }
 
 enum IdStage {
-  IdStage_UNSPECIFIED = 0;
-  IdStage_IDLE = 1;
-  IdStage_RS_ID = 2;
-  IdStage_LD_ID = 3;
-  IdStage_REST0 = 4;
-  IdStage_LQ_ID = 5;
+  IdStage_IDLE = 0;
+  IdStage_RS_ID = 1;
+  IdStage_LD_ID = 2;
+  IdStage_REST0 = 3;
+  IdStage_LQ_ID = 4;
 }
 
 enum IdSubStage {
-  IdSubStage_UNSPECIFIED = 0;
-  IdSubStage_ESETTLE_START = 1;
-  IdSubStage_ESETTLE_WAIT = 2;
-  IdSubStage_ACTIVE_SAMPLING = 3;
+  IdSubStage_ESETTLE_START = 0;
+  IdSubStage_ESETTLE_WAIT = 1;
+  IdSubStage_ACTIVE_SAMPLING = 2;
 }
 
 // Profile
@@ -152,33 +144,24 @@ message Pid {
   float Kp = 1;
   float Ki = 2;
   float Kd = 3;
+  PidType type = 4;
 }
 
-message SetSetpointArg {
+message Setpoint {
   float sp = 1;
   MechMode mech_mode = 2; // Defaults to MechMode_UNSPECIFIED (0) in proto3
 }
 
-message SetControlModeArg {
+message ControlMode {
   McMode mc_mode = 1;
   MechMode mech_mode = 2;
-}
-
-message SetPidArg {
-  Pid pid = 1;
-  PidType n = 2;
 }
 
 message GetPidArg {
   PidType n = 1;
 }
 
-message GetControlModeRet {
-  McMode mc_mode = 1;
-  MechMode mech_mode = 2;
-}
-
-message GetFaultRet {
+message PmsmFaultRet {
   uint32 fault = 1;
 }
 
@@ -189,13 +172,13 @@ message PmsmErrRet {
 message Empty {}
 
 service Fdmc {
-  rpc SetSetpoint(SetSetpointArg) returns (PmsmErrRet) {
+  rpc SetSetpoint(Setpoint) returns (PmsmErrRet) {
     option (fdrpc.id) = 1;
   }
   rpc SetModel(PmsmModel) returns (PmsmErrRet) {
     option (fdrpc.id) = 2;
   }
-  rpc SetControlMode(SetControlModeArg) returns (PmsmErrRet) {
+  rpc SetControlMode(ControlMode) returns (PmsmErrRet) {
     option (fdrpc.id) = 3;
   }
   rpc SetConfigPwm(ConfigPwm) returns (PmsmErrRet) {
@@ -204,7 +187,7 @@ service Fdmc {
   rpc SetConfigAnalog(ConfigAnalog) returns (PmsmErrRet) {
     option (fdrpc.id) = 5;
   }
-  rpc SetPid(SetPidArg) returns (PmsmErrRet) {
+  rpc SetPid(Pid) returns (PmsmErrRet) {
     option (fdrpc.id) = 6;
   }
   rpc SetConfigSComm(ConfigSComm) returns (PmsmErrRet) {
@@ -214,7 +197,7 @@ service Fdmc {
     option (fdrpc.id) = 12;
   }
 
-  rpc GetControlMode(Empty) returns (GetControlModeRet) {
+  rpc GetControlMode(Empty) returns (ControlMode) {
     option (fdrpc.id) = 8;
   }
   rpc GetModel(Empty) returns (PmsmModel) {
@@ -223,7 +206,7 @@ service Fdmc {
   rpc GetPid(GetPidArg) returns (Pid) {
     option (fdrpc.id) = 10;
   }
-  rpc GetFault(Empty) returns (GetFaultRet) {
+  rpc GetFault(Empty) returns (PmsmFaultRet) {
     option (fdrpc.id) = 11;
   }
 }

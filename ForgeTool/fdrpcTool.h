@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <memory>
 #include <vector>
+#include <chrono>
+#include "RpcDef.h"
 #include "fdrpc.pb.h"
 #include <google/protobuf/compiler/importer.h>
 #include <google/protobuf/dynamic_message.h>
@@ -43,24 +45,58 @@ public:
     }
 };
 
+
+
+
+
 class FdrpcTool
 {
+public:
     using Message = google::protobuf::Message;
     using Method = google::protobuf::MethodDescriptor;
     using Field = google::protobuf::FieldDescriptor;
+    using Clock = std::chrono::steady_clock;
 
+    struct CallHandle
+    {
+        uint16_t rid;
+        std::unique_ptr<Message> arg;
+        std::unique_ptr<Message> ret;
+        const Method *desc = nullptr;
+        bool complete = true;
+        Clock::time_point deadline;
+    };
+
+    struct ErrHandle
+    {
+        uint16_t id;
+        uint16_t rid;
+        Rpc::DispatchStatus err;
+    };
+
+    struct NotificationHandle
+    {
+
+    };
+
+    Rpc::RpcType last_type;
+    CallHandle call_handle;
+    std::chrono::milliseconds timeout{3000};
+    ErrHandle err_handle;
+    NotificationHandle notify_handle;
 private:
     ForgeTool &fg;
     ErrorCollector error_collector;
     std::unique_ptr<google::protobuf::compiler::Importer> importer;
     google::protobuf::DynamicMessageFactory factory;
-    std::unique_ptr<Message> arg;
-    std::unique_ptr<Message> ret;
-    std::string err;
     const google::protobuf::FileDescriptor *desc = nullptr;
+
+    //"Generic" render states
+    std::string err;
+    std::vector<std::string> dispatch_err;
+    bool waiting = false;
     int selected_service_ = 0;
     int selected_method_ = 0;
-    const Method *method_ = nullptr;
 
 public:
     FdrpcTool(ForgeTool &fg_, std::vector<std::filesystem::path> paths, const std::filesystem::path file) : fg(fg_)
@@ -75,11 +111,22 @@ public:
             err = error_collector.toString();
             err.push_back('\0');
         }
+        call_handle.complete = true;
+        call_handle.rid = 0;
     }
+
     const Method *methodSelection();
     static bool DrawOneofInput(Message *msg, const Field *field);
     static void DrawFieldInputRepeated(Message *msg, const Field *field);
     static void DrawFieldInput(Message *msg, const Field *field);
     static void DrawMessageInput(Message *msg, const std::string &name = "");
-    void render(ImVec2 dim);
+    static void DrawMessageOutput(Message *msg, const std::string &name = "");
+    static uint32_t getRpcId(const Method *method);
+    static bool deserialize(Message *msg, const std::vector<uint8_t> &data);
+    void update();
+    bool Call(std::vector<uint8_t>& data);
+    Rpc::RpcType Process(std::vector<uint8_t> data);
+    void DrawError(ImVec2 dim);
+    bool renderRpcEx(ImVec2 dim);
+    bool renderRpcRet(ImVec2 dim);
 };

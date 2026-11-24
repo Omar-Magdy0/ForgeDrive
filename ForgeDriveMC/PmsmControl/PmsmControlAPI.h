@@ -35,15 +35,15 @@ PmsmErr setModel(PmsmModel m){
     this->model = m;
     return PmsmErr_OK;
 }
-PmsmErr setControlMode(McMode mc_mode, MechMode mech_mode)
+PmsmErr setControlMode(ControlMode mode)
 {
-    if (mc_mode != McMode_IDLE && control.mc_mode != McMode_IDLE)
+    if (mode.mc_mode != McMode_IDLE && control.mc_mode != McMode_IDLE)
     {
         return PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING;
     }
     uint32_t mask = fd_atomic_start();
-    setControlMode(mc_mode);
-    control.mech_mode = mech_mode;
+    setControlMode(mode.mc_mode);
+    control.mech_mode = mode.mech_mode;
     fd_atomic_end(mask);
     return PmsmErr_OK;
 }
@@ -99,13 +99,13 @@ PmsmErr setConfigAnalog(ConfigAnalog cfg)
     MC3P1.offset_calibration = cfg.offset_calibration;
     return PmsmErr_OK;
 }
-PmsmErr setPid(Pid pid, PidType n)
+PmsmErr setPid(Pid pid)
 {
     pid.Kp = CLAMP(pid.Kp, -1, 1);
     pid.Ki = CLAMP(pid.Ki, -1, 1);
     pid.Kd = CLAMP(pid.Kd, -1, 1);
     uint32_t mask = fd_atomic_start();
-    switch (n)
+    switch (pid.type)
     {
     case PidType_ID:
         foc.state.Id_pid.gainUpdate(pid.Kp, pid.Ki, pid.Kd);
@@ -143,10 +143,10 @@ PmsmErr setConfigSComm(ConfigSComm cfg)
     return PmsmErr_OK;
 }
 // Getters
-void getControlMode(McMode &mc_mode, MechMode &mech_mode){mc_mode = control.mc_mode; mech_mode = control.mech_mode;}
-const PmsmModel& getModel(){return model;}
+ControlMode getControlMode(){return ControlMode{control.mc_mode, control.mech_mode};}
+PmsmModel getModel(){return model;}
 
-const ConfigPwm getPwm(){
+ConfigPwm getPwm(){
     ConfigPwm cfg;
     cfg.deadtime_ns = MC3P1.config.deadtime_nS;
     cfg.duty_max = (float)MC3P1.config.duty_max;
@@ -154,7 +154,7 @@ const ConfigPwm getPwm(){
     cfg.pwm_hz = MC3P1.config.deadtime_nS;
     return cfg;
 }
-const Pid getPid(PidType n)
+Pid getPid(PidType n)
 {
     Pid pid;
     switch (n)

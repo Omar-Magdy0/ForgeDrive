@@ -1,5 +1,6 @@
 #include "fdrpcTool.h"
 #include <algorithm>
+#include <format>
 
 const FdrpcTool::Method *FdrpcTool::methodSelection()
 {
@@ -27,10 +28,6 @@ const FdrpcTool::Method *FdrpcTool::methodSelection()
     if (selected_method_ >= service->method_count())
         selected_method_ = 0;
     const auto *method = service->method(selected_method_);
-    auto getRpcId = [&](const Method *method) -> uint32_t
-    {
-        return method->options().GetExtension(fdrpc::id);
-    };
     auto methodLabel = [&](const auto *method)
     {
         return method->name() + " (ID: " + std::to_string(getRpcId(method)) + ")";
@@ -69,8 +66,8 @@ void FdrpcTool::DrawFieldInputRepeated(Message *msg, const Field *field)
         case Field::CPPTYPE_INT64: { auto v = refl->GetRepeatedInt64(*msg, field, i); if (ImGui::InputScalar(name.c_str(), ImGuiDataType_S64, &v)) refl->SetRepeatedInt64(msg, field, i, v); break; }
         case Field::CPPTYPE_UINT32: { auto v = refl->GetRepeatedUInt32(*msg, field, i); if (ImGui::InputScalar(name.c_str(), ImGuiDataType_U32, &v)) refl->SetRepeatedUInt32(msg, field, i, v); break; }
         case Field::CPPTYPE_UINT64: { auto v = refl->GetRepeatedUInt64(*msg, field, i); if (ImGui::InputScalar(name.c_str(), ImGuiDataType_U64, &v)) refl->SetRepeatedUInt64(msg, field, i, v); break; }
-        case Field::CPPTYPE_DOUBLE: { auto v = refl->GetRepeatedDouble(*msg, field, i); if (ImGui::InputDouble(name.c_str(), &v)) refl->SetRepeatedDouble(msg, field, i, v); break; }
-        case Field::CPPTYPE_FLOAT: { auto v = refl->GetRepeatedFloat(*msg, field, i); if (ImGui::InputFloat(name.c_str(), &v)) refl->SetRepeatedFloat(msg, field, i, v); break; }
+        case Field::CPPTYPE_DOUBLE: { auto v = refl->GetRepeatedDouble(*msg, field, i); if (ImGui::InputDouble(name.c_str(), &v,0,0,"%.17g")) refl->SetRepeatedDouble(msg, field, i, v); break; }
+        case Field::CPPTYPE_FLOAT: { auto v = refl->GetRepeatedFloat(*msg, field, i); if (ImGui::InputFloat(name.c_str(), &v,0,0,"%.9g")) refl->SetRepeatedFloat(msg, field, i, v); break; }
         case Field::CPPTYPE_BOOL: { auto v = refl->GetRepeatedBool(*msg, field, i); if (ImGui::Checkbox(name.c_str(), &v)) refl->SetRepeatedBool(msg, field, i, v); break; }
         case Field::CPPTYPE_ENUM:
         {
@@ -194,8 +191,8 @@ void FdrpcTool::DrawFieldInput(Message *msg, const Field *field)
     case Field::CPPTYPE_INT64: { auto v = refl->GetInt64(*msg, field); if (ImGui::InputScalar(name, ImGuiDataType_S64, &v)) refl->SetInt64(msg, field, v); break; }
     case Field::CPPTYPE_UINT32: { auto v = refl->GetUInt32(*msg, field); if (ImGui::InputScalar(name, ImGuiDataType_U32, &v)) refl->SetUInt32(msg, field, v); break; }
     case Field::CPPTYPE_UINT64: { auto v = refl->GetUInt64(*msg, field); if (ImGui::InputScalar(name, ImGuiDataType_U64, &v)) refl->SetUInt64(msg, field, v); break; }
-    case Field::CPPTYPE_DOUBLE: { auto v = refl->GetDouble(*msg, field); if (ImGui::InputDouble(name, &v)) refl->SetDouble(msg, field, v); break; }
-    case Field::CPPTYPE_FLOAT: { auto v = refl->GetFloat(*msg, field); if (ImGui::InputFloat(name, &v)) refl->SetFloat(msg, field, v); break; }
+    case Field::CPPTYPE_DOUBLE: { auto v = refl->GetDouble(*msg, field); if (ImGui::InputDouble(name, &v,0,0,"%.17g")) refl->SetDouble(msg, field, v); break; }
+    case Field::CPPTYPE_FLOAT: { auto v = refl->GetFloat(*msg, field); if (ImGui::InputFloat(name, &v,0,0,"%.9g")) refl->SetFloat(msg, field, v); break; }
     case Field::CPPTYPE_BOOL: { auto v = refl->GetBool(*msg, field); if (ImGui::Checkbox(name, &v)) refl->SetBool(msg, field, v); break; }
     case Field::CPPTYPE_ENUM:
     {
@@ -224,10 +221,10 @@ void FdrpcTool::DrawFieldInput(Message *msg, const Field *field)
     }
 }
 
-void FdrpcTool::DrawMessageInput(Message *msg, const std::string &fieldName)
+void FdrpcTool::DrawMessageInput(Message *msg, const std::string &name)
 {
     const auto *desc = msg->GetDescriptor();
-    const std::string nodeName = desc->name() + (fieldName.empty() ? "" : " " + fieldName);
+    const std::string nodeName = desc->name() + (name.empty() ? "" : " " + name);
     const std::string fullName = desc->full_name() + nodeName;
     if (!ImGui::TreeNodeEx(nodeName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
         return;
@@ -238,29 +235,152 @@ void FdrpcTool::DrawMessageInput(Message *msg, const std::string &fieldName)
     ImGui::PopID();
 }
 
-void FdrpcTool::render(ImVec2 dim)
+void FdrpcTool::DrawMessageOutput(Message *msg, const std::string &name)
 {
-    if (!ImGui::BeginChild("FdrpcTool", dim))
+    ImGui::BeginDisabled();
+    DrawMessageInput(msg, name);
+    ImGui::EndDisabled();
+}
+
+bool FdrpcTool::renderRpcEx(ImVec2 dim)
+{
+    if (!ImGui::BeginChild("RpcEx", dim))
     {
         ImGui::EndChild();
-        return;
+        return false;
     }
     if (!desc)
     {
         ImGui::InputTextMultiline("##diagnostics", err.data(), err.size(), ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_WordWrap);
         ImGui::EndChild();
-        return;
-    }
-    if (auto *method = methodSelection())
-    {
-        if (method != method_)
-        {
-            method_ = method;
-            arg.reset(factory.GetPrototype(method_->input_type())->New());
-            ret.reset(factory.GetPrototype(method_->output_type())->New());
-        }
-        DrawMessageInput(arg.get());
+        return false;
     }
 
+    bool send = false;
+    ImGui::BeginDisabled(!call_handle.complete);
+    if (auto *desc = methodSelection())
+    {
+        send = ImGui::Button("Send");
+        ImGui::Separator();
+        if (desc != call_handle.desc)
+        {
+            const bool chain = call_handle.desc && call_handle.ret && (call_handle.desc->output_type() == desc->input_type());
+            call_handle.desc = desc;
+            if (chain)
+                call_handle.arg.reset(call_handle.ret.release());
+            else
+                call_handle.arg.reset(factory.GetPrototype(call_handle.desc->input_type())->New());
+            call_handle.ret.reset(factory.GetPrototype(call_handle.desc->output_type())->New());
+            call_handle.desc = desc;
+        }
+        DrawMessageInput(call_handle.arg.get());
+    }
+    ImGui::EndDisabled();
+    ImGui::EndChild();
+    return send;
+}
+
+bool FdrpcTool::renderRpcRet(ImVec2 dim)
+{
+    ImGui::BeginGroup();
+    const float errorHeight = 80.0f;
+    const float outputHeight = ImGui::GetContentRegionAvail().y - errorHeight - ImGui::GetStyle().ItemSpacing.y;
+    ImGui::BeginChild("RpcRetOutput", ImVec2(0, outputHeight), ImGuiChildFlags_None);
+    DrawMessageOutput(call_handle.ret.get());
+    ImGui::EndChild();
+    ImGui::PushFont(fg.Style().fonts.S);
+    if (ImGui::SmallButton("Clear"))
+        dispatch_err.clear();
+    DrawError(ImVec2(0, 0));
+    ImGui::PopFont();
+    ImGui::EndGroup();
+    return false;
+}
+
+uint32_t FdrpcTool::getRpcId(const Method *method)
+{
+    return method->options().GetExtension(fdrpc::id);
+}
+
+bool FdrpcTool::deserialize(Message* msg, const std::vector<uint8_t>& data)
+{
+    if (data.size() > INT_MAX)
+        return false;
+    return msg->ParseFromArray(data.data(), static_cast<int>(data.size()));
+}
+
+void FdrpcTool::update()
+{
+    if (!call_handle.complete && Clock::now() >= call_handle.deadline)
+    {
+        call_handle.complete = true;
+        dispatch_err.emplace_back(std::format("RPC Timeout |ID:{}|REQ:{}", getRpcId(call_handle.desc), call_handle.rid));
+    }
+}
+
+bool FdrpcTool::Call(std::vector<uint8_t>& data)
+{
+    const uint16_t id = getRpcId(call_handle.desc);
+    if(!call_handle.complete)
+        return false;
+    call_handle.rid++;
+    data.resize(4 + call_handle.arg->ByteSizeLong());
+    data[0] = static_cast<uint8_t>(id);
+    data[1] = static_cast<uint8_t>(id >> 8);
+    data[2] = static_cast<uint8_t>(call_handle.rid);
+    data[3] = static_cast<uint8_t>(call_handle.rid >> 8);
+    if(!call_handle.arg->SerializeToArray(data.data() + 4, static_cast<int>(data.size() - 4)))
+    {
+        data.clear();
+        return false;
+    }
+    call_handle.deadline = Clock::now() + timeout;
+    call_handle.desc = call_handle.desc;
+    call_handle.complete = false;
+    return true;
+}
+
+Rpc::RpcType FdrpcTool::Process(std::vector<uint8_t> data)
+{
+    if (data.size() < 4)
+        return Rpc::RpcType_NONE;
+    const uint16_t id = static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8);
+    if(id == 0)
+    {//Error
+        if (data.size() < 7)
+            return Rpc::RpcType_NONE;
+        err_handle.id = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
+        err_handle.rid = static_cast<uint16_t>(data[4]) | (static_cast<uint16_t>(data[5]) << 8);
+        err_handle.err  = static_cast<Rpc::DispatchStatus>(data[6]);
+        dispatch_err.emplace_back(std::format("Dispatch Error |ID:{}|REQ:{}|{}", err_handle.id, err_handle.rid, Rpc::dispatchStatusToString(err_handle.err)));
+        return Rpc::RpcType_ERROR;
+    }
+
+    bool notification = (id < UINT16_MAX) && (id > (UINT16_MAX - (UINT16_MAX>>4)));
+    bool response = !notification;
+    if(response)
+    {
+        const uint16_t rid = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
+        if (id != getRpcId(call_handle.desc) || rid != call_handle.rid) //only one ongoing call and associated return associated
+            return Rpc::RpcType_NONE;   
+        if (!call_handle.ret->ParseFromArray(data.data() + 4, static_cast<int>(data.size() - 4)))
+        {
+            return Rpc::RpcType_NONE;
+        }
+        return Rpc::RpcType_RESPONSE;
+    }else if(notification)//Todo: with gui additions for notifications
+    {
+        return Rpc::RpcType_NOTIFY;
+    }
+    return Rpc::RpcType_NONE;
+}
+
+void FdrpcTool::DrawError(ImVec2 dim)
+{
+    ImGui::BeginChild("DispatchErrors", dim, ImGuiChildFlags_Borders);
+    ImGui::PushStyleColor(ImGuiCol_Text, fg.Style().colors.Error);
+    for (const auto &err : dispatch_err)
+        ImGui::TextWrapped("%s", err.c_str());
+    ImGui::PopStyleColor();
     ImGui::EndChild();
 }

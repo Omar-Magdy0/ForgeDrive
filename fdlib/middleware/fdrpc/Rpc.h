@@ -4,32 +4,19 @@
 #include <pb.h>
 #include <pb_encode.h>
 #include <pb_decode.h>
-
+#include "RpcDef.h"
 
 namespace Rpc
 {
-using idType = uint16_t;
-
-enum DispatchStatus : uint8_t {
-    DispatchStatus_OK = 0,
-    DispatchStatus_INVALID_ARGUMENTS = 1,
-    DispatchStatus_NOT_FOUND = 2,
-    DispatchStatus_EXECUTION_ERROR = 3,
-    DispatchStatus_INTERNAL_ERROR = 4,
-    DispatchStatus_REGISTRY_INVALID = 5,
-    DispatchStatus_RET_STACK = 6,
-};
-
 struct DispatchStack
 {
-    idType id;
-    idType req_id;
+    uint16_t id;
     etl::span<uint8_t> arg;
     etl::span<uint8_t> ret;
 };
 
 struct Method {
-    const idType id;
+    const uint16_t id;
     const pb_msgdesc_t* arg;
     const pb_msgdesc_t* ret;
     DispatchStatus (*cb)(DispatchStack stack);
@@ -39,7 +26,7 @@ class BinarySearch
 {
     public:
     template<typename T>
-    static T* find(etl::span<T> registry, idType id)
+    static T* find(etl::span<T> registry, uint16_t id)
     {
         size_t L = 0;
         size_t R = registry.size();
@@ -105,16 +92,6 @@ public:
             sts = error(id, req_id, sts, tx, written);
         return sts;
     };
-    DispatchStatus notify(etl::span<uint8_t> tx, DispatchStack stack, size_t& written)
-    {
-        const Method* method = SearchPolicy::find(registry, stack.id);
-        if(!method)
-            return DispatchStatus_NOT_FOUND;
-        uint16_t tx_pos = 0;
-        writeRaw(tx, tx_pos, stack.id);
-        writeRaw(tx, tx_pos, stack.req_id);
-        return encode(method->ret, stack.ret.data(), tx.subspan(tx_pos), written);
-    }
     DispatchStatus encode(const pb_msgdesc_t* desc, const void* src, etl::span<uint8_t> output, size_t& written)
     {
         pb_ostream_t stream = pb_ostream_from_buffer(output.data(), output.size());
@@ -128,39 +105,17 @@ public:
         bool status = pb_decode(&stream, desc, dst);
         return status ? DispatchStatus_OK : DispatchStatus_INVALID_ARGUMENTS;
     }
-    DispatchStatus error(idType id, idType req_id, DispatchStatus err, etl::span<uint8_t> buf, size_t &written)
+    DispatchStatus error(uint16_t id, uint16_t req_id, DispatchStatus err, etl::span<uint8_t> buf, size_t &written)
     {
-        constexpr size_t header_size = sizeof(idType) * 3 + sizeof(DispatchStatus);
+        constexpr size_t header_size = sizeof(uint16_t) * 3 + sizeof(DispatchStatus);
         if (buf.size() < header_size)
             return DispatchStatus_INTERNAL_ERROR;
-        size_t offset = 0;
-        idType zero = 0;
         writeRaw(buf, offset, zero);
         writeRaw(buf, offset, id);
         writeRaw(buf, offset, req_id);
         writeRaw(buf, offset, err);
         written = offset;
         return err;
-    }
-    template <typename T>
-    bool writeRaw(etl::span<uint8_t> buffer, size_t& offset, const T& value)
-    {
-        static_assert(std::is_trivially_copyable_v<T>);
-        if (offset + sizeof(T) > buffer.size())
-            return false;
-        memcpy(buffer.data() + offset, &value, sizeof(T));
-        offset += sizeof(T);
-        return true;
-    }
-    template <typename T>
-    bool readRaw(etl::span<const uint8_t> buffer, size_t& offset, T& value)
-    {
-        static_assert(std::is_trivially_copyable_v<T>);
-        if (offset + sizeof(T) > buffer.size())
-            return false;
-        memcpy(&value, buffer.data() + offset, sizeof(T));
-        offset += sizeof(T);
-        return true;
     }
 };
 

@@ -30,22 +30,16 @@ PB_BIND(ConfigGen, ConfigGen, AUTO)
 PB_BIND(Pid, Pid, AUTO)
 
 
-PB_BIND(SetSetpointArg, SetSetpointArg, AUTO)
+PB_BIND(Setpoint, Setpoint, AUTO)
 
 
-PB_BIND(SetControlModeArg, SetControlModeArg, AUTO)
-
-
-PB_BIND(SetPidArg, SetPidArg, AUTO)
+PB_BIND(ControlMode, ControlMode, AUTO)
 
 
 PB_BIND(GetPidArg, GetPidArg, AUTO)
 
 
-PB_BIND(GetControlModeRet, GetControlModeRet, AUTO)
-
-
-PB_BIND(GetFaultRet, GetFaultRet, AUTO)
+PB_BIND(PmsmFaultRet, PmsmFaultRet, AUTO)
 
 
 PB_BIND(PmsmErrRet, PmsmErrRet, AUTO)

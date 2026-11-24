@@ -12,9 +12,8 @@
 
 /* Enum definitions */
 typedef enum _Direction {
-    Direction_UNSPECIFIED = 0,
-    Direction_FORWARD = 1,
-    Direction_BACKWARD = 2
+    Direction_FORWARD = 0,
+    Direction_BACKWARD = 1
 } Direction;
 
 typedef enum _MechMode {
@@ -25,11 +24,10 @@ typedef enum _MechMode {
 } MechMode;
 
 typedef enum _PidType {
-    PidType_UNSPECIFIED = 0,
-    PidType_ID = 1,
-    PidType_IQ = 2,
-    PidType_SPEED = 3,
-    PidType_POSITION = 4
+    PidType_ID = 0,
+    PidType_IQ = 1,
+    PidType_SPEED = 2,
+    PidType_POSITION = 3
 } PidType;
 
 typedef enum _McMode {
@@ -41,23 +39,20 @@ typedef enum _McMode {
 } McMode;
 
 typedef enum _ElecMode {
-    ElecMode_UNSPECIFIED = 0,
-    ElecMode_VOLTAGE = 1,
-    ElecMode_CURRENT = 2
+    ElecMode_VOLTAGE = 0,
+    ElecMode_CURRENT = 1
 } ElecMode;
 
 typedef enum _StopMode {
-    StopMode_UNSPECIFIED = 0,
-    StopMode_COAST = 1,
-    StopMode_RAMP = 2,
-    StopMode_EMERGENCY_PLUG = 3
+    StopMode_COAST = 0,
+    StopMode_RAMP = 1,
+    StopMode_EMERGENCY_PLUG = 2
 } StopMode;
 
 typedef enum _PmsmFault {
-    PmsmFault_UNSPECIFIED = 0,
-    PmsmFault_OK = 1,
-    PmsmFault_UVLO = 2,
-    PmsmFault_OVLO = 3,
+    PmsmFault_OK = 0,
+    PmsmFault_UVLO = 1,
+    PmsmFault_OVLO = 2,
     PmsmFault_OLOAD = 4,
     PmsmFault_CSFAULT = 8,
     PmsmFault_OT = 16,
@@ -65,29 +60,26 @@ typedef enum _PmsmFault {
 } PmsmFault;
 
 typedef enum _PmsmErr {
-    PmsmErr_UNSPECIFIED = 0,
-    PmsmErr_OK = 1,
-    PmsmErr_UNKNOWN_ERROR = 2,
-    PmsmErr_NOT_INITIALIZED = 3,
-    PmsmErr_NOT_IMPLEMENTED = 4,
+    PmsmErr_OK = 0,
+    PmsmErr_UNKNOWN_ERROR = 1,
+    PmsmErr_NOT_INITIALIZED = 2,
+    PmsmErr_NOT_IMPLEMENTED = 3,
     PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64,
     PmsmErr_CONFIG_BAD = 65
 } PmsmErr;
 
 typedef enum _IdStage {
-    IdStage_UNSPECIFIED = 0,
-    IdStage_IDLE = 1,
-    IdStage_RS_ID = 2,
-    IdStage_LD_ID = 3,
-    IdStage_REST0 = 4,
-    IdStage_LQ_ID = 5
+    IdStage_IDLE = 0,
+    IdStage_RS_ID = 1,
+    IdStage_LD_ID = 2,
+    IdStage_REST0 = 3,
+    IdStage_LQ_ID = 4
 } IdStage;
 
 typedef enum _IdSubStage {
-    IdSubStage_UNSPECIFIED = 0,
-    IdSubStage_ESETTLE_START = 1,
-    IdSubStage_ESETTLE_WAIT = 2,
-    IdSubStage_ACTIVE_SAMPLING = 3
+    IdSubStage_ESETTLE_START = 0,
+    IdSubStage_ESETTLE_WAIT = 1,
+    IdSubStage_ACTIVE_SAMPLING = 2
 } IdSubStage;
 
 /* Struct definitions */
@@ -168,36 +160,26 @@ typedef struct _Pid {
     float Kp;
     float Ki;
     float Kd;
+    PidType type;
 } Pid;
 
-typedef struct _SetSetpointArg {
+typedef struct _Setpoint {
     float sp;
     MechMode mech_mode; /* Defaults to MechMode_UNSPECIFIED (0) in proto3 */
-} SetSetpointArg;
+} Setpoint;
 
-typedef struct _SetControlModeArg {
+typedef struct _ControlMode {
     McMode mc_mode;
     MechMode mech_mode;
-} SetControlModeArg;
-
-typedef struct _SetPidArg {
-    bool has_pid;
-    Pid pid;
-    PidType n;
-} SetPidArg;
+} ControlMode;
 
 typedef struct _GetPidArg {
     PidType n;
 } GetPidArg;
 
-typedef struct _GetControlModeRet {
-    McMode mc_mode;
-    MechMode mech_mode;
-} GetControlModeRet;
-
-typedef struct _GetFaultRet {
+typedef struct _PmsmFaultRet {
     uint32_t fault;
-} GetFaultRet;
+} PmsmFaultRet;
 
 typedef struct _PmsmErrRet {
     PmsmErr err;
@@ -213,10 +195,9 @@ extern "C" {
 #endif
 
 /* Helper constants for enums */
-#define _Direction_MIN Direction_UNSPECIFIED
+#define _Direction_MIN Direction_FORWARD
 #define _Direction_MAX Direction_BACKWARD
 #define _Direction_ARRAYSIZE ((Direction)(Direction_BACKWARD+1))
-#define Direction_Direction_UNSPECIFIED Direction_UNSPECIFIED
 #define Direction_Direction_FORWARD Direction_FORWARD
 #define Direction_Direction_BACKWARD Direction_BACKWARD
 
@@ -228,10 +209,9 @@ extern "C" {
 #define MechMode_MechMode_SPEED MechMode_SPEED
 #define MechMode_MechMode_POSITION MechMode_POSITION
 
-#define _PidType_MIN PidType_UNSPECIFIED
+#define _PidType_MIN PidType_ID
 #define _PidType_MAX PidType_POSITION
 #define _PidType_ARRAYSIZE ((PidType)(PidType_POSITION+1))
-#define PidType_PidType_UNSPECIFIED PidType_UNSPECIFIED
 #define PidType_PidType_ID PidType_ID
 #define PidType_PidType_IQ PidType_IQ
 #define PidType_PidType_SPEED PidType_SPEED
@@ -246,25 +226,22 @@ extern "C" {
 #define McMode_McMode_FOC McMode_FOC
 #define McMode_McMode_SCOMM McMode_SCOMM
 
-#define _ElecMode_MIN ElecMode_UNSPECIFIED
+#define _ElecMode_MIN ElecMode_VOLTAGE
 #define _ElecMode_MAX ElecMode_CURRENT
 #define _ElecMode_ARRAYSIZE ((ElecMode)(ElecMode_CURRENT+1))
-#define ElecMode_ElecMode_UNSPECIFIED ElecMode_UNSPECIFIED
 #define ElecMode_ElecMode_VOLTAGE ElecMode_VOLTAGE
 #define ElecMode_ElecMode_CURRENT ElecMode_CURRENT
 
-#define _StopMode_MIN StopMode_UNSPECIFIED
+#define _StopMode_MIN StopMode_COAST
 #define _StopMode_MAX StopMode_EMERGENCY_PLUG
 #define _StopMode_ARRAYSIZE ((StopMode)(StopMode_EMERGENCY_PLUG+1))
-#define StopMode_StopMode_UNSPECIFIED StopMode_UNSPECIFIED
 #define StopMode_StopMode_COAST StopMode_COAST
 #define StopMode_StopMode_RAMP StopMode_RAMP
 #define StopMode_StopMode_EMERGENCY_PLUG StopMode_EMERGENCY_PLUG
 
-#define _PmsmFault_MIN PmsmFault_UNSPECIFIED
+#define _PmsmFault_MIN PmsmFault_OK
 #define _PmsmFault_MAX PmsmFault_OC
 #define _PmsmFault_ARRAYSIZE ((PmsmFault)(PmsmFault_OC+1))
-#define PmsmFault_PmsmFault_UNSPECIFIED PmsmFault_UNSPECIFIED
 #define PmsmFault_PmsmFault_OK PmsmFault_OK
 #define PmsmFault_PmsmFault_UVLO PmsmFault_UVLO
 #define PmsmFault_PmsmFault_OVLO PmsmFault_OVLO
@@ -273,10 +250,9 @@ extern "C" {
 #define PmsmFault_PmsmFault_OT PmsmFault_OT
 #define PmsmFault_PmsmFault_OC PmsmFault_OC
 
-#define _PmsmErr_MIN PmsmErr_UNSPECIFIED
+#define _PmsmErr_MIN PmsmErr_OK
 #define _PmsmErr_MAX PmsmErr_CONFIG_BAD
 #define _PmsmErr_ARRAYSIZE ((PmsmErr)(PmsmErr_CONFIG_BAD+1))
-#define PmsmErr_PmsmErr_UNSPECIFIED PmsmErr_UNSPECIFIED
 #define PmsmErr_PmsmErr_OK PmsmErr_OK
 #define PmsmErr_PmsmErr_UNKNOWN_ERROR PmsmErr_UNKNOWN_ERROR
 #define PmsmErr_PmsmErr_NOT_INITIALIZED PmsmErr_NOT_INITIALIZED
@@ -284,20 +260,18 @@ extern "C" {
 #define PmsmErr_PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING
 #define PmsmErr_PmsmErr_CONFIG_BAD PmsmErr_CONFIG_BAD
 
-#define _IdStage_MIN IdStage_UNSPECIFIED
+#define _IdStage_MIN IdStage_IDLE
 #define _IdStage_MAX IdStage_LQ_ID
 #define _IdStage_ARRAYSIZE ((IdStage)(IdStage_LQ_ID+1))
-#define IdStage_IdStage_UNSPECIFIED IdStage_UNSPECIFIED
 #define IdStage_IdStage_IDLE IdStage_IDLE
 #define IdStage_IdStage_RS_ID IdStage_RS_ID
 #define IdStage_IdStage_LD_ID IdStage_LD_ID
 #define IdStage_IdStage_REST0 IdStage_REST0
 #define IdStage_IdStage_LQ_ID IdStage_LQ_ID
 
-#define _IdSubStage_MIN IdSubStage_UNSPECIFIED
+#define _IdSubStage_MIN IdSubStage_ESETTLE_START
 #define _IdSubStage_MAX IdSubStage_ACTIVE_SAMPLING
 #define _IdSubStage_ARRAYSIZE ((IdSubStage)(IdSubStage_ACTIVE_SAMPLING+1))
-#define IdSubStage_IdSubStage_UNSPECIFIED IdSubStage_UNSPECIFIED
 #define IdSubStage_IdSubStage_ESETTLE_START IdSubStage_ESETTLE_START
 #define IdSubStage_IdSubStage_ESETTLE_WAIT IdSubStage_ESETTLE_WAIT
 #define IdSubStage_IdSubStage_ACTIVE_SAMPLING IdSubStage_ACTIVE_SAMPLING
@@ -309,18 +283,14 @@ extern "C" {
 
 
 
+#define Pid_type_ENUMTYPE PidType
 
-#define SetSetpointArg_mech_mode_ENUMTYPE MechMode
+#define Setpoint_mech_mode_ENUMTYPE MechMode
 
-#define SetControlModeArg_mc_mode_ENUMTYPE McMode
-#define SetControlModeArg_mech_mode_ENUMTYPE MechMode
-
-#define SetPidArg_n_ENUMTYPE PidType
+#define ControlMode_mc_mode_ENUMTYPE McMode
+#define ControlMode_mech_mode_ENUMTYPE MechMode
 
 #define GetPidArg_n_ENUMTYPE PidType
-
-#define GetControlModeRet_mc_mode_ENUMTYPE McMode
-#define GetControlModeRet_mech_mode_ENUMTYPE MechMode
 
 
 #define PmsmErrRet_err_ENUMTYPE PmsmErr
@@ -335,13 +305,11 @@ extern "C" {
 #define ConfigSComm_init_default                 {0, 0, 0, 0, 0}
 #define PmsmModel_init_default                   {0, 0, 0, 0, 0, 0, 0}
 #define ConfigGen_init_default                   {0, 0, 0, 0, 0, 0, 0, 0, 0}
-#define Pid_init_default                         {0, 0, 0}
-#define SetSetpointArg_init_default              {0, _MechMode_MIN}
-#define SetControlModeArg_init_default           {_McMode_MIN, _MechMode_MIN}
-#define SetPidArg_init_default                   {false, Pid_init_default, _PidType_MIN}
+#define Pid_init_default                         {0, 0, 0, _PidType_MIN}
+#define Setpoint_init_default                    {0, _MechMode_MIN}
+#define ControlMode_init_default                 {_McMode_MIN, _MechMode_MIN}
 #define GetPidArg_init_default                   {_PidType_MIN}
-#define GetControlModeRet_init_default           {_McMode_MIN, _MechMode_MIN}
-#define GetFaultRet_init_default                 {0}
+#define PmsmFaultRet_init_default                {0}
 #define PmsmErrRet_init_default                  {_PmsmErr_MIN}
 #define Empty_init_default                       {0}
 #define ProfilePoint2D_init_zero                 {0, 0, 0}
@@ -351,13 +319,11 @@ extern "C" {
 #define ConfigSComm_init_zero                    {0, 0, 0, 0, 0}
 #define PmsmModel_init_zero                      {0, 0, 0, 0, 0, 0, 0}
 #define ConfigGen_init_zero                      {0, 0, 0, 0, 0, 0, 0, 0, 0}
-#define Pid_init_zero                            {0, 0, 0}
-#define SetSetpointArg_init_zero                 {0, _MechMode_MIN}
-#define SetControlModeArg_init_zero              {_McMode_MIN, _MechMode_MIN}
-#define SetPidArg_init_zero                      {false, Pid_init_zero, _PidType_MIN}
+#define Pid_init_zero                            {0, 0, 0, _PidType_MIN}
+#define Setpoint_init_zero                       {0, _MechMode_MIN}
+#define ControlMode_init_zero                    {_McMode_MIN, _MechMode_MIN}
 #define GetPidArg_init_zero                      {_PidType_MIN}
-#define GetControlModeRet_init_zero              {_McMode_MIN, _MechMode_MIN}
-#define GetFaultRet_init_zero                    {0}
+#define PmsmFaultRet_init_zero                   {0}
 #define PmsmErrRet_init_zero                     {_PmsmErr_MIN}
 #define Empty_init_zero                          {0}
 
@@ -403,16 +369,13 @@ extern "C" {
 #define Pid_Kp_tag                               1
 #define Pid_Ki_tag                               2
 #define Pid_Kd_tag                               3
-#define SetSetpointArg_sp_tag                    1
-#define SetSetpointArg_mech_mode_tag             2
-#define SetControlModeArg_mc_mode_tag            1
-#define SetControlModeArg_mech_mode_tag          2
-#define SetPidArg_pid_tag                        1
-#define SetPidArg_n_tag                          2
+#define Pid_type_tag                             4
+#define Setpoint_sp_tag                          1
+#define Setpoint_mech_mode_tag                   2
+#define ControlMode_mc_mode_tag                  1
+#define ControlMode_mech_mode_tag                2
 #define GetPidArg_n_tag                          1
-#define GetControlModeRet_mc_mode_tag            1
-#define GetControlModeRet_mech_mode_tag          2
-#define GetFaultRet_fault_tag                    1
+#define PmsmFaultRet_fault_tag                   1
 #define PmsmErrRet_err_tag                       1
 
 /* Struct field encoding specification for nanopb */
@@ -492,44 +455,32 @@ X(a, STATIC,   SINGULAR, UINT32,   pos_rate_div,      9)
 #define Pid_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, FLOAT,    Kp,                1) \
 X(a, STATIC,   SINGULAR, FLOAT,    Ki,                2) \
-X(a, STATIC,   SINGULAR, FLOAT,    Kd,                3)
+X(a, STATIC,   SINGULAR, FLOAT,    Kd,                3) \
+X(a, STATIC,   SINGULAR, UENUM,    type,              4)
 #define Pid_CALLBACK NULL
 #define Pid_DEFAULT NULL
 
-#define SetSetpointArg_FIELDLIST(X, a) \
+#define Setpoint_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, FLOAT,    sp,                1) \
 X(a, STATIC,   SINGULAR, UENUM,    mech_mode,         2)
-#define SetSetpointArg_CALLBACK NULL
-#define SetSetpointArg_DEFAULT NULL
+#define Setpoint_CALLBACK NULL
+#define Setpoint_DEFAULT NULL
 
-#define SetControlModeArg_FIELDLIST(X, a) \
+#define ControlMode_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    mc_mode,           1) \
 X(a, STATIC,   SINGULAR, UENUM,    mech_mode,         2)
-#define SetControlModeArg_CALLBACK NULL
-#define SetControlModeArg_DEFAULT NULL
-
-#define SetPidArg_FIELDLIST(X, a) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  pid,               1) \
-X(a, STATIC,   SINGULAR, UENUM,    n,                 2)
-#define SetPidArg_CALLBACK NULL
-#define SetPidArg_DEFAULT NULL
-#define SetPidArg_pid_MSGTYPE Pid
+#define ControlMode_CALLBACK NULL
+#define ControlMode_DEFAULT NULL
 
 #define GetPidArg_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    n,                 1)
 #define GetPidArg_CALLBACK NULL
 #define GetPidArg_DEFAULT NULL
 
-#define GetControlModeRet_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UENUM,    mc_mode,           1) \
-X(a, STATIC,   SINGULAR, UENUM,    mech_mode,         2)
-#define GetControlModeRet_CALLBACK NULL
-#define GetControlModeRet_DEFAULT NULL
-
-#define GetFaultRet_FIELDLIST(X, a) \
+#define PmsmFaultRet_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   fault,             1)
-#define GetFaultRet_CALLBACK NULL
-#define GetFaultRet_DEFAULT NULL
+#define PmsmFaultRet_CALLBACK NULL
+#define PmsmFaultRet_DEFAULT NULL
 
 #define PmsmErrRet_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    err,               1)
@@ -549,12 +500,10 @@ extern const pb_msgdesc_t ConfigSComm_msg;
 extern const pb_msgdesc_t PmsmModel_msg;
 extern const pb_msgdesc_t ConfigGen_msg;
 extern const pb_msgdesc_t Pid_msg;
-extern const pb_msgdesc_t SetSetpointArg_msg;
-extern const pb_msgdesc_t SetControlModeArg_msg;
-extern const pb_msgdesc_t SetPidArg_msg;
+extern const pb_msgdesc_t Setpoint_msg;
+extern const pb_msgdesc_t ControlMode_msg;
 extern const pb_msgdesc_t GetPidArg_msg;
-extern const pb_msgdesc_t GetControlModeRet_msg;
-extern const pb_msgdesc_t GetFaultRet_msg;
+extern const pb_msgdesc_t PmsmFaultRet_msg;
 extern const pb_msgdesc_t PmsmErrRet_msg;
 extern const pb_msgdesc_t Empty_msg;
 
@@ -567,12 +516,10 @@ extern const pb_msgdesc_t Empty_msg;
 #define PmsmModel_fields &PmsmModel_msg
 #define ConfigGen_fields &ConfigGen_msg
 #define Pid_fields &Pid_msg
-#define SetSetpointArg_fields &SetSetpointArg_msg
-#define SetControlModeArg_fields &SetControlModeArg_msg
-#define SetPidArg_fields &SetPidArg_msg
+#define Setpoint_fields &Setpoint_msg
+#define ControlMode_fields &ControlMode_msg
 #define GetPidArg_fields &GetPidArg_msg
-#define GetControlModeRet_fields &GetControlModeRet_msg
-#define GetFaultRet_fields &GetFaultRet_msg
+#define PmsmFaultRet_fields &PmsmFaultRet_msg
 #define PmsmErrRet_fields &PmsmErrRet_msg
 #define Empty_fields &Empty_msg
 
@@ -581,19 +528,17 @@ extern const pb_msgdesc_t Empty_msg;
 #define ConfigGen_size                           51
 #define ConfigPwm_size                           22
 #define ConfigSComm_size                         28
+#define ControlMode_size                         4
 #define ElecSensorConfig_size                    10
 #define Empty_size                               0
 #define FDMC_V1_FDMC_PB_H_MAX_SIZE               ConfigAnalog_size
-#define GetControlModeRet_size                   4
-#define GetFaultRet_size                         6
 #define GetPidArg_size                           2
-#define Pid_size                                 15
+#define Pid_size                                 17
 #define PmsmErrRet_size                          2
+#define PmsmFaultRet_size                        6
 #define PmsmModel_size                           36
 #define ProfilePoint2D_size                      15
-#define SetControlModeArg_size                   4
-#define SetPidArg_size                           19
-#define SetSetpointArg_size                      7
+#define Setpoint_size                            7
 
 /* Mapping from canonical names (mangle_names or overridden package name) */
 #define fdmc_v1_Direction Direction
@@ -614,12 +559,10 @@ extern const pb_msgdesc_t Empty_msg;
 #define fdmc_v1_PmsmModel PmsmModel
 #define fdmc_v1_ConfigGen ConfigGen
 #define fdmc_v1_Pid Pid
-#define fdmc_v1_SetSetpointArg SetSetpointArg
-#define fdmc_v1_SetControlModeArg SetControlModeArg
-#define fdmc_v1_SetPidArg SetPidArg
+#define fdmc_v1_Setpoint Setpoint
+#define fdmc_v1_ControlMode ControlMode
 #define fdmc_v1_GetPidArg GetPidArg
-#define fdmc_v1_GetControlModeRet GetControlModeRet
-#define fdmc_v1_GetFaultRet GetFaultRet
+#define fdmc_v1_PmsmFaultRet PmsmFaultRet
 #define fdmc_v1_PmsmErrRet PmsmErrRet
 #define fdmc_v1_Empty Empty
 #define _fdmc_v1_Direction_MIN _Direction_MIN
@@ -660,12 +603,10 @@ extern const pb_msgdesc_t Empty_msg;
 #define fdmc_v1_PmsmModel_init_default PmsmModel_init_default
 #define fdmc_v1_ConfigGen_init_default ConfigGen_init_default
 #define fdmc_v1_Pid_init_default Pid_init_default
-#define fdmc_v1_SetSetpointArg_init_default SetSetpointArg_init_default
-#define fdmc_v1_SetControlModeArg_init_default SetControlModeArg_init_default
-#define fdmc_v1_SetPidArg_init_default SetPidArg_init_default
+#define fdmc_v1_Setpoint_init_default Setpoint_init_default
+#define fdmc_v1_ControlMode_init_default ControlMode_init_default
 #define fdmc_v1_GetPidArg_init_default GetPidArg_init_default
-#define fdmc_v1_GetControlModeRet_init_default GetControlModeRet_init_default
-#define fdmc_v1_GetFaultRet_init_default GetFaultRet_init_default
+#define fdmc_v1_PmsmFaultRet_init_default PmsmFaultRet_init_default
 #define fdmc_v1_PmsmErrRet_init_default PmsmErrRet_init_default
 #define fdmc_v1_Empty_init_default Empty_init_default
 #define fdmc_v1_ProfilePoint2D_init_zero ProfilePoint2D_init_zero
@@ -676,12 +617,10 @@ extern const pb_msgdesc_t Empty_msg;
 #define fdmc_v1_PmsmModel_init_zero PmsmModel_init_zero
 #define fdmc_v1_ConfigGen_init_zero ConfigGen_init_zero
 #define fdmc_v1_Pid_init_zero Pid_init_zero
-#define fdmc_v1_SetSetpointArg_init_zero SetSetpointArg_init_zero
-#define fdmc_v1_SetControlModeArg_init_zero SetControlModeArg_init_zero
-#define fdmc_v1_SetPidArg_init_zero SetPidArg_init_zero
+#define fdmc_v1_Setpoint_init_zero Setpoint_init_zero
+#define fdmc_v1_ControlMode_init_zero ControlMode_init_zero
 #define fdmc_v1_GetPidArg_init_zero GetPidArg_init_zero
-#define fdmc_v1_GetControlModeRet_init_zero GetControlModeRet_init_zero
-#define fdmc_v1_GetFaultRet_init_zero GetFaultRet_init_zero
+#define fdmc_v1_PmsmFaultRet_init_zero PmsmFaultRet_init_zero
 #define fdmc_v1_PmsmErrRet_init_zero PmsmErrRet_init_zero
 #define fdmc_v1_Empty_init_zero Empty_init_zero
 

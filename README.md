@@ -1,208 +1,116 @@
----
-# ⚡ ForgeDriveMC
+# ForgeDrive
 
-A **modular, dual-platform** open-source firmware platform for **PMSM motor control** in electric vehicle applications.  
-Built for the **Cairo University Eco Racing Team** — validated in real-world racing.
+**An open, modular software foundation for electric drives and embedded control.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Platform: STM32F4 + Host](https://img.shields.io/badge/platform-STM32F4%20%7C%20Host%20(SIL)-blue)
----
+ForgeDrive brings together motor-control firmware, portable driver generation, reusable embedded libraries, and desktop tools for working with ForgeDrive devices. The project aims to make drive development easier to understand, adapt, simulate, and extend across hardware platforms.
 
-## 🧠 Overview
+The repository is open to contributions, ideas, bug reports, and platform ports.
 
-ForgeDriveMC implements **Field-Oriented Control (FOC)** and **Self-Commissioning (SComm)** for PMSM drives with a clean hardware abstraction layer (`eldriver`) that runs identically on:
+## Project areas
 
-| Platform | Purpose | Toolchain |
-|----------|---------|-----------|
-| **Host (x86)** | SIL simulation, HIL testing, GUI dashboard | Native GCC + CMake |
-| **STM32F4** | Embedded deployment | GCC ARM Embedded + CMake |
+| Directory | What it contains |
+| --- | --- |
+| [`ForgeDriveMC/`](ForgeDriveMC/) | Motor-control firmware, including PMSM control, platform integration, and target configuration. Supported platforms include STM32 targets and a native **Host** build for Software-in-the-Loop (SIL) simulation. |
+| [`ForgeTool/`](ForgeTool/) | Desktop application for communicating with and inspecting ForgeDrive devices. |
+| [`fdlib/`](fdlib/) | ForgeDrive middleware, core utilities, math, data structures, and the portable driver interface. |
+| [`test/`](test/) | Unit tests for selected `fdlib` components and middleware. |
+| [`thirdparty/`](thirdparty/) | Third-party libraries and assets used by the firmware, desktop tool, and tests. Each component retains its own license and notices. |
+| [`Doc/`](Doc/) | Project and platform documentation. |
+| [`setup.sh`](setup.sh) | Ubuntu/Debian environment setup for the toolchains and dependencies used in this repository. |
 
-### Core Capabilities
+## A portable, generated driver layer
 
-- ⚙️ **FOC** (Field-Oriented Control) with SVM
-- 🔬 **SComm** (Self-Commissioning) — HFI-based parameter identification
-- 📊 **Real-time Dashboard** — ImGui/ImPlot GUI with scope, triggers, and analytics
-- 🧪 **SIL Simulation** — Full PMSM electrical model with HDF5 logging
-- 🔄 **ABF Protocol** — Asynchronous Binary Frame over USB-CDC/UART/TCP
-- 📈 **DAQ System** — Internal Data Value (IDV) serialization for telemetry
----
+The driver layer in `fdlib/driver` is designed to separate reusable driver interfaces from target-specific hardware implementation. It builds on vendor HALs and CMSIS where appropriate, and uses Python with Jinja2 templates to generate device-specific driver code from a configuration.
 
-## 🏗️ Architecture
+For the motor-control firmware, [`ForgeDriveMC/fd_driver_conf.py`](ForgeDriveMC/fd_driver_conf.py) describes configured peripherals and resources. During CMake configuration, the driver generator uses this configuration and the selected device to produce the driver files consumed by the build. This keeps hardware mappings explicit while allowing the same higher-level code to work with different targets and host simulation.
 
-### Project Structure
+The current firmware build defaults to `STM32F401xC`. Supported device names and platform details are determined by the generator and platform files under `fdlib/driver`.
 
-| Directory | Contents |
-|-----------|----------|
-| `application/` | Main entry, PMSM control logic |
-| `application/PmsmControl/` | FOC, SComm, position drivers, types |
-| `core/` | Low-level utilities (rstream, smem, math) |
-| `middleware/` | ABF/IDV protocols, DAQ, scope stream |
-| `platform/host/` | Host eldrivers, SIL engine, GUI |
-| `platform/stm32f4/` | STM32F4 HAL, USB, FreeRTOS config |
-| `ForgeTool/` | PC utility for USB communication |
-| `test/` | SIL integration tests |
+The **Host** platform builds the control application for the development computer and connects it to the SIL platform implementation. Select it with `-DDEVICE=host`:
 
----
-
-## 🎮 Control Modes
-
-| Mode | Description | Status |
-|------|-------------|--------|
-| `Foc` | Field-Oriented Control with Space Vector PWM | ✅ Active |
-| `SComm` | Self-Commissioning (R, Ld, Lq identification via HFI) | ✅ Active |
-| `Idle` | Safe state, motor disabled | ✅ Active |
-
-### Control Loop Architecture
-
-```
-pwmLoop() ─── PWM rate (e.g., 25 kHz)
-  ├── Read ADC (phase currents, bus voltage)
-  ├── Clarke/Park transforms
-  ├── Current PI controllers (dq frame)
-  ├── Inverse Park/Clarke
-  └── Write SVM duty cycles
-
-xmcLoop() ─── Slow loop (~1 kHz)
-  ├── Position/speed estimation
-  ├── Speed/position PI controllers
-  └── Setpoint management
-```
-
----
-
-## 🔬 SIL Simulation
-
-The Software-in-the-Loop engine models:
-
-- **PMSM electrical dynamics** — saliency, mutual inductances, back-EMF
-- **Inverter non-idealities** — dead-time, diode commutation, on/off resistance
-- **Discontinuity handling** — sub-stepping for drive transitions
-- **HDF5 logging** — compressed, chunked datasets with column metadata
-
-Launch the GUI dashboard:
 ```bash
-./build/bin/ForgeDriveMC
+cmake -S ForgeDriveMC -B ForgeDriveMC/build-host -DDEVICE=host
+cmake --build ForgeDriveMC/build-host --parallel
 ```
 
----
+Use the Host build to develop and exercise control logic in simulation without an STM32 target. It does not replace validation on the intended hardware.
 
-## 📡 Communication Protocols
+## Getting started
 
-### ABF (Asynchronous Binary Frame)
-- Sync byte + ServiceID + Payload + CRC-8 AUTOSAR
-- MCOBS encoding for payload
-- Supports UART, USB-CDC, and TCP transports
+### Install development dependencies
 
-### IDV (Internal Data Value)
-- Self-describing serialization for DAQ channels
-- Auto-discovery with MARKER-based session/stream/channel hierarchy
+On Ubuntu or Debian, run:
 
----
+```bash
+./setup.sh
+source venv/bin/activate
+```
 
-## 📄 License
+The script installs system packages, the ARM embedded toolchain, and Python packages used for code generation and protocol tools. It uses `sudo` for system package installation.
 
-This project is **MIT licensed** — see [LICENSE](LICENSE) for details.
+### Build the desktop tool
 
-## 🤝 Sponsors
+```bash
+cmake -S ForgeTool -B ForgeTool/build
+cmake --build ForgeTool/build --parallel
+```
 
-[![Shell](https://img.shields.io/badge/Shell-Sponsor-yellow)](https://www.shell.com)
-[![EgyptAir](https://img.shields.io/badge/EgyptAir-Sponsor-red)](https://www.egyptair.com)
+The executable is placed at `ForgeTool/build/ForgeTool`. The desktop build uses CMake, a C++23 compiler, OpenGL, GLFW, libusb, Protobuf, and the Asio headers.
 
-## 📬 Contact
+### Build motor-control firmware
 
-**Maintainer**: Omar Magdy  
-📧 [omar.magdy.om.om@gmail.com](mailto:omar.magdy.om.om@gmail.com)
+Activate the environment created by `setup.sh`, then configure and build:
 
----
+```bash
+source venv/bin/activate
+cmake -S ForgeDriveMC -B ForgeDriveMC/build
+cmake --build ForgeDriveMC/build --parallel
+```
 
-*Built with passion by the **Cairo University Eco Racing Team** 🏁*
+The default device is set in `ForgeDriveMC/CMakeLists.txt`. To select another supported target, pass it at configure time, for example:
 
----
-# ⚡ ForgeDriveMC
+```bash
+cmake -S ForgeDriveMC -B ForgeDriveMC/build -DDEVICE=STM32F401xC
+```
 
-A modular, open-source platform for developing **inverters**, **controllers**, and **embedded firmware** for electric vehicle applications.  
-Built with robust engineering principles and driven by passion.
+The build generates configured drivers and protocol sources as part of the CMake configure step. Review the target configuration and generated output before flashing firmware to hardware.
 
-Maintained by **Omar Magdy** for the **Cairo University Eco Racing Team**.
+### Build and run unit tests
 
----
+```bash
+cmake -S test -B test/build
+cmake --build test/build --parallel
+ctest --test-dir test/build --output-on-failure
+```
 
-## 🧠 Overview
+The test project uses Catch2 through CMake FetchContent, so its initial configure may need network access to retrieve Catch2.
 
-ForgeDriveMC implements a range of hardware and software solutions for electric drive systems.  
-It includes:
+## Contributing
 
-- Custom inverters (multi-phase and bidirectional support)
-- Firmware for Trapezoidal , FOC, SPWM, SVM, and advanced motor control
-- Modular controllers and drivers
-- Fully documented software and hardware stacks
-- Design iterations built for real-world racing
+Contributions are welcome. You can help by reporting issues, improving documentation, adding tests, refining the driver generator, or contributing support for additional platforms and devices.
 
----
+When opening a change, please include enough context to explain the problem or use case, keep changes focused, and describe how you verified them. For hardware-dependent changes, note the target board and the checks performed on real hardware or in simulation. Please preserve third-party license and attribution notices when modifying vendored code.
 
-## 🚀 Features
+## Acknowledgements
 
-- ⚙️ **Multiple Inverter Designs**
-- 🧾 **Well-documented Firmware** using Doxygen
-- 💡 **Modular & Scalable Design** across generations
-- 🛠️ **Interactive BOMs and Fabrication-Ready Gerbers**
-- 🔧 **Configurable Build System** for firmware
-- 💻 **Simulator & HIL Support**
-- 🧪 **Validated by Real-World Team Use**
+ForgeDrive builds on the work of many open-source projects. Special thanks to:
 
-Specific features are documented in each design subfolder:
+- [ETL — Embedded Template Library](https://github.com/ETLCPP/etl)
+- [Protocol Buffers](https://github.com/protocolbuffers/protobuf) and [nanopb](https://github.com/nanopb/nanopb)
+- [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot)
 
----
+The repository also includes and uses projects such as FreeRTOS, CMSIS, CMSIS-DSP, Catch2, and other libraries and assets. See the relevant directories under [`thirdparty/`](thirdparty/) for their source files, license texts, and attribution details.
 
-## 📦 Installation
+## Contact
 
-- Build your own firmware using the instructions in each firmware folder.
-- Or, download the **precompiled binaries** from the design folders.
-- Configure and flash using the README-provided instructions.
+- **Project maintainer:** Omar Magdy
+- **Email:** omar.magdy.om.om@gmail.com
 
----
+## License
 
-## 🧑‍💻 Used By
+ForgeDrive's original project code is offered under a **dual licensing** model:
 
-- 🏁 **Cairo University Eco Racing Team** https://cu-eco.org
+- Open-source projects may use, modify, and distribute the covered ForgeDrive code under **GNU GPLv3-only**, subject to its terms. See [`LICENSES/GPL-3.0-only.txt`](LICENSES/GPL-3.0-only.txt).
+- Closed-source products and other uses that cannot comply with GPLv3 require a separate written commercial license. See [`docs/licensing.md`](docs/licensing.md) for the scope and contact details.
 
----
-
-## 📄 License
-
-This project is open source.  
-📌 **License**:  MIT
-
----
-
-## 💬 Support
-
-You can support the project by:
-
-- Contributing firmware or hardware improvements
-- Reviewing documentation and build systems
-- Participating in issue tracking and pull requests
-- Providing feedback based on hardware tests
-- Become a sponsor
----
-
-## 🤝 Sponsors
-
-- 🐚 **Shell**
-- ✈️ **EgyptAir**
-
----
-
-## 📬 Contact
-
-Maintainer: **Omar Magdy**  
-📧 [omar.magdy.om.om@gmail.com](mailto:omar.magdy.om.om@gmail.com)
-
----
-
-## 🏷️ Acknowledgements
-
-- All engineers and contributors from the Cairo University Eco Racing Team
-
----
-
+This project license does not replace or relicense third-party components. Code and assets under [`thirdparty/`](thirdparty/) retain their own licenses and notices; review them individually. Generated output may include or depend on third-party code, so check the relevant notices and license terms when distributing a build.

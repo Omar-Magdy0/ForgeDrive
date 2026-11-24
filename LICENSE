@@ -1,0 +1,28 @@
+ForgeDrive is dual licensed.
+
+1. GNU General Public License version 3 only
+
+You may use, modify, and distribute the ForgeDrive project code covered by
+this offer under the GNU General Public License, version 3 only. A copy of
+the license is provided in LICENSES/GPL-3.0-only.txt.
+
+2. Commercial license
+
+If you need to use or distribute covered ForgeDrive project code in a
+proprietary or closed-source product, or otherwise cannot comply with GPLv3,
+you must obtain a separate written commercial license from the ForgeDrive
+rights holder before that use or distribution. Commercial terms are agreed
+separately; this file does not itself grant commercial rights.
+
+This dual-license offer applies only to original ForgeDrive project code in
+the first-party project directories (including ForgeDriveMC/, ForgeTool/,
+fdlib/, test/, Doc/, and EcoJM/) for which the ForgeDrive rights holder is
+authorized to grant these rights. It does not apply to third-party software,
+generated material whose licensing is determined by its inputs or templates,
+or other materials with separate license notices. Those materials remain
+subject to their own terms. See docs/licensing.md for scope and further
+information.
+
+Unless required by applicable law or agreed to in writing, the ForgeDrive
+project code is provided without warranty. See GPLv3 for the full warranty
+disclaimer and limitation of liability applicable to the GPLv3 grant.
