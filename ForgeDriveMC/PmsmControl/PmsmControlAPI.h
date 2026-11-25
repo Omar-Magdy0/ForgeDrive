@@ -85,8 +85,8 @@ PmsmErr setConfigSComm(ConfigSComm cfg) {
   scomm.conf = cfg;
   return PmsmErr_OK;
 }
-// Getters
-ControlMode getControlMode() { return ControlMode{control.mc_mode, control.mech_mode}; }
+ControlMode getControlMode() { return {control.mc_mode, control.mech_mode}; }
+ConfigSComm getConfigScomm() { return scomm.conf; }
 PmsmModel   getModel() { return model; }
 ConfigPwm   getPwm() {
   ConfigPwm cfg;
@@ -109,6 +109,7 @@ Pid getPid(PidType n) {
     pid.Kd = INT32_MAX;
     break;
   }
+  pid.type = n;
   return pid;
 }
 // Status and Error

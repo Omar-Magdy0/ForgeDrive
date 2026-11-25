@@ -9,10 +9,10 @@ namespace Fdmc
 {
 #define FDRPC_MAX(a, b) ( ((a) > (b)) ? (a) : (b))
 using namespace Rpc;
-constexpr uint16_t MAX_REQUEST_ENCODED_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, Setpoint_size), PmsmModel_size), ControlMode_size), ConfigPwm_size), ConfigAnalog_size), Pid_size), ConfigSComm_size), Empty_size), Empty_size), Empty_size), GetPidArg_size), Empty_size);
-constexpr uint16_t MAX_RESPONSE_ENCODED_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), ControlMode_size), PmsmModel_size), Pid_size), PmsmFaultRet_size);
-constexpr uint16_t MAX_REQUEST_STRUCT_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, sizeof(Setpoint)), sizeof(PmsmModel)), sizeof(ControlMode)), sizeof(ConfigPwm)), sizeof(ConfigAnalog)), sizeof(Pid)), sizeof(ConfigSComm)), sizeof(Empty)), sizeof(Empty)), sizeof(Empty)), sizeof(GetPidArg)), sizeof(Empty));
-constexpr uint16_t MAX_RESPONSE_STRUCT_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(ControlMode)), sizeof(PmsmModel)), sizeof(Pid)), sizeof(PmsmFaultRet));
+constexpr uint16_t MAX_REQUEST_ENCODED_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, Setpoint_size), PmsmModel_size), ControlMode_size), ConfigPwm_size), ConfigAnalog_size), Pid_size), ConfigSComm_size), Empty_size), Empty_size), GetPidArg_size), Empty_size), Empty_size), Empty_size);
+constexpr uint16_t MAX_RESPONSE_ENCODED_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), PmsmErrRet_size), ControlMode_size), PmsmModel_size), Pid_size), PmsmFaultRet_size), ConfigSComm_size), PmsmErrRet_size);
+constexpr uint16_t MAX_REQUEST_STRUCT_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, sizeof(Setpoint)), sizeof(PmsmModel)), sizeof(ControlMode)), sizeof(ConfigPwm)), sizeof(ConfigAnalog)), sizeof(Pid)), sizeof(ConfigSComm)), sizeof(Empty)), sizeof(Empty)), sizeof(GetPidArg)), sizeof(Empty)), sizeof(Empty)), sizeof(Empty));
+constexpr uint16_t MAX_RESPONSE_STRUCT_SIZE = FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(FDRPC_MAX(0, sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(PmsmErrRet)), sizeof(ControlMode)), sizeof(PmsmModel)), sizeof(Pid)), sizeof(PmsmFaultRet)), sizeof(ConfigSComm)), sizeof(PmsmErrRet));
 enum Id : uint16_t {
     Id_SetSetpoint = 1,
     Id_SetModel = 2,
@@ -21,11 +21,12 @@ enum Id : uint16_t {
     Id_SetConfigAnalog = 5,
     Id_SetPid = 6,
     Id_SetConfigSComm = 7,
-    Id_ClearFault = 12,
     Id_GetControlMode = 8,
     Id_GetModel = 9,
     Id_GetPid = 10,
     Id_GetFault = 11,
+    Id_GetConfigScomm = 12,
+    Id_ClearFault = 13,
 };
 template<Id id>
 struct MethodTraits;
@@ -36,11 +37,12 @@ Rpc::DispatchStatus SetConfigPwm(DispatchStack);
 Rpc::DispatchStatus SetConfigAnalog(DispatchStack);
 Rpc::DispatchStatus SetPid(DispatchStack);
 Rpc::DispatchStatus SetConfigSComm(DispatchStack);
-Rpc::DispatchStatus ClearFault(DispatchStack);
 Rpc::DispatchStatus GetControlMode(DispatchStack);
 Rpc::DispatchStatus GetModel(DispatchStack);
 Rpc::DispatchStatus GetPid(DispatchStack);
 Rpc::DispatchStatus GetFault(DispatchStack);
+Rpc::DispatchStatus GetConfigScomm(DispatchStack);
+Rpc::DispatchStatus ClearFault(DispatchStack);
 inline constexpr Method registry[] = {
   { Id_SetSetpoint, &Setpoint_msg, &PmsmErrRet_msg, SetSetpoint },
   { Id_SetModel, &PmsmModel_msg, &PmsmErrRet_msg, SetModel },
@@ -53,6 +55,7 @@ inline constexpr Method registry[] = {
   { Id_GetModel, &Empty_msg, &PmsmModel_msg, GetModel },
   { Id_GetPid, &GetPidArg_msg, &Pid_msg, GetPid },
   { Id_GetFault, &Empty_msg, &PmsmFaultRet_msg, GetFault },
+  { Id_GetConfigScomm, &Empty_msg, &ConfigSComm_msg, GetConfigScomm },
   { Id_ClearFault, &Empty_msg, &PmsmErrRet_msg, ClearFault },
 };
 template<> struct MethodTraits<Fdmc::Id::Id_SetSetpoint> {
@@ -83,10 +86,6 @@ template<> struct MethodTraits<Fdmc::Id::Id_SetConfigSComm> {
     using Arg = ConfigSComm;
     using Ret = PmsmErrRet;
 };
-template<> struct MethodTraits<Fdmc::Id::Id_ClearFault> {
-    using Arg = Empty;
-    using Ret = PmsmErrRet;
-};
 template<> struct MethodTraits<Fdmc::Id::Id_GetControlMode> {
     using Arg = Empty;
     using Ret = ControlMode;
@@ -102,6 +101,14 @@ template<> struct MethodTraits<Fdmc::Id::Id_GetPid> {
 template<> struct MethodTraits<Fdmc::Id::Id_GetFault> {
     using Arg = Empty;
     using Ret = PmsmFaultRet;
+};
+template<> struct MethodTraits<Fdmc::Id::Id_GetConfigScomm> {
+    using Arg = Empty;
+    using Ret = ConfigSComm;
+};
+template<> struct MethodTraits<Fdmc::Id::Id_ClearFault> {
+    using Arg = Empty;
+    using Ret = PmsmErrRet;
 };
 #undef FDRPC_MAX 
 }

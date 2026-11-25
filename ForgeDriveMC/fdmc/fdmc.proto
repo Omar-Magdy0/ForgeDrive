@@ -193,10 +193,6 @@ service Fdmc {
   rpc SetConfigSComm(ConfigSComm) returns (PmsmErrRet) {
     option (fdrpc.id) = 7;
   }
-  rpc ClearFault(Empty) returns (PmsmErrRet) {
-    option (fdrpc.id) = 12;
-  }
-
   rpc GetControlMode(Empty) returns (ControlMode) {
     option (fdrpc.id) = 8;
   }
@@ -208,5 +204,11 @@ service Fdmc {
   }
   rpc GetFault(Empty) returns (PmsmFaultRet) {
     option (fdrpc.id) = 11;
+  }
+  rpc GetConfigScomm(Empty) returns (ConfigSComm) {
+    option (fdrpc.id) = 12;
+  }
+  rpc ClearFault(Empty) returns (PmsmErrRet) {
+    option (fdrpc.id) = 13;
   }
 }

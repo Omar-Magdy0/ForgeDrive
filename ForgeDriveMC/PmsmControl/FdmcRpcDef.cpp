@@ -1,3 +1,4 @@
+#include "fdmc.rpc.h"
 #include "sys.h"
 using namespace Fdmc;
 #define RPC_DEF(m, op)                                     \
@@ -8,22 +9,17 @@ using namespace Fdmc;
     Ret& ret  = *reinterpret_cast<Ret*>(stack.ret.data()); \
     op                                                     \
   }
-RPC_DEF(SetSetpoint, {
-  ret.err = Sys::pmsm1.setSetpoint(arg.sp, arg.mech_mode);
-  return Rpc::DispatchStatus::DispatchStatus_OK;
-})
-RPC_DEF(SetModel, {
-  ret.err = Sys::pmsm1.setModel(arg);
-  return Rpc::DispatchStatus::DispatchStatus_OK;
-})
-Rpc::DispatchStatus Fdmc::SetControlMode(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::SetConfigPwm(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::SetConfigAnalog(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::SetPid(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::SetConfigSComm(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::ClearFault(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::GetControlMode(Rpc::DispatchStack stack) { return {}; }
+RPC_DEF(SetSetpoint, ret.err = Sys::pmsm1.setSetpoint(arg.sp, arg.mech_mode); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(SetModel, ret.err = Sys::pmsm1.setModel(arg); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(SetControlMode, ret.err = Sys::pmsm1.setControlMode(arg); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(SetConfigPwm, ret.err = Sys::pmsm1.setConfigPwm(arg); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(SetConfigAnalog, ret.err = Sys::pmsm1.setConfigAnalog(arg); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(SetPid, ret.err = Sys::pmsm1.setPid(arg); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(SetConfigSComm, ret.err = Sys::pmsm1.setConfigSComm(arg); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(GetFault, ret.fault = Sys::pmsm1.getFault(); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(GetControlMode, ret = Sys::pmsm1.getControlMode(); return Rpc::DispatchStatus::DispatchStatus_OK;)
 RPC_DEF(GetModel, ret = Sys::pmsm1.getModel(); return Rpc::DispatchStatus::DispatchStatus_OK;)
-Rpc::DispatchStatus Fdmc::GetPid(Rpc::DispatchStack stack) { return {}; }
-Rpc::DispatchStatus Fdmc::GetFault(Rpc::DispatchStack stack) { return {}; }
+RPC_DEF(GetPid, ret = Sys::pmsm1.getPid(arg.n); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(GetConfigScomm, ret = Sys::pmsm1.getConfigScomm(); return Rpc::DispatchStatus::DispatchStatus_OK;)
+RPC_DEF(ClearFault, ret.err = Sys::pmsm1.clearFault(); return Rpc::DispatchStatus::DispatchStatus_OK;)
 #undef RPC_DEF
