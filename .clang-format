@@ -1,0 +1,103 @@
+
+BasedOnStyle: LLVM
+
+# ============================================================
+# General layout
+# ============================================================
+
+IndentWidth: 2
+ContinuationIndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 160
+
+BreakBeforeBraces: Attach
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: false
+AlignAfterOpenBracket: Align
+
+# ============================================================
+# Horizontal packing
+# ============================================================
+
+BinPackArguments: true
+BinPackParameters: true
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+PenaltyBreakAssignment: 1000
+PenaltyBreakBeforeFirstCallParameter: 1000
+PenaltyBreakOpenParenthesis: 1000
+PenaltyExcessCharacter: 1000000
+
+# ============================================================
+# Compact functions and control structures
+# ============================================================
+
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+
+IndentCaseLabels: false
+
+# ============================================================
+# Empty lines and vertical spacing
+# ============================================================
+
+KeepEmptyLines:
+  AtEndOfBlock: false
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+
+MaxEmptyLinesToKeep: 0
+
+EmptyLineBeforeAccessModifier: Never
+EmptyLineAfterAccessModifier: Never
+
+# ============================================================
+# Alignment
+# ============================================================
+
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCompound: true
+
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+
+AlignConsecutiveBitFields:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+
+AlignTrailingComments:
+  Kind: Always
+
+AlignEscapedNewlines: Left
+
+# ============================================================
+# Pointers and references
+# ============================================================
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+
+# ============================================================
+# Preprocessor and includes
+# ============================================================
+    
+SortIncludes: CaseSensitive
+IndentPPDirectives: None

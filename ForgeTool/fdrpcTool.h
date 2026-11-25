@@ -89,7 +89,7 @@ private:
     ErrorCollector error_collector;
     std::unique_ptr<google::protobuf::compiler::Importer> importer;
     google::protobuf::DynamicMessageFactory factory;
-    const google::protobuf::FileDescriptor *desc = nullptr;
+    const google::protobuf::FileDescriptor *fdesc = nullptr;
 
     //"Generic" render states
     std::string err;
@@ -105,7 +105,7 @@ public:
         for (const auto &path : paths)
             source_tree.MapPath("", path.string());
         importer = std::make_unique<google::protobuf::compiler::Importer>(&source_tree, &error_collector);
-        desc = importer->Import(file);
+        fdesc = importer->Import(file);
         if (error_collector.diagnostics.size() > 0)
         {
             err = error_collector.toString();
@@ -125,7 +125,7 @@ public:
     static bool deserialize(Message *msg, const std::vector<uint8_t> &data);
     void update();
     bool Call(std::vector<uint8_t>& data);
-    Rpc::RpcType Process(std::vector<uint8_t> data);
+    Rpc::RpcType Process(std::span<uint8_t> data);
     void DrawError(ImVec2 dim);
     bool renderRpcEx(ImVec2 dim);
     bool renderRpcRet(ImVec2 dim);

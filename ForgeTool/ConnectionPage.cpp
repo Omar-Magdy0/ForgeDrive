@@ -7,7 +7,7 @@
 constexpr GridConfig card_grid = {.minItemWidth = 160, .spacingX = 12, .spacingY = 12, .maxColumns = 6};
 constexpr int card_height = 170;
 
-void ConnectionPage::DrawLaunchBar(std::function<void()> disconnect)
+void ConnectionPage::DrawLaunchBar(IComm *comm, std::function<void()> disconnect)
 {
     auto avail = ImGui::GetContentRegionAvail();
     float spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -16,20 +16,21 @@ void ConnectionPage::DrawLaunchBar(std::function<void()> disconnect)
     ImGui::PushFont(fg.Style().fonts.IconM);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y - buttonHeight);
     if (ImGui::Button(ICON_FA_LINK_SLASH, ImVec2(buttonWidth, 0)))
-        fg.exec(disconnect);
+        disconnect();
     ImGui::SameLine();
     ImGui::Button(ICON_FA_CIRCLE_INFO, ImVec2(buttonWidth, 0));
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_ARROW_UP_RIGHT_FROM_SQUARE, ImVec2(buttonWidth, 0)))
     {
         std::string name = "SAD";
-        Launchable& laun = fg.Launch<LaunchFdmc>(name);
+        LaunchFdmc& laun = fg.Launch<LaunchFdmc>(name);
+        laun.setComm(comm);
         fg.SetStatus(fg.Style().colors.Info, "Launch " + laun.getWindowName());
     }
     ImGui::PopFont();
 }
 
-void ConnectionPage::DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, bool launchBar = false)
+void ConnectionPage::DrawUsbCard(const UsbDeviceInfo& info, ImVec2 dim, IComm *comm, bool launchBar)
 {
     bool selected = false;
     if (CardBegin(ImGui::GetID(info._libusb_device), fg.Style(), selected, dim, 1))
@@ -56,7 +57,6 @@ void ConnectionPage::DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, bool launchBar 
             SetNextItemAlignment(button_width, button_height, AlignX::Center, AlignY::Bottom);
             if (ImGui::Button("Connect", ImVec2(button_width, button_height)))
             {
-                fg.exec([this, info]()
                 {
                     std::string error;
                     Usbxch::connect(info, error);
@@ -64,14 +64,14 @@ void ConnectionPage::DrawUsbCard(UsbDeviceInfo info, ImVec2 dim, bool launchBar 
                     auto color = ne ? fg.Style().colors.Success : fg.Style().colors.Error;
                     auto text = "USB CONNECTION : " + (ne? "SUCCESS" : error);
                     fg.SetStatus(color, text);
-                });
+                };
             }
         }
         else
         {
             if (launchBar)
             {
-                DrawLaunchBar([device]()
+                DrawLaunchBar(comm, [device]()
                               { Usbxch::disconnect(device); });
             }
         }
@@ -97,7 +97,7 @@ void ConnectionPage::DrawTCPCard(TCPClient *client, ImVec2 dim, bool launchBar =
         ImGui::PopFont();
         if (launchBar)
         {
-            DrawLaunchBar([client]()
+            DrawLaunchBar(client, [client]()
                           { TCPClient::disconnect(client); });
         }
     }
@@ -115,7 +115,7 @@ void ConnectionPage::ConnectionsList()
         for (auto& device : usb_devices)
         {
             if(GridItem())
-                DrawUsbCard(device->getDeviceInfo(), ImVec2(0, card_height), true);
+                DrawUsbCard(device->getDeviceInfo(), ImVec2(0, card_height), device, true);
         }
         for (auto* client : tcp_connections)
         {

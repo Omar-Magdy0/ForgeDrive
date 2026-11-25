@@ -3,7 +3,9 @@
 #include "IconsFontAwesome7.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
+#include <stdint.h>
 #include <implot.h>
+
 
 inline ImVec4 ImRGB(
     uint8_t r,
@@ -513,66 +515,4 @@ inline ImVec2 SetNextItemAlignment(float width, float height, AlignX x = AlignX:
     return pos;
 }
 
-
-class InputForm
-{
-private:
-    /* data */
-public:
-    void FLOAT(const char *name, float &value)
-    {
-        ImGui::InputFloat(name, &value, 0, 0, "%.3f");
-    }
-    void INT(const char *name, int &value)
-    {
-        ImGui::InputInt(name, &value, 0, 0);
-    }
-    template<typename T>
-    void ENUM( const char *name, T &value)
-    {
-
-    }
-    void BOOL(const char *name, bool &value)
-    {
-        ImGui::Checkbox(name, &value);
-    }
-    template<typename T>
-    void TUPLE(const char *name, T &value)
-    {
-        static_assert(etl::is_tuple<T>::value, "TUPLE requires etl::tuple");
-        if (ImGui::TreeNode(name))
-        {
-        }
-    }
-    template<typename T>
-    void ARG_TUPLE(T &value)
-    {
-    }
-    template<typename T>
-    void input()
-    {
-
-    }
-};
-
-class OutputForm
-{
-    private:
-        /* data */
-    public:
-    void FLOAT();
-    void INT();
-    void ENUM();
-    void BOOL();
-    void STRING();
-    void BYTES();
-    void ARRAY();
-    template<typename T>
-    void TUPLE();
-    template<typename T>
-    void RET_TUPLE();
-    void NULL_();
-    template<typename T>
-    void output();
-};
 

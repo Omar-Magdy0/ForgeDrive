@@ -132,8 +132,8 @@ static void drawControlPanel()
         scope.update_decimation(temp);
     }
     ImGui::Separator();
-    ImGui::InputFloat("Trigger", &scope.trigger_level, 0.1, 1, "%.1f");
-    ImGui::InputFloat("Hysteresis", &scope.hysteresis_level, 0.1, 1, "%.1f");
+    ImGui::InputFloat("Trigger", &scope.trigger_level, 0.1, 1, "%.6g");
+    ImGui::InputFloat("Hysteresis", &scope.hysteresis_level, 0.1, 1, "%.6g");
     ImGui::Separator();
     if (ImGui::BeginCombo("Display", display_mode_names[(int)display_mode]))
     {

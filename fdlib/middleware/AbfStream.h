@@ -27,6 +27,14 @@ extern "C" {
 // ================== ENUMS ==================
 typedef enum
 {
+    AbfId_RPC = 120,
+    AbfId_DAQStream = 121,
+    AbfId_DAQCodec = 127,
+} AbfId;
+
+
+typedef enum
+{
     AbfErr_OK = 0,
     AbfErr_PAYLOAD_INCOMPLETE = 1,
     AbfErr_PAYLOAD_LARGER_THAN_EXPECTED = 2,
