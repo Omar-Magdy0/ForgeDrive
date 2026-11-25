@@ -1,6 +1,2 @@
 #include "ForgeTool.h"
-
-void LaunchablePage::render()
-{
-    
-}
+void LaunchablePage::render() {}

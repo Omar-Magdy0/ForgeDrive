@@ -7,6 +7,9 @@
         "functions": "#7A5DE8",
         "types": "#2D8ABF"
     },
+    "clang-format.executable": "/usr/bin/clang-format-23",
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format-23",
+    "editor.formatOnSave": true,
     "files.associations": {
         "core.h": "c",
         "stdint.h": "c",

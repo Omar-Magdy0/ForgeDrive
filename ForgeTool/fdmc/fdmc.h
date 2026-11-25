@@ -6,15 +6,14 @@ extern "C" {
 }
 class LaunchFdmc : public Launchable {
   FdrpcTool            rpctool;
-  IComm               *comm;
+  IComm*               comm;
   AbfReader_t          frame_reader;
   AbfRead_t            frame;
   std::vector<uint8_t> tx_buf;
   std::vector<uint8_t> b_buf;
   std::vector<uint8_t> rx_buf;
-
 public:
-  LaunchFdmc(ForgeTool &fg, std::string name)
+  LaunchFdmc(ForgeTool& fg, std::string name)
       : Launchable(fg, "ForgeDriveMC", name), rpctool(fg,
                                                       {"/media/renderer/New Volume/Shared_data/ForgeDrive/ForgeDriveMC/fdmc",
                                                        "/media/renderer/New Volume/Shared_data/ForgeDrive/fdlib/middleware/fdrpc", "/usr/include"},
@@ -27,7 +26,7 @@ public:
     abf_init_reader(&frame_reader);
   }
   void frameHandle(uint8_t id, std::span<uint8_t> data);
-  void setComm(IComm *comm_) {
+  void setComm(IComm* comm_) {
     if (!comm_) return;
     comm               = comm_;
     comm->onDisconnect = [this]() {

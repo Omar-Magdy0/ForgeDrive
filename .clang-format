@@ -47,12 +47,6 @@ IndentCaseLabels: false
 # Empty lines and vertical spacing
 # ============================================================
 
-KeepEmptyLines:
-  AtEndOfBlock: false
-  AtEndOfFile: false
-  AtStartOfBlock: false
-  AtStartOfFile: false
-
 MaxEmptyLinesToKeep: 0
 
 EmptyLineBeforeAccessModifier: Never
