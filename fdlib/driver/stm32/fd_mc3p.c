@@ -413,9 +413,7 @@ void fd_mc3p_{{inst.name}}_reconfigure_pwm(fd_mc3p_handle_t *h)
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
     h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
     //compute deadtme compensation
-    #ifdef FD_MC3P_DTC_ACTIVE
-    h->dtc_comp_q15 = (uint16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
-    #endif
+    pv_mc3p_dtc_update_comp(h);
 }
 void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_state_t state_u, fd_mc3p_phase_state_t state_v, fd_mc3p_phase_state_t state_w)
 {
@@ -477,9 +475,9 @@ void fd_mc3p_{{inst.name}}_write_phase_state(fd_mc3p_handle_t *h, fd_mc3p_phase_
 void fd_mc3p_{{inst.name}}_write_phase_duty(fd_mc3p_handle_t *h, int16_t dutyu_q15, int16_t dutyv_q15, int16_t dutyw_q15)
 {
     TIM_TypeDef *tim = TIM{{inst.pwm.tim}};
-    uint32_t compare_u = ((uint32_t)SATURATE(dutyu_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
-    uint32_t compare_v = ((uint32_t)SATURATE(dutyv_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
-    uint32_t compare_w = ((uint32_t)SATURATE(dutyw_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
+    uint32_t compare_u = ((uint32_t)MC3P_SATURATE(dutyu_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
+    uint32_t compare_v = ((uint32_t)MC3P_SATURATE(dutyv_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
+    uint32_t compare_w = ((uint32_t)MC3P_SATURATE(dutyw_q15, h->duty_min_q15, h->duty_max_q15) * h->timer_max_q15) >> 15;
     tim->CCR{{inst.pwm["uh"][1]}} = compare_u;
     tim->CCR{{inst.pwm["vh"][1]}} = compare_v;
     tim->CCR{{inst.pwm["wh"][1]}} = compare_w;
@@ -487,19 +485,6 @@ void fd_mc3p_{{inst.name}}_write_phase_duty(fd_mc3p_handle_t *h, int16_t dutyu_q
 void fd_mc3p_{{inst.name}}_read_sync(fd_mc3p_handle_t *h, void *data)
 {
     ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
-#define DTC_UPDATE_POLARITY(current, bit)         \
-    do                                            \
-    {                                             \
-        if ((current) > (int32_t)FD_MC3P_DTC_CTHRESH)       \
-        {                                         \
-            h->dtc_state |= (bit);             \
-        }                                         \
-        else if ((current) < -(int32_t)FD_MC3P_DTC_CTHRESH) \
-        {                                         \
-            h->dtc_state &= ~(bit);            \
-        }                                         \
-    } while (0)
-
     uint8_t is_svm = IS_SVM_SECTOR(h->sector_last);
     uint8_t is_trap = IS_TRAP_SECTOR(h->sector_last);
     ((fd_mc3p_trap_data_t *)(data))->vbus_q31 = h->rank_scale[0][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_1) - h->rank_scale[0][1]);
@@ -519,20 +504,16 @@ void fd_mc3p_{{inst.name}}_read_sync(fd_mc3p_handle_t *h, void *data)
         
         {% endif %}
         // Dead-time compensation
-        #ifdef FD_MC3P_DTC_ACTIVE
-        DTC_UPDATE_POLARITY(svm->cu_q31, (1 << 0));
-        DTC_UPDATE_POLARITY(svm->cv_q31, (1 << 1));
-        DTC_UPDATE_POLARITY(svm->cw_q31, (1 << 2));
-        #endif
+        pv_mc3p_dtc_update_polarity(h, svm->cu_q31, (1 << 0));
+        pv_mc3p_dtc_update_polarity(h, svm->cv_q31, (1 << 1));
+        pv_mc3p_dtc_update_polarity(h, svm->cw_q31, (1 << 2));
     }
     else if (is_trap)
     {
         fd_mc3p_trap_data_t *trap = (fd_mc3p_trap_data_t *)data;
         trap->vbemf_q31 = h->rank_scale[1][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_2) - h->rank_scale[1][1]);
         trap->cbus_q31 =  h->rank_scale[2][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_3) - h->rank_scale[2][1]);
-        #ifdef FD_MC3P_DTC_ACTIVE
-        DTC_UPDATE_POLARITY(trap->cbus_q31 , (1 << 3));
-        #endif
+        pv_mc3p_dtc_update_polarity(h, trap->cbus_q31, (1 << 3));
     }
 }
 void fd_mc3p_{{inst.name}}_bg_startConv(fd_mc3p_handle_t *h)

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #pragma once
 #include <math.h>
 #include <stdint.h>
@@ -38,6 +39,23 @@ FORCE_INLINE static inline uint32_t sat_add(uint32_t a, uint32_t b) {
 }
 // Unsigned saturating subtraction
 FORCE_INLINE static inline uint32_t sat_sub(uint32_t a, uint32_t b) { return a < b ? 0 : a - b; }
+// constants
+inline constexpr int32_t                                         MaxaMinbA0 = static_cast<int32_t>((127.0 / 128.0) * INT32_MAX);
+inline constexpr int32_t                                         MaxaMinbA1 = static_cast<int32_t>((27.0 / 32.0) * INT32_MAX);
+inline constexpr int32_t                                         MaxaMinbB0 = static_cast<int32_t>((3.0 / 16.0) * INT32_MAX);
+inline constexpr int32_t                                         MaxaMinbB1 = static_cast<int32_t>((71.0 / 128.0) * INT32_MAX);
+inline constexpr float                                           Pi         = 3.14159265358979323846f;
+inline constexpr double                                          Kilo       = 1e3;
+inline constexpr double                                          Mega       = 1e6;
+inline constexpr double                                          Giga       = 1e9;
+inline constexpr double                                          Milli      = 1e-3;
+inline constexpr double                                          Micro      = 1e-6;
+inline constexpr double                                          Nano       = 1e-9;
+inline constexpr double                                          Pico       = 1e-12;
+template <typename T, typename U> constexpr auto                 Min(T a, U b) { return a < b ? a : b; }
+template <typename T, typename U> constexpr auto                 Max(T a, U b) { return a > b ? a : b; }
+template <typename T, typename Min, typename Max> constexpr auto Clamp(T value, Min min, Max max) { return value < min ? min : (value > max ? max : value); }
+template <typename T> constexpr T                                Abs(T value) { return value < T{0} ? -value : value; }
 class pid_q31 {
   int32_t A[3];
   int32_t x[2];
@@ -88,22 +106,13 @@ public:
     x[1] = 0;
   }
 };
+static inline uint32_t maxa_minb_uq31(int32_t i1, int32_t i2) {
+  uint32_t a   = i1 < 0 ? 0u - (uint32_t)i1 : (uint32_t)i1;
+  uint32_t b   = i2 < 0 ? 0u - (uint32_t)i2 : (uint32_t)i2;
+  uint32_t max = a > b ? a : b;
+  uint32_t min = a > b ? b : a;
+  int32_t  z0  = (int32_t)(((int64_t)MaxaMinbA0 * max + (int64_t)MaxaMinbB0 * min) >> 31);
+  int32_t  z1  = (int32_t)(((int64_t)MaxaMinbA1 * max + (int64_t)MaxaMinbB1 * min) >> 31);
+  return (uint32_t)(z0 > z1 ? z0 : z1);
+}
 } // namespace fd
-namespace fd {
-template <typename T> bool constexpr in_range(T c, T min, T max) { return (c <= max) && (c >= min); }
-template <typename T> bool constexpr nearly_equal(T a, T b, T diff) { return ((a - b) <= diff) && ((a - b) >= -diff); }
-static inline int increment_roll(int x, int min, int max) { return ((x) >= (max)) ? (min) : ((x) + 1); }
-static inline int decrement_roll(int x, int min, int max) { return ((x) <= (min)) ? (max) : ((x)-1); }
-}; // namespace fd
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif
-#define CLAMP(v, min, max) (((v) < (min)) ? (min) : (((v) > (max)) ? (max) : (v)))
-#define ABS(x)             ((x) < 0 ? -(x) : (x))
-#define FD_KILO            1e3
-#define FD_MEGA            1e6
-#define FD_GIGA            1e9
-#define FD_MILLI           1e-3
-#define FD_MICRO           1e-6
-#define FD_NANO            1e-9
-#define FD_PICO            1e-12

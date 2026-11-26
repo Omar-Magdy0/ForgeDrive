@@ -32,15 +32,15 @@ struct PmsmControlCore {
   CoreState   state;
   CoreControl control;
   PmsmModel   model;
-#include "PmsmControlCore_Foc.h"
-#include "PmsmControlCore_SComm.h"
+#include "PmsmControlCore_Foc.inc"
+#include "PmsmControlCore_SComm.inc"
   void setControlMode(McMode mc_mode);
   void pwmConfigUpdate(ConfigPwm cfg);
   void (*onFault)(void* ctx, PmsmFault f);
   PmsmControlCore(void (*_onFault)(void*, PmsmFault), const ConfigGen& _conf) : conf(_conf), onFault(_onFault) {};
   void pwmLoop();
   void xmcLoop();
-#include "PmsmControlAPI.h"
+#include "PmsmControlAPI.inc"
   PmsmErr init();
   void    configGenUpdate();
   void    modelUpdate();

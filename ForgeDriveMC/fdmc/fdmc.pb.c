@@ -18,7 +18,7 @@ PB_BIND(ElecSensorConfig, ElecSensorConfig, AUTO)
 PB_BIND(ConfigAnalog, ConfigAnalog, AUTO)
 
 
-PB_BIND(ConfigSComm, ConfigSComm, AUTO)
+PB_BIND(ConfigScomm, ConfigScomm, AUTO)
 
 
 PB_BIND(PmsmModel, PmsmModel, AUTO)

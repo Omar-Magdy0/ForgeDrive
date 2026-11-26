@@ -22,26 +22,6 @@
             "--all-scopes-completion",
             "--pch-storage=memory"
         ],
-        "files.associations": {
-            "core.h": "c",
-            "stdint.h": "c",
-            "compare": "cpp",
-            "cstdint": "cpp",
-            "unordered_map": "cpp",
-            "istream": "cpp",
-            "numeric": "cpp",
-            "ostream": "cpp",
-            "sstream": "cpp",
-            "cmsis_os.h": "c",
-            "stm32f4xx.h": "c",
-            "stm32f4xx_hal.h": "c",
-            "cmath": "cpp",
-            "limits": "cpp",
-            "functional": "cpp",
-            "tuple": "cpp",
-            "type_traits": "cpp",
-            "stm32f4xx_hal_tim.h": "c"
-        },
         "C_Cpp.default.compilerPath": "/usr/bin/arm-none-eabi-g++",
         "python-envs.pythonProjects": [
             {
@@ -49,6 +29,9 @@
                 "envManager": "ms-python.python:venv",
                 "packageManager": "ms-python.python:pip"
             }
-        ]
+        ],
+        "files.associations": {
+            "*.inc": "cpp"
+        }
     }
 }

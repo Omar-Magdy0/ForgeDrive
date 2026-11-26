@@ -87,11 +87,13 @@ message ConfigPwm {
   uint32 deadtime_ns = 2;
   float duty_min = 3;
   float duty_max = 4;
+  float dtc_thresh = 5;
+  bool dtc_active = 6;
 }
 
 message ElecSensorConfig {
-  float offset = 2;
-  float gain = 3;
+  float offset = 1;
+  float gain = 2;
 }
 
 // Analog configuration
@@ -107,7 +109,7 @@ message ConfigAnalog {
 }
 
 // Serial communication configuration
-message ConfigSComm {
+message ConfigScomm {
   uint32 oversample_bits = 1;
   uint32 esettle_min_ticks = 2;
   uint32 hfi_n = 3;
@@ -148,7 +150,7 @@ message Pid {
 }
 
 message Setpoint {
-  float sp = 1;
+  float value = 1;
   MechMode mech_mode = 2; // Defaults to MechMode_UNSPECIFIED (0) in proto3
 }
 
@@ -172,43 +174,67 @@ message PmsmErrRet {
 message Empty {}
 
 service Fdmc {
+  // Setpoint
   rpc SetSetpoint(Setpoint) returns (PmsmErrRet) {
-    option (fdrpc.id) = 1;
-  }
-  rpc SetModel(PmsmModel) returns (PmsmErrRet) {
     option (fdrpc.id) = 2;
   }
-  rpc SetControlMode(ControlMode) returns (PmsmErrRet) {
+  rpc GetSetpoint(Empty) returns (Setpoint) {
     option (fdrpc.id) = 3;
   }
-  rpc SetConfigPwm(ConfigPwm) returns (PmsmErrRet) {
+
+  // Motor model
+  rpc SetModel(PmsmModel) returns (PmsmErrRet) {
     option (fdrpc.id) = 4;
   }
-  rpc SetConfigAnalog(ConfigAnalog) returns (PmsmErrRet) {
+  rpc GetModel(Empty) returns (PmsmModel) {
     option (fdrpc.id) = 5;
   }
-  rpc SetPid(Pid) returns (PmsmErrRet) {
+
+  // Control mode
+  rpc SetControlMode(ControlMode) returns (PmsmErrRet) {
     option (fdrpc.id) = 6;
   }
-  rpc SetConfigSComm(ConfigSComm) returns (PmsmErrRet) {
+  rpc GetControlMode(Empty) returns (ControlMode) {
     option (fdrpc.id) = 7;
   }
-  rpc GetControlMode(Empty) returns (ControlMode) {
+
+  // PWM configuration
+  rpc SetConfigPwm(ConfigPwm) returns (PmsmErrRet) {
     option (fdrpc.id) = 8;
   }
-  rpc GetModel(Empty) returns (PmsmModel) {
+  rpc GetConfigPwm(Empty) returns (ConfigPwm) {
     option (fdrpc.id) = 9;
   }
-  rpc GetPid(GetPidArg) returns (Pid) {
+
+  // Analog configuration
+  rpc SetConfigAnalog(ConfigAnalog) returns (PmsmErrRet) {
     option (fdrpc.id) = 10;
   }
-  rpc GetFault(Empty) returns (PmsmFaultRet) {
+  rpc GetConfigAnalog(Empty) returns (ConfigAnalog) {
     option (fdrpc.id) = 11;
   }
-  rpc GetConfigScomm(Empty) returns (ConfigSComm) {
+
+  // PID configuration
+  rpc SetPid(Pid) returns (PmsmErrRet) {
     option (fdrpc.id) = 12;
   }
-  rpc ClearFault(Empty) returns (PmsmErrRet) {
+  rpc GetPid(GetPidArg) returns (Pid) {
     option (fdrpc.id) = 13;
+  }
+
+  // Self-commissioning configuration
+  rpc SetConfigScomm(ConfigScomm) returns (PmsmErrRet) {
+    option (fdrpc.id) = 14;
+  }
+  rpc GetConfigScomm(Empty) returns (ConfigScomm) {
+    option (fdrpc.id) = 15;
+  }
+
+  // Fault management
+  rpc ClearFault(Empty) returns (PmsmErrRet) {
+    option (fdrpc.id) = 16;
+  }
+  rpc GetFault(Empty) returns (PmsmFaultRet) {
+    option (fdrpc.id) = 17;
   }
 }

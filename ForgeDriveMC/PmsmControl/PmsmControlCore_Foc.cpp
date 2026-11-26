@@ -1,29 +1,11 @@
 #include "PmsmControlCore.h"
 #include "math/qmath.h"
+#include <cmath>
+#include <cstdint>
+using namespace fd;
 // Fixed-point filter coefficients for current magnitude estimation (max_a_min_b approximation)
-constexpr q31_t    MAXA_MINB_A0       = (127 / 128.0) * INT32_MAX;
-constexpr q31_t    MAXA_MINB_A1       = (27 / 32.0) * INT32_MAX;
-constexpr q31_t    MAXA_MINB_B0       = (3 / 16.0) * INT32_MAX;
-constexpr q31_t    MAXA_MINB_B1       = (71 / 128.0) * INT32_MAX;
-constexpr q15_t    SQRT3_Q3P12        = ((int32_t)(1.73205080757 * INT16_MAX) >> 3);
 constexpr uint32_t POS_MAX_ERROR_STEP = INT32_MAX / 3600;
 // Speed scaling: convert from Q32.31 delta-angle to Q7.24 angular velocity
-constexpr int       SPEED_FROM_DELTA_SHIFT = 7;
-static inline q31_t maxa_minb_q31(q31_t i1, q31_t i2) {
-  q31_t max, min;
-  i1 = i1 < 0 ? -i1 : i1;
-  i2 = i2 < 0 ? -i2 : i2;
-  if (i1 > i2) {
-    max = i1;
-    min = i2;
-  } else {
-    max = i2;
-    min = i1;
-  }
-  q31_t z0 = (((int64_t)MAXA_MINB_A0 * max + (int64_t)MAXA_MINB_B0 * min) >> 31);
-  q31_t z1 = (((int64_t)MAXA_MINB_A1 * max + (int64_t)MAXA_MINB_B1 * min) >> 31);
-  return z0 > z1 ? z0 : z1;
-}
 void PmsmControlCore::Foc_init() {}
 void PmsmControlCore::Foc_onEnter(McMode prev_mct) {
   foc.state.Id_pid.reset();
@@ -66,9 +48,9 @@ void PmsmControlCore::Foc_xmcLoop() {
     foc.state.ECd_sp_q31 = 0;
   } else {
   }
-  int32_t mag_q31 = maxa_minb_q31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
-  if (mag_q31 > control.max_cmag_q31) {
-    q31_t scale          = ((int64_t)control.max_cmag_q31 << 31) / mag_q31;
+  uint32_t imag_uq31 = maxa_minb_uq31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
+  if (imag_uq31 > control.max_imag_uq31 && imag_uq31 != 0) {
+    uint32_t scale       = ((uint64_t)control.max_imag_uq31 << 31) / imag_uq31;
     foc.state.ECd_sp_q31 = ((int64_t)foc.state.ECd_sp_q31 * scale) >> 31;
     foc.state.ECq_sp_q31 = ((int64_t)foc.state.ECq_sp_q31 * scale) >> 31;
   }
@@ -76,19 +58,22 @@ void PmsmControlCore::Foc_xmcLoop() {
 }
 void PmsmControlCore::Foc_pwmLoop() {
   state.Vbus_q31 = mc3p_sync_meas.svm.vbus_q31;
-  if (state.Vbus_q31 > control.max_vbus_q31) state.fault |= (uint32_t)PmsmFault_OVLO;
-  else if (state.Vbus_q31 < control.min_vbus_q31) state.fault |= (uint32_t)PmsmFault_UVLO;
+  if (state.Vbus_q31 > control.max_vbus_uq31) state.fault |= (uint32_t)PmsmFault_OVLO;
+  else if (state.Vbus_q31 < control.min_vbus_uq31) state.fault |= (uint32_t)PmsmFault_UVLO;
   POS1.pTick_enter(pTicks);
   POS1.get_eTheta(state.eTheta_q31, model.pole_pairs);
-  q31_t sin, cos;
-  q31_t Ialpha_q31, Ibeta_q31;
-  q31_t valpha_q31, vbeta_q31;
+  int32_t sin, cos;
+  int32_t Ialpha_q31, Ibeta_q31;
+  int32_t valpha_q31, vbeta_q31;
   arm_sin_cos_q31(state.eTheta_q31, &sin, &cos);
   arm_clarke_q31(mc3p_sync_meas.svm.cu_q31, mc3p_sync_meas.svm.cv_q31, &Ialpha_q31, &Ibeta_q31);
   arm_park_q31(Ialpha_q31, Ibeta_q31, &foc.state.Id_q31, &foc.state.Iq_q31, sin, cos);
-  int64_t temp0  = (((int64_t)foc.state.Id_q31 * foc.state.Vd_q31 + (int64_t)foc.state.Iq_q31 * foc.state.Vq_q31) >> 1) / (state.Vbus_q31);
-  state.Ibus_q31 = temp0 * 3;
-  if (state.Ibus_q31 > control.max_cmag_q31 || state.Ibus_q31 < -control.max_cmag_q31) state.fault |= (uint32_t)PmsmFault_OC;
+  int64_t power_q61 = (((int64_t)foc.state.Id_q31 * foc.state.Vd_q31) >> 1) + (((int64_t)foc.state.Iq_q31 * foc.state.Vq_q31) >> 1);
+  state.power_q31   = (int32_t)(power_q61 >> 30);
+  state.Ibus_q31    = (int32_t)((power_q61 / state.Vbus_q31) * 6);
+  state.imag_uq31   = maxa_minb_uq31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
+  // if (state.imag_uq31 > control.max_imag_uq31) state.fault |= (uint32_t)PmsmFault_OC;
+  //  if (state.Ibus_q31 > control.max_ibus_uq31 || state.Ibus_q31 < -control.max_ibus_uq31) state.fault |= (uint32_t)PmsmFault_OC;
   if (state.fault != (uint32_t)PmsmFault_OK) {
     fd_mc3p_write_float(MC3P1);
     return;
@@ -108,13 +93,12 @@ void PmsmControlCore::Foc_pwmLoop() {
   }
   // Circular overmodulation clamping
   // Here overmodulation logic is intended
-  q31_t   vmag_q31      = maxa_minb_q31(foc.state.Vd_q31, foc.state.Vq_q31);
-  int32_t vbus_lim_q31  = ((int64_t)state.Vbus_q31 * MC3P1.duty_max_q15) >> 15;
-  int32_t mod_idx_q3p12 = (((int32_t)(vmag_q31 >> 16) * SQRT3_Q3P12) / (vbus_lim_q31 >> 16));
-  if (mod_idx_q3p12 > foc.state.mod_idx_max_q3p12) {
-    // scale both Vd and Vq down
-    foc.state.Vd_q31 = (foc.state.Vd_q31 >> 12) * (((int32_t)foc.state.mod_idx_max_q3p12 << 12) / mod_idx_q3p12);
-    foc.state.Vq_q31 = (foc.state.Vq_q31 >> 12) * (((int32_t)foc.state.mod_idx_max_q3p12 << 12) / mod_idx_q3p12);
+  uint32_t vmag_q31 = maxa_minb_uq31(foc.state.Vd_q31, foc.state.Vq_q31);
+  uint32_t vlim_q31 = (uint64_t(state.Vbus_q31) * (MC3P1.duty_max_q15 - MC3P1.duty_min_q15) * foc.state.modidxInvSqrt3_uq15) >> 30;
+  if (vmag_q31 > vlim_q31 && vmag_q31 != 0U) {
+    uint32_t scale_q31 = ((uint64_t)vlim_q31 << 31) / vmag_q31;
+    foc.state.Vd_q31   = (int32_t)(((int64_t)foc.state.Vd_q31 * scale_q31) >> 31);
+    foc.state.Vq_q31   = (int32_t)(((int64_t)foc.state.Vq_q31 * scale_q31) >> 31);
   }
   q15_t dalpha_q15, dbeta_q15;
   arm_inv_park_q31(foc.state.Vd_q31, foc.state.Vq_q31, &valpha_q31, &vbeta_q31, sin, cos);

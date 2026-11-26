@@ -96,6 +96,8 @@ typedef struct _ConfigPwm {
     uint32_t deadtime_ns;
     float duty_min;
     float duty_max;
+    float dtc_thresh;
+    bool dtc_active;
 } ConfigPwm;
 
 typedef struct _ElecSensorConfig {
@@ -123,13 +125,13 @@ typedef struct _ConfigAnalog {
 } ConfigAnalog;
 
 /* Serial communication configuration */
-typedef struct _ConfigSComm {
+typedef struct _ConfigScomm {
     uint32_t oversample_bits;
     uint32_t esettle_min_ticks;
     uint32_t hfi_n;
     float dc_vinj;
     float hfi_vinj;
-} ConfigSComm;
+} ConfigScomm;
 
 /* PMSM model */
 typedef struct _PmsmModel {
@@ -164,7 +166,7 @@ typedef struct _Pid {
 } Pid;
 
 typedef struct _Setpoint {
-    float sp;
+    float value;
     MechMode mech_mode; /* Defaults to MechMode_UNSPECIFIED (0) in proto3 */
 } Setpoint;
 
@@ -299,10 +301,10 @@ extern "C" {
 
 /* Initializer values for message structs */
 #define ProfilePoint2D_init_default              {0, 0, 0}
-#define ConfigPwm_init_default                   {0, 0, 0, 0}
+#define ConfigPwm_init_default                   {0, 0, 0, 0, 0, 0}
 #define ElecSensorConfig_init_default            {0, 0}
 #define ConfigAnalog_init_default                {false, ElecSensorConfig_init_default, false, ElecSensorConfig_init_default, false, ElecSensorConfig_init_default, false, ElecSensorConfig_init_default, false, ElecSensorConfig_init_default, false, ElecSensorConfig_init_default, false, ElecSensorConfig_init_default, 0}
-#define ConfigSComm_init_default                 {0, 0, 0, 0, 0}
+#define ConfigScomm_init_default                 {0, 0, 0, 0, 0}
 #define PmsmModel_init_default                   {0, 0, 0, 0, 0, 0, 0}
 #define ConfigGen_init_default                   {0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define Pid_init_default                         {0, 0, 0, _PidType_MIN}
@@ -313,10 +315,10 @@ extern "C" {
 #define PmsmErrRet_init_default                  {_PmsmErr_MIN}
 #define Empty_init_default                       {0}
 #define ProfilePoint2D_init_zero                 {0, 0, 0}
-#define ConfigPwm_init_zero                      {0, 0, 0, 0}
+#define ConfigPwm_init_zero                      {0, 0, 0, 0, 0, 0}
 #define ElecSensorConfig_init_zero               {0, 0}
 #define ConfigAnalog_init_zero                   {false, ElecSensorConfig_init_zero, false, ElecSensorConfig_init_zero, false, ElecSensorConfig_init_zero, false, ElecSensorConfig_init_zero, false, ElecSensorConfig_init_zero, false, ElecSensorConfig_init_zero, false, ElecSensorConfig_init_zero, 0}
-#define ConfigSComm_init_zero                    {0, 0, 0, 0, 0}
+#define ConfigScomm_init_zero                    {0, 0, 0, 0, 0}
 #define PmsmModel_init_zero                      {0, 0, 0, 0, 0, 0, 0}
 #define ConfigGen_init_zero                      {0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define Pid_init_zero                            {0, 0, 0, _PidType_MIN}
@@ -335,8 +337,10 @@ extern "C" {
 #define ConfigPwm_deadtime_ns_tag                2
 #define ConfigPwm_duty_min_tag                   3
 #define ConfigPwm_duty_max_tag                   4
-#define ElecSensorConfig_offset_tag              2
-#define ElecSensorConfig_gain_tag                3
+#define ConfigPwm_dtc_thresh_tag                 5
+#define ConfigPwm_dtc_active_tag                 6
+#define ElecSensorConfig_offset_tag              1
+#define ElecSensorConfig_gain_tag                2
 #define ConfigAnalog_vsbus_tag                   1
 #define ConfigAnalog_vsu_tag                     2
 #define ConfigAnalog_vsv_tag                     3
@@ -345,11 +349,11 @@ extern "C" {
 #define ConfigAnalog_csv_tag                     6
 #define ConfigAnalog_csw_tag                     7
 #define ConfigAnalog_offset_calibration_tag      8
-#define ConfigSComm_oversample_bits_tag          1
-#define ConfigSComm_esettle_min_ticks_tag        2
-#define ConfigSComm_hfi_n_tag                    3
-#define ConfigSComm_dc_vinj_tag                  4
-#define ConfigSComm_hfi_vinj_tag                 5
+#define ConfigScomm_oversample_bits_tag          1
+#define ConfigScomm_esettle_min_ticks_tag        2
+#define ConfigScomm_hfi_n_tag                    3
+#define ConfigScomm_dc_vinj_tag                  4
+#define ConfigScomm_hfi_vinj_tag                 5
 #define PmsmModel_R_tag                          1
 #define PmsmModel_Ld_tag                         2
 #define PmsmModel_Lq_tag                         3
@@ -370,7 +374,7 @@ extern "C" {
 #define Pid_Ki_tag                               2
 #define Pid_Kd_tag                               3
 #define Pid_type_tag                             4
-#define Setpoint_sp_tag                          1
+#define Setpoint_value_tag                       1
 #define Setpoint_mech_mode_tag                   2
 #define ControlMode_mc_mode_tag                  1
 #define ControlMode_mech_mode_tag                2
@@ -390,13 +394,15 @@ X(a, STATIC,   SINGULAR, FLOAT,    v2,                3)
 X(a, STATIC,   SINGULAR, UINT32,   pwm_hz,            1) \
 X(a, STATIC,   SINGULAR, UINT32,   deadtime_ns,       2) \
 X(a, STATIC,   SINGULAR, FLOAT,    duty_min,          3) \
-X(a, STATIC,   SINGULAR, FLOAT,    duty_max,          4)
+X(a, STATIC,   SINGULAR, FLOAT,    duty_max,          4) \
+X(a, STATIC,   SINGULAR, FLOAT,    dtc_thresh,        5) \
+X(a, STATIC,   SINGULAR, BOOL,     dtc_active,        6)
 #define ConfigPwm_CALLBACK NULL
 #define ConfigPwm_DEFAULT NULL
 
 #define ElecSensorConfig_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    offset,            2) \
-X(a, STATIC,   SINGULAR, FLOAT,    gain,              3)
+X(a, STATIC,   SINGULAR, FLOAT,    offset,            1) \
+X(a, STATIC,   SINGULAR, FLOAT,    gain,              2)
 #define ElecSensorConfig_CALLBACK NULL
 #define ElecSensorConfig_DEFAULT NULL
 
@@ -419,14 +425,14 @@ X(a, STATIC,   SINGULAR, BOOL,     offset_calibration,   8)
 #define ConfigAnalog_csv_MSGTYPE ElecSensorConfig
 #define ConfigAnalog_csw_MSGTYPE ElecSensorConfig
 
-#define ConfigSComm_FIELDLIST(X, a) \
+#define ConfigScomm_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   oversample_bits,   1) \
 X(a, STATIC,   SINGULAR, UINT32,   esettle_min_ticks,   2) \
 X(a, STATIC,   SINGULAR, UINT32,   hfi_n,             3) \
 X(a, STATIC,   SINGULAR, FLOAT,    dc_vinj,           4) \
 X(a, STATIC,   SINGULAR, FLOAT,    hfi_vinj,          5)
-#define ConfigSComm_CALLBACK NULL
-#define ConfigSComm_DEFAULT NULL
+#define ConfigScomm_CALLBACK NULL
+#define ConfigScomm_DEFAULT NULL
 
 #define PmsmModel_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, FLOAT,    R,                 1) \
@@ -461,7 +467,7 @@ X(a, STATIC,   SINGULAR, UENUM,    type,              4)
 #define Pid_DEFAULT NULL
 
 #define Setpoint_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    sp,                1) \
+X(a, STATIC,   SINGULAR, FLOAT,    value,             1) \
 X(a, STATIC,   SINGULAR, UENUM,    mech_mode,         2)
 #define Setpoint_CALLBACK NULL
 #define Setpoint_DEFAULT NULL
@@ -496,7 +502,7 @@ extern const pb_msgdesc_t ProfilePoint2D_msg;
 extern const pb_msgdesc_t ConfigPwm_msg;
 extern const pb_msgdesc_t ElecSensorConfig_msg;
 extern const pb_msgdesc_t ConfigAnalog_msg;
-extern const pb_msgdesc_t ConfigSComm_msg;
+extern const pb_msgdesc_t ConfigScomm_msg;
 extern const pb_msgdesc_t PmsmModel_msg;
 extern const pb_msgdesc_t ConfigGen_msg;
 extern const pb_msgdesc_t Pid_msg;
@@ -512,7 +518,7 @@ extern const pb_msgdesc_t Empty_msg;
 #define ConfigPwm_fields &ConfigPwm_msg
 #define ElecSensorConfig_fields &ElecSensorConfig_msg
 #define ConfigAnalog_fields &ConfigAnalog_msg
-#define ConfigSComm_fields &ConfigSComm_msg
+#define ConfigScomm_fields &ConfigScomm_msg
 #define PmsmModel_fields &PmsmModel_msg
 #define ConfigGen_fields &ConfigGen_msg
 #define Pid_fields &Pid_msg
@@ -526,8 +532,8 @@ extern const pb_msgdesc_t Empty_msg;
 /* Maximum encoded size of messages (where known) */
 #define ConfigAnalog_size                        86
 #define ConfigGen_size                           51
-#define ConfigPwm_size                           22
-#define ConfigSComm_size                         28
+#define ConfigPwm_size                           29
+#define ConfigScomm_size                         28
 #define ControlMode_size                         4
 #define ElecSensorConfig_size                    10
 #define Empty_size                               0
@@ -555,7 +561,7 @@ extern const pb_msgdesc_t Empty_msg;
 #define fdmc_v1_ConfigPwm ConfigPwm
 #define fdmc_v1_ElecSensorConfig ElecSensorConfig
 #define fdmc_v1_ConfigAnalog ConfigAnalog
-#define fdmc_v1_ConfigSComm ConfigSComm
+#define fdmc_v1_ConfigScomm ConfigScomm
 #define fdmc_v1_PmsmModel PmsmModel
 #define fdmc_v1_ConfigGen ConfigGen
 #define fdmc_v1_Pid Pid
@@ -599,7 +605,7 @@ extern const pb_msgdesc_t Empty_msg;
 #define fdmc_v1_ConfigPwm_init_default ConfigPwm_init_default
 #define fdmc_v1_ElecSensorConfig_init_default ElecSensorConfig_init_default
 #define fdmc_v1_ConfigAnalog_init_default ConfigAnalog_init_default
-#define fdmc_v1_ConfigSComm_init_default ConfigSComm_init_default
+#define fdmc_v1_ConfigScomm_init_default ConfigScomm_init_default
 #define fdmc_v1_PmsmModel_init_default PmsmModel_init_default
 #define fdmc_v1_ConfigGen_init_default ConfigGen_init_default
 #define fdmc_v1_Pid_init_default Pid_init_default
@@ -613,7 +619,7 @@ extern const pb_msgdesc_t Empty_msg;
 #define fdmc_v1_ConfigPwm_init_zero ConfigPwm_init_zero
 #define fdmc_v1_ElecSensorConfig_init_zero ElecSensorConfig_init_zero
 #define fdmc_v1_ConfigAnalog_init_zero ConfigAnalog_init_zero
-#define fdmc_v1_ConfigSComm_init_zero ConfigSComm_init_zero
+#define fdmc_v1_ConfigScomm_init_zero ConfigScomm_init_zero
 #define fdmc_v1_PmsmModel_init_zero PmsmModel_init_zero
 #define fdmc_v1_ConfigGen_init_zero ConfigGen_init_zero
 #define fdmc_v1_Pid_init_zero Pid_init_zero

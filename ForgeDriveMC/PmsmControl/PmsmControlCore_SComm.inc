@@ -2,7 +2,7 @@
 struct SComm {
   static constexpr float HFI_ANGLE_SCALE = 2.0f; // HFI angle spans 2 radians per cycle
   // Config runtime
-  ConfigSComm conf;
+  ConfigScomm conf;
   q31_t       dc_vinj_q31;
   q31_t       hfi_vinj_q31;
   // States

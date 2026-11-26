@@ -53,10 +53,7 @@ void pv_mc3p_MC3P1_hw_init(fd_mc3p_handle_t* h) {
   sil.param.load_J            = dummy_load.J;
   h->duty_max_q15             = (uint16_t)((h->config.duty_max) * 0x7FFF);
   h->duty_min_q15             = (uint16_t)((h->config.duty_min) * 0x7FFF);
-// compute deadtme compensation
-#ifdef FD_MC3P_DTC_ACTIVE
-  h->dtc_comp_q15 = (int16_t)(((float)h->config.deadtime_nS * h->config.pwm_Hz / 1e9) * INT16_MAX + 0.5);
-#endif
+  // compute deadtme compensation
   SILTick::instance().register_event((uint64_t)(1e9 / h->config.pwm_Hz), postScanMethod);
 }
 void pv_mc3p_MC3P1_sector_update(fd_mc3p_handle_t* h, fd_mc3p_sector_t sector) {
@@ -80,8 +77,9 @@ void pv_mc3p_MC3P1_sector_update(fd_mc3p_handle_t* h, fd_mc3p_sector_t sector) {
 }
 void pv_mc3p_MC3P1_offset_calibration(fd_mc3p_handle_t* h) {}
 void fd_mc3p_MC3P1_reconfigure_pwm(fd_mc3p_handle_t* h) {
-  h->duty_max_q15          = (uint16_t)((h->config.duty_max) * 0x7FFF);
-  h->duty_min_q15          = (uint16_t)((h->config.duty_min) * 0x7FFF);
+  h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
+  h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
+  pv_mc3p_dtc_update_comp(h);
   sil_input.dt             = 1.0f / h->config.pwm_Hz;
   sil.param.inv_pwm_freq   = h->config.pwm_Hz;
   sil.param.inv_deatime_ns = h->config.deadtime_nS;
@@ -90,14 +88,6 @@ void fd_mc3p_MC3P1_bg_startConv(fd_mc3p_handle_t* h) {}
 void fd_mc3p_MC3P1_read_sync(fd_mc3p_handle_t* h, void* data) {
   uint8_t is_svm  = IS_SVM_SECTOR(h->sector_last);
   uint8_t is_trap = IS_TRAP_SECTOR(h->sector_last);
-#define DTC_UPDATE_POLARITY(current, bit)                   \
-  do {                                                      \
-    if ((current) > (int32_t)FD_MC3P_DTC_CTHRESH) {         \
-      h->dtc_state |= (bit);                                \
-    } else if ((current) < -(int32_t)FD_MC3P_DTC_CTHRESH) { \
-      h->dtc_state &= ~(bit);                               \
-    }                                                       \
-  } while (0)
   if (is_svm) {
     // Convert float currents to Q31 format for the control algorithm
     // Scaling: 1.0A = X counts (adjust FD_MC3P_CS_SCALE to tune sensitivity)
@@ -105,11 +95,9 @@ void fd_mc3p_MC3P1_read_sync(fd_mc3p_handle_t* h, void* data) {
     ((fd_mc3p_svm_data_t*)(data))->cu_q31   = FD_MC3P_FLOAT_TO_CS(sil.state.ip[0]);
     ((fd_mc3p_svm_data_t*)(data))->cv_q31   = FD_MC3P_FLOAT_TO_CS(sil.state.ip[1]);
     ((fd_mc3p_svm_data_t*)(data))->cw_q31   = FD_MC3P_FLOAT_TO_CS(sil.state.ip[2]);
-#ifdef FD_MC3P_DTC_ACTIVE
-    DTC_UPDATE_POLARITY(((fd_mc3p_svm_data_t*)(data))->cu_q31, (1 << 0));
-    DTC_UPDATE_POLARITY(((fd_mc3p_svm_data_t*)(data))->cv_q31, (1 << 1));
-    DTC_UPDATE_POLARITY(((fd_mc3p_svm_data_t*)(data))->cw_q31, (1 << 2));
-#endif
+    pv_mc3p_dtc_update_polarity(h, ((fd_mc3p_svm_data_t*)(data))->cu_q31, (1 << 0));
+    pv_mc3p_dtc_update_polarity(h, ((fd_mc3p_svm_data_t*)(data))->cv_q31, (1 << 1));
+    pv_mc3p_dtc_update_polarity(h, ((fd_mc3p_svm_data_t*)(data))->cw_q31, (1 << 2));
   } else if (is_trap) {
     // Back-EMF would be: Ke * ωe where ωe = pp * ω_mech
     ((fd_mc3p_svm_data_t*)(data))->vbus_q31 = FD_MC3P_FLOAT_TO_VS(sil_input.vcc);
@@ -143,9 +131,7 @@ void fd_mc3p_MC3P1_read_sync(fd_mc3p_handle_t* h, void* data) {
     }
     ((fd_mc3p_trap_data_t*)(data))->vbemf_q31 = FD_MC3P_FLOAT_TO_VS(adc_syncRank1);
     ((fd_mc3p_trap_data_t*)(data))->cbus_q31  = FD_MC3P_FLOAT_TO_CS(adc_syncRank2);
-#ifdef FD_MC3P_DTC_ACTIVE
-    DTC_UPDATE_POLARITY(((fd_mc3p_trap_data_t*)(data))->cbus_q31, (1 << 3));
-#endif
+    pv_mc3p_dtc_update_polarity(h, ((fd_mc3p_trap_data_t*)(data))->cbus_q31, (1 << 3));
   } else {
     ((fd_mc3p_svm_data_t*)(data))->vbus_q31 = FD_MC3P_FLOAT_TO_VS(sil_input.vcc);
   }
@@ -159,9 +145,9 @@ void fd_mc3p_MC3P1_write_phase_state(fd_mc3p_handle_t* h, fd_mc3p_phase_state_t 
   MC3P1_phase_state[2] = state_w;
 }
 void fd_mc3p_MC3P1_write_phase_duty(fd_mc3p_handle_t* h, int16_t duty_u_q15, int16_t duty_v_q15, int16_t duty_w_q15) {
-  duty_u_q15    = (uint32_t)SATURATE(duty_u_q15, h->duty_min_q15, h->duty_max_q15);
-  duty_v_q15    = (uint32_t)SATURATE(duty_v_q15, h->duty_min_q15, h->duty_max_q15);
-  duty_w_q15    = (uint32_t)SATURATE(duty_w_q15, h->duty_min_q15, h->duty_max_q15);
+  duty_u_q15    = (uint32_t)MC3P_SATURATE(duty_u_q15, h->duty_min_q15, h->duty_max_q15);
+  duty_v_q15    = (uint32_t)MC3P_SATURATE(duty_v_q15, h->duty_min_q15, h->duty_max_q15);
+  duty_w_q15    = (uint32_t)MC3P_SATURATE(duty_w_q15, h->duty_min_q15, h->duty_max_q15);
   float duty[3] = {((float)duty_u_q15 / INT16_MAX), ((float)duty_v_q15 / INT16_MAX), ((float)duty_w_q15 / INT16_MAX)};
   for (int i = 0; i < 3; i++) {
     if (MC3P1_phase_state[i] == FD_MC3P_PHASE_L_ON) {

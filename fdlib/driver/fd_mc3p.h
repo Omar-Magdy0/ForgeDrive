@@ -17,6 +17,7 @@
 #ifndef MCADCPWM3P_H
 #define MCADCPWM3P_H
 
+#include <cstdint>
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C"
@@ -28,7 +29,13 @@ extern "C"
 #define MC3P_SYNC_CHANNELS_MAX 7
 #define MC3P_BG_CHANNELS_MAX 8
 
-#define SATURATE(v , min , max)(( v > max)?max: ((v < min)?0:v))
+#define MC3P_SATURATE(v, min, max) (((v) > (max)) ? (max) : (((v) < (min)) ? (min) : (v)))
+static inline int16_t mc3p_saturate_q15(int32_t value)
+{
+    if (value > INT16_MAX) return INT16_MAX;
+    if (value < INT16_MIN) return INT16_MIN;
+    return (int16_t)value;
+}
 #define Q15_HALF        16384   // 0.5 × 32768
 #define Q15_SQRT3_BY_2  28378   // 0.8660254 × 32768
 
@@ -101,9 +108,6 @@ extern "C"
     {{ mc3p.trap_table }}
     };
 
-    {% if mc3p.dtc is defined %}
-    #define FD_MC3P_DTC_ACTIVE
-    {% endif %}
     /**
      * @brief Mapping for synchronized ADC measurements.
      */
@@ -128,6 +132,8 @@ extern "C"
         uint32_t deadtime_nS; /**< Deadtime in Nanoseconds */
         float duty_max;       /**< Maximum allowable duty cycle */
         float duty_min;       /**< Minimum allowable duty cycle */
+        float dtc_thresh;
+        bool dtc_active;
     } fd_mc3p_config_t;
 
     /**
@@ -150,6 +156,7 @@ extern "C"
         int32_t rank_scale[4][2];
         bool offset_calibration;
         uint16_t dtc_comp_q15;
+        int32_t dtc_thresh;
         uint8_t dtc_state;
     } fd_mc3p_handle_t;
 
@@ -171,13 +178,19 @@ extern "C"
     } fd_mc3p_trap_data_t;
 
 /* Conversion Macros */
-#define FD_MC3P_VS_TO_FLOAT(vs) ((float)(((int64_t)(vs) * FD_MC3P_VS_SCALE) >> 31))
-#define FD_MC3P_CS_TO_FLOAT(cs) ((float)(((int64_t)(cs) * FD_MC3P_CS_SCALE) >> 31))
-#define FD_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / FD_MC3P_VS_SCALE) * INT32_MAX))
-#define FD_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / FD_MC3P_CS_SCALE) * INT32_MAX))
 #define FD_MC3P_VS_SCALE {{mc3p.vs_scale}}
 #define FD_MC3P_CS_SCALE {{mc3p.cs_scale}}
-
+#define FD_MC3P_VS_TO_FLOAT(vs) ((float)((int64_t)(vs) * FD_MC3P_VS_SCALE) / INT32_MAX)
+#define FD_MC3P_CS_TO_FLOAT(cs) ((float)((int64_t)(cs) * FD_MC3P_CS_SCALE) / INT32_MAX)
+#define FD_MC3P_FLOAT_TO_VS(f) ((int32_t)(((float)(f) / FD_MC3P_VS_SCALE) * INT32_MAX))
+#define FD_MC3P_FLOAT_TO_CS(f) ((int32_t)(((float)(f) / FD_MC3P_CS_SCALE) * INT32_MAX))
+static inline void pv_mc3p_dtc_update_polarity(fd_mc3p_handle_t *h, int32_t current, uint8_t bit)
+{
+    if (current > h->dtc_thresh) h->dtc_state |= bit;
+    else if (current < -h->dtc_thresh) h->dtc_state &= (uint8_t)~bit;
+}
+static inline int16_t pv_mc3p_dtc_comp(fd_mc3p_handle_t *h, uint8_t bit){return (h->dtc_state & bit)? h->dtc_comp_q15 : -h->dtc_comp_q15;}
+static inline void pv_mc3p_dtc_update_comp(fd_mc3p_handle_t *h){h->dtc_comp_q15 = h->config.dtc_active?(int16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5) : 0;}
 {% for inst in mc3p.instances %}
 void pv_mc3p_{{inst.name}}_sector_update(fd_mc3p_handle_t *h, fd_mc3p_sector_t sector);
 void pv_mc3p_{{inst.name}}_hw_init(fd_mc3p_handle_t *h);
@@ -198,10 +211,9 @@ static inline void fd_mc3p_{{inst.name}}_init(fd_mc3p_handle_t *h)
 {
     h->duty_max_q15 = (uint16_t)((h->config.duty_max) * 0x7FFF);
     h->duty_min_q15 = (uint16_t)((h->config.duty_min) * 0x7FFF);
+    h->dtc_thresh = FD_MC3P_FLOAT_TO_CS(h->config.dtc_thresh);
     //compute deadtme compensation
-    #ifdef FD_MC3P_DTC_ACTIVE
-    h->dtc_comp_q15 = (uint16_t)(((float)h->config.deadtime_nS*h->config.pwm_Hz/1e9)*INT16_MAX + 0.5);
-    #endif
+    pv_mc3p_dtc_update_comp(h);
     
     h->sector_last = FD_MC3P_SECTOR_FLOAT;
     h->mode        = FD_MC3P_MODE_NONE;
@@ -230,33 +242,23 @@ static inline void fd_mc3p_{{inst.name}}_write_trap(fd_mc3p_handle_t *h, fd_mc3p
     {
         pv_mc3p_{{inst.name}}_sector_update(h, sector);
     }
-    #ifdef FD_MC3P_DTC_ACTIVE
-    h->dutyu_q15 = __SSAT((int32_t)duty_q15 + ((h->dtc_state & (1<<3))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    #else
-    h->dutyu_q15 = duty_q15;
-    #endif
-
+    h->dutyu_q15 = mc3p_saturate_q15((int32_t)duty_q15 + pv_mc3p_dtc_comp(h, 1<<3));
     h->dutyv_q15 = h->dutyu_q15;
     h->dutyw_q15 = h->dutyu_q15;
     fd_mc3p_{{inst.name}}_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
 }
 static inline void fd_mc3p_{{inst.name}}_write_svm(fd_mc3p_handle_t *h, int16_t alpha_q15, int16_t beta_q15) 
 {
-    int32_t vmax, vmin, voff;
+    int32_t vmax, vmin, voff, vcm;
     int32_t dutyu_q15, dutyv_q15, dutyw_q15;
     /* αβ → phase (normalized Q15) */
     dutyu_q15 = alpha_q15;
-
-    dutyv_q15 = (-(int32_t)Q15_HALF * alpha_q15
-         + (int32_t)Q15_SQRT3_BY_2 * beta_q15) >> 15;
-
-    dutyw_q15 = (-(int32_t)Q15_HALF * alpha_q15
-         - (int32_t)Q15_SQRT3_BY_2 * beta_q15) >> 15;
+    dutyv_q15 = (-(int32_t)Q15_HALF * alpha_q15 + (int32_t)Q15_SQRT3_BY_2 * beta_q15) >> 15;
+    dutyw_q15 = (-(int32_t)Q15_HALF * alpha_q15 - (int32_t)Q15_SQRT3_BY_2 * beta_q15) >> 15;
     /* SVPWM zero-sequence injection */
     uint8_t b0 = (dutyu_q15 >= 0);
     uint8_t b1 = (dutyv_q15 >= 0);
     uint8_t b2 = (dutyw_q15 >= 0);
-
     // 3-bit code
     uint8_t code = (b2 << 2) | (b1 << 1) | b0;
     fd_mc3p_sector_t sector;
@@ -275,6 +277,10 @@ static inline void fd_mc3p_{{inst.name}}_write_svm(fd_mc3p_handle_t *h, int16_t 
     {
         pv_mc3p_{{inst.name}}_sector_update(h, sector);
     }
+    dutyu_q15 += pv_mc3p_dtc_comp(h, 1<<0);
+    dutyv_q15 += pv_mc3p_dtc_comp(h, 1<<1);
+    dutyw_q15 += pv_mc3p_dtc_comp(h, 1<<2);
+
     /* SVPWM zero-sequence injection */
     vmax = dutyu_q15;
     if (dutyv_q15 > vmax) vmax = dutyv_q15;
@@ -285,19 +291,14 @@ static inline void fd_mc3p_{{inst.name}}_write_svm(fd_mc3p_handle_t *h, int16_t 
     if (dutyw_q15 < vmin) vmin = dutyw_q15;
 
     voff = (vmax + vmin) >> 1;
-
-    dutyu_q15 = (dutyu_q15 - voff) + Q15_HALF;
-    dutyv_q15 = (dutyv_q15 - voff) + Q15_HALF;
-    dutyw_q15 = (dutyw_q15 - voff) + Q15_HALF;
-    #ifdef FD_MC3P_DTC_ACTIVE
-    h->dutyu_q15 = __SSAT(dutyu_q15 + ((h->dtc_state & (1<<0))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    h->dutyv_q15 = __SSAT(dutyv_q15 + ((h->dtc_state & (1<<1))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    h->dutyw_q15 = __SSAT(dutyw_q15 + ((h->dtc_state & (1<<2))? h->dtc_comp_q15 : -h->dtc_comp_q15), 16);
-    #else
-    h->dutyu_q15 = dutyu_q15;
-    h->dutyv_q15 = dutyv_q15;
-    h->dutyw_q15 = dutyw_q15;
-    #endif
+    vcm = (h->duty_max_q15 + h->duty_min_q15) >> 1;
+    dutyu_q15 = (dutyu_q15 - voff) + vcm;
+    dutyv_q15 = (dutyv_q15 - voff) + vcm;
+    dutyw_q15 = (dutyw_q15 - voff) + vcm;
+    
+    h->dutyu_q15 = mc3p_saturate_q15(dutyu_q15);
+    h->dutyv_q15 = mc3p_saturate_q15(dutyv_q15);
+    h->dutyw_q15 = mc3p_saturate_q15(dutyw_q15);
     fd_mc3p_{{inst.name}}_write_phase_duty(h, h->dutyu_q15, h->dutyv_q15, h->dutyw_q15);
     h->sector_last = sector;
 }
@@ -306,15 +307,6 @@ __attribute__((weak)) void fd_mc3p_{{inst.name}}_bg_postScanCallback(void);
 extern fd_mc3p_handle_t {{inst.name}};
 {% endfor %}
 
-inline void fd_mc3p_set_sync_scale_impl(fd_mc3p_handle_t *h, const float scales[MC3P_SYNC_CHANNELS_MAX][2])
-{
-    for (uint8_t i = 0; i < MC3P_SYNC_CHANNELS_MAX; i++)
-    {
-        float scale = (i >= FD_MC3P_CSU && i <= FD_MC3P_CSW)? FD_MC3P_CS_SCALE : FD_MC3P_VS_SCALE;
-        h->sync_scale[i][0] = roundf((DRV.adc_to_V * INT32_MAX)/(scales[i][0] * scale));
-        h->sync_scale[i][1] = roundf((scales[i][1])/DRV.adc_to_V);
-    }
-}
 // ==========================================
 // UNIFIED COMPILE-TIME DISPATCH MACROS
 // ==========================================
@@ -331,7 +323,6 @@ inline void fd_mc3p_set_sync_scale_impl(fd_mc3p_handle_t *h, const float scales[
 #define fd_mc3p_write_float(inst) FD_MC3P_DISPATCH(inst, _write_float)(&(inst))
 #define fd_mc3p_write_trap(inst, sector, duty) FD_MC3P_DISPATCH(inst, _write_trap)(&(inst), sector, duty)
 #define fd_mc3p_write_svm(inst, a, b) FD_MC3P_DISPATCH(inst, _write_svm)(&(inst), a, b)
-#define fd_mc3p_set_sync_scale(inst, arg)(fd_mc3p_set_sync_scale_impl(&(inst), arg))
 
 
 
