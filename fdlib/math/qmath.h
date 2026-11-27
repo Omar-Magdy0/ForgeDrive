@@ -7,7 +7,7 @@ extern "C" {
 #include "cmsis_gcc.h"
 }
 #endif
-namespace fd {
+namespace Fd {
 #if defined(__ARM_FEATURE_DSP) && (__ARM_FEATURE_DSP == 1)
 // Requires the appropriate CMSIS core instruction header.
 #define FD_HAS_ARM_SAT_ARITH 1
@@ -15,7 +15,7 @@ namespace fd {
 #define FD_HAS_ARM_SAT_ARITH 0
 #endif
 //  Signed saturating addition
-FORCE_INLINE static inline int32_t sat_add(int32_t a, int32_t b) {
+FORCE_INLINE static inline int32_t SatAdd(int32_t a, int32_t b) {
 #if FD_HAS_ARM_SAT_ARITH
   return __QADD(a, b);
 #else
@@ -24,7 +24,7 @@ FORCE_INLINE static inline int32_t sat_add(int32_t a, int32_t b) {
 #endif
 }
 // Signed saturating subtraction
-FORCE_INLINE static inline int32_t sat_sub(int32_t a, int32_t b) {
+FORCE_INLINE static inline int32_t SatSub(int32_t a, int32_t b) {
 #if FD_HAS_ARM_SAT_ARITH
   return __QSUB(a, b);
 #else
@@ -33,12 +33,12 @@ FORCE_INLINE static inline int32_t sat_sub(int32_t a, int32_t b) {
 #endif
 }
 // Unsigned saturating addition
-FORCE_INLINE static inline uint32_t sat_add(uint32_t a, uint32_t b) {
+FORCE_INLINE static inline uint32_t SatAdd(uint32_t a, uint32_t b) {
   uint64_t r = (uint64_t)a + b;
   return r > UINT32_MAX ? UINT32_MAX : (uint32_t)r;
 }
 // Unsigned saturating subtraction
-FORCE_INLINE static inline uint32_t sat_sub(uint32_t a, uint32_t b) { return a < b ? 0 : a - b; }
+FORCE_INLINE static inline uint32_t SatSub(uint32_t a, uint32_t b) { return a < b ? 0 : a - b; }
 // constants
 inline constexpr int32_t                                         MaxaMinbA0 = static_cast<int32_t>((127.0 / 128.0) * INT32_MAX);
 inline constexpr int32_t                                         MaxaMinbA1 = static_cast<int32_t>((27.0 / 32.0) * INT32_MAX);
@@ -56,41 +56,41 @@ template <typename T, typename U> constexpr auto                 Min(T a, U b) {
 template <typename T, typename U> constexpr auto                 Max(T a, U b) { return a > b ? a : b; }
 template <typename T, typename Min, typename Max> constexpr auto Clamp(T value, Min min, Max max) { return value < min ? min : (value > max ? max : value); }
 template <typename T> constexpr T                                Abs(T value) { return value < T{0} ? -value : value; }
-class pid_q31 {
+class Pid_Q31 {
   int32_t A[3];
   int32_t x[2];
 public:
-  bool gainUpdate(float Kp, float Ki, float Kd) {
+  bool GainUpdate(float kp, float ki, float kd) {
     float temp;
-    temp = Kp + Ki + Kd;
+    temp = kp + ki + kd;
     if (temp > 1.0f || temp < -1.0f) return false;
     A[0] = (int32_t)(temp * INT32_MAX);
-    temp = -Kp - 2.0f * Kd;
+    temp = -kp - 2.0f * kd;
     if (temp > 1.0f || temp < -1.0f) return false;
     A[1] = (int32_t)(temp * INT32_MAX);
-    temp = Kd;
+    temp = kd;
     if (temp > 1.0f || temp < -1.0f) return false;
     A[2] = (int32_t)(temp * INT32_MAX);
     return true;
   }
-  void getGain(float& Kp, float& Ki, float& Kd) {
+  void GetGain(float& kp, float& ki, float& kd) {
     constexpr float Q31_SCALE = 1.0f / INT32_MAX;
     float           a0        = A[0] * Q31_SCALE;
     float           a1        = A[1] * Q31_SCALE;
     float           a2        = A[2] * Q31_SCALE;
-    Kd                        = a2;
-    Kp                        = -a1 - 2.0f * a2;
-    Ki                        = a0 + a1 + a2;
+    kd                        = a2;
+    kp                        = -a1 - 2.0f * a2;
+    ki                        = a0 + a1 + a2;
   }
-  pid_q31() {
+  Pid_Q31() {
     A[0] = 0;
     A[1] = 0;
     A[2] = 0;
     x[0] = 0;
     x[1] = 0;
   };
-  pid_q31(float Kp, float Ki, float Kd) {
-    gainUpdate(Kp, Ki, Kd);
+  Pid_Q31(float kp, float ki, float kd) {
+    GainUpdate(kp, ki, kd);
     x[0] = 0;
     x[1] = 0;
   };
@@ -115,4 +115,4 @@ static inline uint32_t MaxaMinb_UQ31(int32_t i1, int32_t i2) {
   int32_t  z1  = (int32_t)(((int64_t)MaxaMinbA1 * max + (int64_t)MaxaMinbB1 * min) >> 31);
   return (uint32_t)(z0 > z1 ? z0 : z1);
 }
-} // namespace fd
+} // namespace Fd

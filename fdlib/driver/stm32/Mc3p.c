@@ -356,7 +356,7 @@ void PrvMc3p_{{inst.name}}_SectorUpdate(FdMc3pHandle *h, FdMc3pSector sector)
 
     h->sectorLast = sector;
 }
-void PrvMc3p_{{inst.name}}_OffsetCalibration(FdMc3pHandle *h)
+void PrvMc3p_{{inst.name}}_OffsetCalib(FdMc3pHandle *h)
 {
     // Set all phases to Low (0,0,0)
     // Set mode to calibration
@@ -487,33 +487,33 @@ void FdMc3p_{{inst.name}}_read_sync(FdMc3pHandle *h, void *data)
     ADC_TypeDef *adc = ADC{{ inst.analog.adc }};
     uint8_t is_svm = IS_SVM_SECTOR(h->sectorLast);
     uint8_t is_trap = IS_TRAP_SECTOR(h->sectorLast);
-    ((FdMc3pTrapData *)(data))->vBus_vsQ31 = h->rankScale[0][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_1) - h->rankScale[0][1]);
+    ((FdMc3pTrapData *)(data))->vBus_Q31 = h->rankScale[0][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_1) - h->rankScale[0][1]);
     if (is_svm)
     {
         FdMc3pSvmData *svm = (FdMc3pSvmData *)data;
         //Read Current Sensors in the same order we put the rank
         {% if mc3p.current_sensing.topology in ["three_shunt","two_shunt","two_inline"] %}
         {% for phase, adc in inst.analog.inj.items() if phase.startswith("cs")%} 
-        svm->c{{ phase[2:] | upper }}_csQ31 = h->rankScale[{{loop.index}}][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_{{ loop.index + 1 }}) - h->rankScale[{{ loop.index }}][1]);
+        svm->c{{ phase[2:] | upper }}_Q31 = h->rankScale[{{loop.index}}][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_{{ loop.index + 1 }}) - h->rankScale[{{ loop.index }}][1]);
         {% endfor %}
         //Infer the third phase current from the 2x measured current for double measurements
         {% if mc3p.current_sensing.topology in ["two_shunt","two_inline"] %}
-        svm->c{{inst.cs_missing[0]  | upper }}_csQ31 = -svm->c{{inst.cs_found[0]  | upper }}_csQ31 -svm->c{{inst.cs_found[1]  | upper }}_csQ31;
+        svm->c{{inst.cs_missing[0]  | upper }}_Q31 = -svm->c{{inst.cs_found[0]  | upper }}_Q31 -svm->c{{inst.cs_found[1]  | upper }}_Q31;
         {% endif %}
         {% elif mc3p.current_sensing.topology == "single_shunt" %}
         
         {% endif %}
         // Dead-time compensation
-        PrvMc3p_DtcUpdatePolarity(h, svm->cU_csQ31, (1 << 0));
-        PrvMc3p_DtcUpdatePolarity(h, svm->cV_csQ31, (1 << 1));
-        PrvMc3p_DtcUpdatePolarity(h, svm->cW_csQ31, (1 << 2));
+        PrvMc3p_DtcUpdatePolarity(h, svm->cU_Q31, (1 << 0));
+        PrvMc3p_DtcUpdatePolarity(h, svm->cV_Q31, (1 << 1));
+        PrvMc3p_DtcUpdatePolarity(h, svm->cW_Q31, (1 << 2));
     }
     else if (is_trap)
     {
         FdMc3pTrapData *trap = (FdMc3pTrapData *)data;
-        trap->vBemf_vsQ31 = h->rankScale[1][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_2) - h->rankScale[1][1]);
-        trap->cBus_csQ31 =  h->rankScale[2][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_3) - h->rankScale[2][1]);
-        PrvMc3p_DtcUpdatePolarity(h, trap->cBus_csQ31, (1 << 3));
+        trap->vBemf_Q31 = h->rankScale[1][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_2) - h->rankScale[1][1]);
+        trap->cBus_Q31 =  h->rankScale[2][0] * (LL_ADC_INJ_ReadConversionData12(adc, LL_ADC_INJ_RANK_3) - h->rankScale[2][1]);
+        PrvMc3p_DtcUpdatePolarity(h, trap->cBus_Q31, (1 << 3));
     }
 }
 void FdMc3p_{{inst.name}}_BgStartConv(FdMc3pHandle *h)

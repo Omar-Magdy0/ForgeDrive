@@ -25,6 +25,8 @@ public:
     writeIdx          = 0;
     isTrig            = false;
     frozen            = false;
+    hysteresisLvl     = 0;
+    hystTrig          = false;
   }
   void Write(const T* data) {
     if (!frozen) {
@@ -70,7 +72,7 @@ public:
     return true;
   }
   bool IsFrozen() const { return frozen; }
-  bool IsisTrig() const { return isTrig; }
+  bool IsTrig() const { return isTrig; }
   void Reset() {
     writeIdx      = 0;
     isTrig        = false;

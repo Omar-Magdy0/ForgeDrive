@@ -1,6 +1,7 @@
 #include "Sys.h"
 #include "Abf.h"
 #include "Timer.h"
+#include "fdmc.pb.h"
 #include <stdalign.h>
 #include <stddef.h>
 #ifdef FDDRV_PLATFORM_HOST
@@ -12,9 +13,9 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char* name) {
   taskDISABLE_INTERRUPTS();
   for (;;) {}
 }
-void FdMc3p_MC3P1_SyncPostScanCallback(void) { Sys::pmsm1.pwmLoop(); }
+void FdMc3p_MC3P1_SyncPostScanCallback(void) { Sys::pmsm1.PwmLoop(); }
 void FdMc3p_MC3P1_BgPostScanCallback(void) {}
-void FdTimer_TIMERxMC_PeriodCallback(void) { Sys::pmsm1.xmcLoop(); }
+void FdTimer_TIMERxMC_PeriodCallback(void) { Sys::pmsm1.XmcLoop(); }
 // dispatch incoming rpc command and respond
 inline void RpcHandle(etl::span<uint8_t> data) {
   size_t                       toWrite = 0;
@@ -76,61 +77,60 @@ void lcom(void* _ctx) {
     vTaskDelayUntil(&last_wake, period);
   }
 }
-ConfigGen Sys::configGen = {.max_freq        = 40000,
-                            .min_freq        = 5000,
-                            .max_deadtime_ns = 1000,
-                            .min_deadtime_ns = 300,
-                            .max_cmag        = 20,
-                            .min_vbus        = 30,
-                            .max_vbus        = 40,
-                            .xtick_freq      = 4000,
-                            .pos_rate_div    = 10};
+ConfigGen Sys::configGen = {.maxPwm_hz      = 40000,
+                            .minPwm_hz      = 5000,
+                            .maxDeadtime_ns = 1000,
+                            .minDeadtime_ns = 300,
+                            .maxCMag        = 20,
+                            .minVBus        = 30,
+                            .maxVBus        = 40,
+                            .xtick_hz       = 4000,
+                            .posRate        = 10};
 void      Sys::init() {
   FdDrv_Init(&DRV); // Driver initialization
   platform_init();
   FdUsbxch_Init(USB1);
-  FdTimer_Init(TIMERxMC, configGen.xtick_freq);
+  FdTimer_Init(TIMERxMC, configGen.xtick_hz);
   FdTimer_Enable(TIMERxMC, true);
   lcom_handle    = xTaskCreateStatic(lcom, "lcom", LCOM_STACK_SIZE, NULL, LCOM_PRIO, lcom_stack, &lcom_buf);
   bool config_ok = true;
   // enable motor control
   {
     PmsmErr      err[8];
-    uint8_t      i      = 0;
-    ConfigPwm    pwm    = {.pwm_hz = 20000, .deadtime_ns = 600, .duty_min = 0, .duty_max = 0.95, .dtc_thresh = 0, .dtc_active = false};
-    ConfigAnalog analog = {.vsbus              = {.offset = 1, .gain = 1},
-                           .vsu                = {.offset = 1, .gain = 1},
-                           .vsv                = {.offset = 1, .gain = 1},
-                           .vsw                = {.offset = 1, .gain = 1},
-                           .csu_csbus          = {.offset = 1, .gain = 1},
-                           .csv                = {.offset = 1, .gain = 1},
-                           .csw                = {.offset = 1, .gain = 1},
-                           .offset_calibration = true};
-    ConfigScomm  scomm  = {.oversample_bits = 10, .esettle_min_ticks = 100, .hfi_n = 20, .dc_vinj = 2.5, .hfi_vinj = 2};
-    PmsmModel    model  = {.R = 0.1, .Ld = 0.001, .Lq = 0.001, .psi = 1, .J = 0.1, .B = 0.1, .pole_pairs = 1};
-    Pid          pid_Id, pid_Iq, pid_pos, pid_speed;
-    pid_Id           = {.Kp = 0.1, .Ki = 0.01, .Kd = 0, .type = PidType_ID};
-    pid_Iq           = {.Kp = 0.1, .Ki = 0.01, .Kd = 0, .type = PidType_IQ};
-    pid_pos          = {.Kp = 0.1, .Ki = 1e-5, .Kd = 1e-5, .type = PidType_POSITION};
-    pid_speed        = {.Kp = 0.1, .Ki = 0.5, .Kd = 0, .type = PidType_SPEED};
-    ControlMode ctrl = {McMode_IDLE, MechMode_TORQUE};
-    pmsm1.setControlMode(ctrl);
-    /*0*/ err[i++] = pmsm1.setConfigPwm(pwm);
-    /*1*/ err[i++] = pmsm1.setConfigAnalog(analog);
-    /*2*/ err[i++] = pmsm1.setConfigScomm(scomm);
-    /*3*/ err[i++] = pmsm1.setModel(model);
-    /*4*/ err[i++] = pmsm1.setPid(pid_Id);
-    /*5*/ err[i++] = pmsm1.setPid(pid_Iq);
-    /*6*/ err[i++] = pmsm1.setPid(pid_pos);
-    /*7*/ err[i++] = pmsm1.setPid(pid_speed);
-    ctrl.mc_mode   = McMode_FOC;
-    /*8*/ err[i++] = pmsm1.setControlMode(ctrl);
+    uint8_t      i        = 0;
+    ConfigPwm    pwm      = {.pwm_hz = 20000, .deadtime_ns = 600, .minDuty = 0, .maxDuty = 0.95, .dtcThresh = 0, .dtcActive = false};
+    ConfigAnalog analog   = {.vsBus       = {.offset = 1, .gain = 1},
+                             .vsU         = {.offset = 1, .gain = 1},
+                             .vsV         = {.offset = 1, .gain = 1},
+                             .vsW         = {.offset = 1, .gain = 1},
+                             .csU_csBus   = {.offset = 1, .gain = 1},
+                             .csV         = {.offset = 1, .gain = 1},
+                             .csW         = {.offset = 1, .gain = 1},
+                             .offsetCalib = true};
+    ConfigScomm  scomm    = {.oversampleBits = 10, .minSettleTicks = 100, .hfiN = 20, .dcVinj = 2.5, .hfiVinj = 2};
+    PmsmModel    model    = {.res_ohm = 0.1, .indD_h = 0.001, .indQ_h = 0.001, .flux_wb = 1, .inertia_kgm2 = 0.1, .friction_nms = 0.1, .polePairs = 1};
+    Pid          pidCD    = {.kp = 0.1, .ki = 0.01, .kd = 0, .type = PidType_CD};
+    Pid          pidCQ    = {.kp = 0.1, .ki = 0.01, .kd = 0, .type = PidType_CQ};
+    Pid          pidPos   = {.kp = 0.1, .ki = 1e-5, .kd = 1e-5, .type = PidType_Position};
+    Pid          pidSpeed = {.kp = 0.1, .ki = 0.5, .kd = 0, .type = PidType_Speed};
+    ControlMode  ctrl     = {McMode_Idle, MechMode_Torque};
+    pmsm1.SetControlMode(ctrl);
+    /*0*/ err[i++] = pmsm1.SetConfigPwm(pwm);
+    /*1*/ err[i++] = pmsm1.SetConfigAnalog(analog);
+    /*2*/ err[i++] = pmsm1.SetConfigScomm(scomm);
+    /*3*/ err[i++] = pmsm1.SetModel(model);
+    /*4*/ err[i++] = pmsm1.SetPid(pidCD);
+    /*5*/ err[i++] = pmsm1.SetPid(pidCQ);
+    /*6*/ err[i++] = pmsm1.SetPid(pidPos);
+    /*7*/ err[i++] = pmsm1.SetPid(pidSpeed);
+    ctrl.mcMode    = McMode_Foc;
+    /*8*/ err[i++] = pmsm1.SetControlMode(ctrl);
     for (int i = 0; i < 8; i++)
-      if (err[i] != PmsmErr_OK) config_ok = false;
+      if (err[i] != PmsmErr_Ok) config_ok = false;
   }
   while (!config_ok);
-  pmsm1.init();
-  pmsm1.setSetpoint({5});
+  pmsm1.Init();
+  pmsm1.SetSetpoint({5});
 // FreeRtos initialization
 #ifndef FDDRV_PLATFORM_HOST
   vTaskStartScheduler();

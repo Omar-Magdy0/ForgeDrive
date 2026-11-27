@@ -4,79 +4,79 @@ package fdmc.v1;
 import "fdrpc.proto";
 
 enum Direction {
-  Direction_FORWARD = 0;
-  Direction_BACKWARD = 1;
+  Direction_Forward = 0;
+  Direction_Backward = 1;
 }
 
 enum MechMode {
-  MechMode_UNSPECIFIED = 0;
-  MechMode_TORQUE = 1;
-  MechMode_SPEED = 2;
-  MechMode_POSITION = 3;
+  MechMode_Unspecified = 0;
+  MechMode_Torque = 1;
+  MechMode_Speed = 2;
+  MechMode_Position = 3;
 }
 
 enum PidType {
-  PidType_ID = 0;
-  PidType_IQ = 1;
-  PidType_SPEED = 2;
-  PidType_POSITION = 3;
+  PidType_CD = 0;
+  PidType_CQ = 1;
+  PidType_Speed = 2;
+  PidType_Position = 3;
 }
 
 enum McMode {
-  McMode_UNSPECIFIED = 0;
-  McMode_IDLE = 1;
-  McMode_FAULT = 2;
-  McMode_FOC = 3;
-  McMode_SCOMM = 4;
+  McMode_Unspecified = 0;
+  McMode_Idle = 1;
+  McMode_Fault = 2;
+  McMode_Foc = 3;
+  McMode_Scomm = 4;
 }
 
 enum ElecMode {
-  ElecMode_VOLTAGE = 0;
-  ElecMode_CURRENT = 1;
+  ElecMode_Voltage = 0;
+  ElecMode_Current = 1;
 }
 
 enum StopMode {
-  StopMode_COAST = 0;
-  StopMode_RAMP = 1;
-  StopMode_EMERGENCY_PLUG = 2;
+  StopMode_Coast = 0;
+  StopMode_Ramp = 1;
+  StopMode_EmergencyPlug = 2;
 }
 
 enum PmsmFault {
-  PmsmFault_OK = 0;
-  PmsmFault_UVLO = 1;
-  PmsmFault_OVLO = 2;
-  PmsmFault_OLOAD = 4;
-  PmsmFault_CSFAULT = 8;
-  PmsmFault_OT = 16;
-  PmsmFault_OC = 32;
+  PmsmFault_Ok = 0;
+  PmsmFault_Uvlo = 1;
+  PmsmFault_Ovlo = 2;
+  PmsmFault_Overload = 4;
+  PmsmFault_CurrentSense = 8;
+  PmsmFault_Overtemp = 16;
+  PmsmFault_Overcurrent = 32;
 }
 
 enum PmsmErr {
-  PmsmErr_OK = 0;
-  PmsmErr_UNKNOWN_ERROR = 1;
-  PmsmErr_NOT_INITIALIZED = 2;
-  PmsmErr_NOT_IMPLEMENTED = 3;
-  PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64;
-  PmsmErr_CONFIG_BAD = 65;
+  PmsmErr_Ok = 0;
+  PmsmErr_Unkown = 1;
+  PmsmErr_NotInitialized = 2;
+  PmsmErr_NotImplemented = 3;
+  PmsmErr_ConfigNotAllowed = 64;
+  PmsmErr_ConfigBad = 65;
 }
 
 enum IdStage {
-  IdStage_IDLE = 0;
-  IdStage_RS_ID = 1;
-  IdStage_LD_ID = 2;
-  IdStage_REST0 = 3;
-  IdStage_LQ_ID = 4;
+  IdStage_Idle = 0;
+  IdStage_Res = 1;
+  IdStage_IndD = 2;
+  IdStage_Rest0 = 3;
+  IdStage_IndQ = 4;
 }
 
 enum IdSubStage {
-  IdSubStage_ESETTLE_START = 0;
-  IdSubStage_ESETTLE_WAIT = 1;
-  IdSubStage_ACTIVE_SAMPLING = 2;
+  IdSubStage_SettleStart = 0;
+  IdSubStage_SettleWait = 1;
+  IdSubStage_ActiveSampling = 2;
 }
 
 // Profile
 message ProfilePoint2D {
-  float t = 1;
+  float time = 1;
   float v1 = 2;
   float v2 = 3;
 }
@@ -85,10 +85,10 @@ message ProfilePoint2D {
 message ConfigPwm {
   uint32 pwm_hz = 1;
   uint32 deadtime_ns = 2;
-  float duty_min = 3;
-  float duty_max = 4;
-  float dtc_thresh = 5;
-  bool dtc_active = 6;
+  float minDuty = 3;
+  float maxDuty = 4;
+  float dtcThresh = 5;
+  bool dtcActive = 6;
 }
 
 message ElecSensorConfig {
@@ -98,65 +98,65 @@ message ElecSensorConfig {
 
 // Analog configuration
 message ConfigAnalog {
-  ElecSensorConfig vsbus = 1;
-  ElecSensorConfig vsu = 2;
-  ElecSensorConfig vsv = 3;
-  ElecSensorConfig vsw = 4;
-  ElecSensorConfig csu_csbus = 5;
-  ElecSensorConfig csv = 6;
-  ElecSensorConfig csw = 7;
-  bool offset_calibration = 8;
+  ElecSensorConfig vsBus = 1;
+  ElecSensorConfig vsU = 2;
+  ElecSensorConfig vsV = 3;
+  ElecSensorConfig vsW = 4;
+  ElecSensorConfig csU_csBus = 5;
+  ElecSensorConfig csV = 6;
+  ElecSensorConfig csW = 7;
+  bool offsetCalib = 8;
 }
 
 // Serial communication configuration
 message ConfigScomm {
-  uint32 oversample_bits = 1;
-  uint32 esettle_min_ticks = 2;
-  uint32 hfi_n = 3;
-  float dc_vinj = 4;
-  float hfi_vinj = 5;
+  uint32 oversampleBits = 1;
+  uint32 minSettleTicks = 2;
+  uint32 hfiN = 3;
+  float dcVinj = 4;
+  float hfiVinj = 5;
 }
 
 // PMSM model
 message PmsmModel {
-  float R = 1;
-  float Ld = 2;
-  float Lq = 3;
-  float psi = 4;
-  float J = 5;
-  float B = 6;
-  uint32 pole_pairs = 7;
+  float res_ohm = 1;
+  float indD_h = 2;
+  float indQ_h = 3;
+  float flux_wb = 4;
+  float inertia_kgm2 = 5;
+  float friction_nms = 6;
+  uint32 polePairs = 7;
 }
 
 // General configuration
 message ConfigGen {
-  uint32 max_freq = 1;
-  uint32 min_freq = 2;
-  uint32 max_deadtime_ns = 3;
-  uint32 min_deadtime_ns = 4;
-  float max_cmag = 5;
-  float min_vbus = 6;
-  float max_vbus = 7;
-  uint32 xtick_freq = 8;
-  uint32 pos_rate_div = 9;
+  uint32 maxPwm_hz = 1;
+  uint32 minPwm_hz = 2;
+  uint32 maxDeadtime_ns = 3;
+  uint32 minDeadtime_ns = 4;
+  float maxCMag = 5;
+  float minVBus = 6;
+  float maxVBus = 7;
+  uint32 xtick_hz = 8;
+  uint32 posRate = 9;
 }
 
 // PID controller
 message Pid {
-  float Kp = 1;
-  float Ki = 2;
-  float Kd = 3;
+  float kp = 1;
+  float ki = 2;
+  float kd = 3;
   PidType type = 4;
 }
 
 message Setpoint {
-  float value = 1;
-  MechMode mech_mode = 2; // Defaults to MechMode_UNSPECIFIED (0) in proto3
+  float val = 1;
+  MechMode mechMode = 2; // Defaults to MechMode_UNSPECIFIED (0) in proto3
 }
 
 message ControlMode {
-  McMode mc_mode = 1;
-  MechMode mech_mode = 2;
+  McMode mcMode = 1;
+  MechMode mechMode = 2;
 }
 
 message GetPidArg {

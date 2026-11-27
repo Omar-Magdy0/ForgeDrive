@@ -75,7 +75,7 @@ void PrvMc3p_MC3P1_SectorUpdate(FdMc3pHandle* h, FdMc3pSector sector) {
   }
   h->sectorLast = sector;
 }
-void PrvMc3p_MC3P1_OffsetCalibration(FdMc3pHandle* h) {}
+void PrvMc3p_MC3P1_OffsetCalib(FdMc3pHandle* h) {}
 void FdMc3p_MC3P1_ReconfigurePwm(FdMc3pHandle* h) {
   h->maxDuty = (uint16_t)((h->config.maxDuty) * 0x7FFF);
   h->minDuty = (uint16_t)((h->config.minDuty) * 0x7FFF);
@@ -91,16 +91,16 @@ void FdMc3p_MC3P1_ReadSync(FdMc3pHandle* h, void* data) {
   if (is_svm) {
     // Convert float currents to Q31 format for the control algorithm
     // Scaling: 1.0A = X counts (adjust FD_MC3P_CS_SCALE to tune sensitivity)
-    ((FdMc3pSvmData*)(data))->vBus_vsQ31 = FDMC3P_F2VS(sil_input.vcc);
-    ((FdMc3pSvmData*)(data))->cU_csQ31   = FDMC3P_F2CS(sil.state.ip[0]);
-    ((FdMc3pSvmData*)(data))->cV_csQ31   = FDMC3P_F2CS(sil.state.ip[1]);
-    ((FdMc3pSvmData*)(data))->cW_csQ31   = FDMC3P_F2CS(sil.state.ip[2]);
-    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pSvmData*)(data))->cU_csQ31, (1 << 0));
-    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pSvmData*)(data))->cV_csQ31, (1 << 1));
-    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pSvmData*)(data))->cW_csQ31, (1 << 2));
+    ((FdMc3pSvmData*)(data))->vBus_Q31 = FDMC3P_F2VS(sil_input.vcc);
+    ((FdMc3pSvmData*)(data))->cU_Q31   = FDMC3P_F2CS(sil.state.ip[0]);
+    ((FdMc3pSvmData*)(data))->cV_Q31   = FDMC3P_F2CS(sil.state.ip[1]);
+    ((FdMc3pSvmData*)(data))->cW_Q31   = FDMC3P_F2CS(sil.state.ip[2]);
+    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pSvmData*)(data))->cU_Q31, (1 << 0));
+    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pSvmData*)(data))->cV_Q31, (1 << 1));
+    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pSvmData*)(data))->cW_Q31, (1 << 2));
   } else if (is_trap) {
     // Back-EMF would be: Ke * ωe where ωe = pp * ω_mech
-    ((FdMc3pSvmData*)(data))->vBus_vsQ31 = FDMC3P_F2VS(sil_input.vcc);
+    ((FdMc3pSvmData*)(data))->vBus_Q31 = FDMC3P_F2VS(sil_input.vcc);
     float adc_syncRank1, adc_syncRank2;
     switch (h->sectorLast) {
     case FdMc3pSector_Trap1:
@@ -129,11 +129,11 @@ void FdMc3p_MC3P1_ReadSync(FdMc3pHandle* h, void* data) {
       break;
     default: break;
     }
-    ((FdMc3pTrapData*)(data))->vBemf_vsQ31 = FDMC3P_F2VS(adc_syncRank1);
-    ((FdMc3pTrapData*)(data))->cBus_csQ31  = FDMC3P_F2CS(adc_syncRank2);
-    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pTrapData*)(data))->cBus_csQ31, (1 << 3));
+    ((FdMc3pTrapData*)(data))->vBemf_Q31 = FDMC3P_F2VS(adc_syncRank1);
+    ((FdMc3pTrapData*)(data))->cBus_Q31  = FDMC3P_F2CS(adc_syncRank2);
+    PrvMc3p_DtcUpdatePolarity(h, ((FdMc3pTrapData*)(data))->cBus_Q31, (1 << 3));
   } else {
-    ((FdMc3pSvmData*)(data))->vBus_vsQ31 = FDMC3P_F2VS(sil_input.vcc);
+    ((FdMc3pSvmData*)(data))->vBus_Q31 = FDMC3P_F2VS(sil_input.vcc);
   }
 }
 void FdMc3p_MC3P1_WritePhaseState(FdMc3pHandle* h, FdMc3pPhaseState state_u, FdMc3pPhaseState state_v, FdMc3pPhaseState state_w) {

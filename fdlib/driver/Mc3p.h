@@ -132,7 +132,7 @@ static inline int16_t FdMc3p_SaturateQ15(int32_t value)
         float minDuty;       /**< Minimum allowable duty cycle */
         float dtcThresh;
         bool dtcActive;
-        bool offsetCalibration;
+        bool offsetCalib;
     } FdMc3pConfig;
 
     /**
@@ -153,26 +153,26 @@ static inline int16_t FdMc3p_SaturateQ15(int32_t value)
         uint16_t bgData[FDMC3P_BG_CHANNELS_MAX];
         uint8_t bgChannels;
         int32_t rankScale[4][2];
-        uint16_t dtcComp_vsQ15;
-        int32_t dtcThresh_csQ31;
+        uint16_t dtcComp_Q15;
+        int32_t dtcThresh_Q31;
         uint8_t dtcState;
     } FdMc3pHandle;
 
     /** @brief Data structure for SVM-specific measurements. */
     typedef struct
     {
-        int32_t vBus_vsQ31;
-        int32_t cU_csQ31;
-        int32_t cV_csQ31;
-        int32_t cW_csQ31;
+        int32_t vBus_Q31;
+        int32_t cU_Q31;
+        int32_t cV_Q31;
+        int32_t cW_Q31;
     } FdMc3pSvmData;
 
     /** @brief Data structure for Trapezoidal-specific measurements. */
     typedef struct
     {
-        int32_t vBus_vsQ31;
-        int32_t vBemf_vsQ31;
-        int32_t cBus_csQ31;
+        int32_t vBus_Q31;
+        int32_t vBemf_Q31;
+        int32_t cBus_Q31;
     } FdMc3pTrapData;
 
 /* Conversion Macros */
@@ -184,15 +184,15 @@ static inline int16_t FdMc3p_SaturateQ15(int32_t value)
 #define FDMC3P_F2CS(f) ((int32_t)(((float)(f) / FDMC3P_CS_SCALE) * INT32_MAX))
 static inline void PrvMc3p_DtcUpdatePolarity(FdMc3pHandle *h, int32_t current, uint8_t bit)
 {
-    if (current > h->dtcThresh_csQ31) h->dtcState |= bit;
-    else if (current < -h->dtcThresh_csQ31) h->dtcState &= (uint8_t)~bit;
+    if (current > h->dtcThresh_Q31) h->dtcState |= bit;
+    else if (current < -h->dtcThresh_Q31) h->dtcState &= (uint8_t)~bit;
 }
-static inline int16_t PrvMc3p_DtcComp(FdMc3pHandle *h, uint8_t bit){return (h->dtcState & bit)? h->dtcComp_vsQ15 : -h->dtcComp_vsQ15;}
-static inline void PrvMc3p_DtcUpdateComp(FdMc3pHandle *h){h->dtcComp_vsQ15 = h->config.dtcActive?(int16_t)(((float)h->config.deadtime_ns*h->config.pwm_hz/1e9)*INT16_MAX + 0.5) : 0;}
+static inline int16_t PrvMc3p_DtcComp(FdMc3pHandle *h, uint8_t bit){return (h->dtcState & bit)? h->dtcComp_Q15 : -h->dtcComp_Q15;}
+static inline void PrvMc3p_DtcUpdateComp(FdMc3pHandle *h){h->dtcComp_Q15 = h->config.dtcActive?(int16_t)(((float)h->config.deadtime_ns*h->config.pwm_hz/1e9)*INT16_MAX + 0.5) : 0;}
 {% for inst in mc3p.instances %}
 void PrvMc3p_{{inst.name}}_SectorUpdate(FdMc3pHandle *h, FdMc3pSector sector);
 void PrvMc3p_{{inst.name}}_HwInit(FdMc3pHandle *h);
-void PrvMc3p_{{inst.name}}_OffsetCalibration(FdMc3pHandle *h);
+void PrvMc3p_{{inst.name}}_OffsetCalib(FdMc3pHandle *h);
 static inline FdMc3pMode FdMc3p_Sector2Mode(FdMc3pSector sector)
 {
     if (sector >= FdMc3pSector_Trap1 &&
@@ -209,14 +209,14 @@ static inline void FdMc3p_{{inst.name}}_Init(FdMc3pHandle *h)
 {
     h->maxDuty = (uint16_t)((h->config.maxDuty) * 0x7FFF);
     h->minDuty = (uint16_t)((h->config.minDuty) * 0x7FFF);
-    h->dtcThresh_csQ31 = FDMC3P_F2CS(h->config.dtcThresh);
+    h->dtcThresh_Q31 = FDMC3P_F2CS(h->config.dtcThresh);
     //compute deadtme compensation
     PrvMc3p_DtcUpdateComp(h);
     
     h->sectorLast = FdMc3pSector_Float;
     h->mode        = FdMc3pMode_None;
     PrvMc3p_{{inst.name}}_HwInit(h);
-    if(h->config.offsetCalibration)PrvMc3p_{{inst.name}}_OffsetCalibration(h);
+    if(h->config.offsetCalib)PrvMc3p_{{inst.name}}_OffsetCalib(h);
 }
 void FdMc3p_{{inst.name}}_ReconfigurePwm(FdMc3pHandle *h);
 void FdMc3p_{{inst.name}}_BgStartConv(FdMc3pHandle *h);

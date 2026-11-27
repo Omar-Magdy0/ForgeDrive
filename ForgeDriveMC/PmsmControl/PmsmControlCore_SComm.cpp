@@ -1,53 +1,54 @@
 #include "PmsmControlCore.h"
+#include <cstdint>
 // Builds upon FOC to run, tune and identify parameters
 void PmsmControlCore::SComm_init() {}
 void PmsmControlCore::SComm_onEnter(McMode prev_mct) {
-  scomm.idstage          = IdStage_RS_ID;
-  control.elec_mode      = ElecMode_VOLTAGE;
-  scomm.hfi_Angv_RPT_q31 = static_cast<q31_t>((scomm.HFI_ANGLE_SCALE / scomm.conf.hfi_n) * INT32_MAX);
-  scomm.dc_vinj_q31      = FDMC3P_F2VS(scomm.conf.dc_vinj);
-  scomm.hfi_vinj_q31     = FDMC3P_F2VS(scomm.conf.hfi_vinj);
+  scomm.idStage     = IdStage_Res;
+  control.elecMode  = ElecMode_Voltage;
+  scomm.hfiOmegaRpt = static_cast<int32_t>((scomm.HFI_ANGLE_SCALE / scomm.conf.hfiN) * INT32_MAX);
+  scomm.dcVinj_Q31  = FDMC3P_F2VS(scomm.conf.dcVinj);
+  scomm.hfiVinj_Q31 = FDMC3P_F2VS(scomm.conf.hfiVinj);
 }
 void PmsmControlCore::SComm_onExit() {}
 void PmsmControlCore::SComm_pwmLoop() {
-  q31_t sin, cos;
+  int32_t sin, cos;
   // Hfi added logic here......
-  switch (scomm.idstage) {
-  case IdStage_RS_ID: {
-    if (scomm.samples_counter && scomm.idsub == IdSubStage_ACTIVE_SAMPLING) {
-      scomm.accumulate0     += foc.state.Id_q31;
-      scomm.samples_counter  = scomm.samples_counter - 1;
+  switch (scomm.idStage) {
+  case IdStage_Res: {
+    if (scomm.sampleCnt && scomm.idSub == IdSubStage_ActiveSampling) {
+      scomm.accumulate0 += foc.state.cD_Q31;
+      scomm.sampleCnt    = scomm.sampleCnt - 1;
     }
     break;
   }
-  case IdStage_LD_ID: {
-    arm_sin_cos_q31(scomm.hfi_angle_q31, &sin, &cos);
-    foc.state.ECd_sp_q31 = ((int64_t)scomm.hfi_vinj_q31 * sin) >> 31;
-    foc.state.ECq_sp_q31 = 0;
-    if (scomm.samples_counter && scomm.idsub == IdSubStage_ACTIVE_SAMPLING) {
+  case IdStage_IndD: {
+    arm_sin_cos_q31(scomm.hfiTheta_Q31, &sin, &cos);
+    foc.state.dSp_Q31 = ((int64_t)scomm.hfiVinj_Q31 * sin) >> 31;
+    foc.state.qSp_Q31 = 0;
+    if (scomm.sampleCnt && scomm.idSub == IdSubStage_ActiveSampling) {
       // Heterodyne the read current.....
-      q31_t hfid             = ((int64_t)foc.state.Id_q31 * sin) >> 31;
-      q31_t hfiq             = ((int64_t)foc.state.Id_q31 * cos) >> 31;
-      scomm.accumulate0     += hfid;
-      scomm.accumulate1     += hfiq;
-      scomm.samples_counter  = scomm.samples_counter - 1;
+      int32_t hfiD       = ((int64_t)foc.state.cD_Q31 * sin) >> 31;
+      int32_t hfiQ       = ((int64_t)foc.state.cD_Q31 * cos) >> 31;
+      scomm.accumulate0 += hfiD;
+      scomm.accumulate1 += hfiQ;
+      scomm.sampleCnt    = scomm.sampleCnt - 1;
     }
-    scomm.hfi_angle_q31 += scomm.hfi_Angv_RPT_q31;
+    scomm.hfiTheta_Q31 += scomm.hfiOmegaRpt;
     break;
   }
-  case IdStage_LQ_ID: {
-    arm_sin_cos_q31(scomm.hfi_angle_q31, &sin, &cos);
-    foc.state.ECd_sp_q31 = 0;
-    foc.state.ECq_sp_q31 = ((int64_t)scomm.hfi_vinj_q31 * sin) >> 31;
-    if (scomm.samples_counter && scomm.idsub == IdSubStage_ACTIVE_SAMPLING) {
+  case IdStage_IndQ: {
+    arm_sin_cos_q31(scomm.hfiTheta_Q31, &sin, &cos);
+    foc.state.dSp_Q31 = 0;
+    foc.state.qSp_Q31 = ((int64_t)scomm.hfiVinj_Q31 * sin) >> 31;
+    if (scomm.sampleCnt && scomm.idSub == IdSubStage_ActiveSampling) {
       // Heterodyne the read current.....
-      q31_t hfid             = ((int64_t)foc.state.Iq_q31 * sin) >> 31;
-      q31_t hfiq             = ((int64_t)foc.state.Iq_q31 * cos) >> 31;
-      scomm.accumulate0     += hfid;
-      scomm.accumulate1     += hfiq;
-      scomm.samples_counter  = scomm.samples_counter - 1;
+      int32_t hfiD       = ((int64_t)foc.state.cQ_Q31 * sin) >> 31;
+      int32_t hfiQ       = ((int64_t)foc.state.cQ_Q31 * cos) >> 31;
+      scomm.accumulate0 += hfiD;
+      scomm.accumulate1 += hfiQ;
+      scomm.sampleCnt    = scomm.sampleCnt - 1;
     }
-    scomm.hfi_angle_q31 += scomm.hfi_Angv_RPT_q31;
+    scomm.hfiTheta_Q31 += scomm.hfiOmegaRpt;
     break;
   }
   default: break;
@@ -57,116 +58,116 @@ void PmsmControlCore::SComm_pwmLoop() {
 void PmsmControlCore::SComm_xmcLoop() {
   // Go step by step into identification process...
   // First Identify DC resistance
-  switch (scomm.idstage) {
-  case IdStage_RS_ID: {
+  switch (scomm.idStage) {
+  case IdStage_Res: {
     // Apply constant dc voltage on d-axis
     // Force angle and speed to 0
-    state.eTheta_q31     = 0;
-    foc.state.ECd_sp_q31 = scomm.dc_vinj_q31;
-    foc.state.ECq_sp_q31 = 0;
+    state.eTheta_Q31  = 0;
+    foc.state.dSp_Q31 = scomm.dcVinj_Q31;
+    foc.state.qSp_Q31 = 0;
     // wait for electrical settling
-    switch (scomm.idsub) {
-    case IdSubStage_ESETTLE_START:
-      scomm.eSettle_start_tick = pTicks;
-      scomm.idsub              = IdSubStage_ESETTLE_WAIT;
-      scomm.accumulate0        = 0;
-      scomm.samples_counter    = 1 << scomm.conf.oversample_bits;
+    switch (scomm.idSub) {
+    case IdSubStage_SettleStart:
+      scomm.eSettleStartTick = pTicks;
+      scomm.idSub            = IdSubStage_SettleWait;
+      scomm.accumulate0      = 0;
+      scomm.sampleCnt        = 1 << scomm.conf.oversampleBits;
       break;
-    case IdSubStage_ESETTLE_WAIT:
-      if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks) { scomm.idsub = IdSubStage_ACTIVE_SAMPLING; }
+    case IdSubStage_SettleWait:
+      if (pTicks - scomm.eSettleStartTick > scomm.conf.minSettleTicks) { scomm.idSub = IdSubStage_ActiveSampling; }
       break;
-    case IdSubStage_ACTIVE_SAMPLING:
-      if (scomm.samples_counter == 0) {
-        scomm.model.R = FDMC3P_VS2F(scomm.dc_vinj_q31) / FDMC3P_CS2F((scomm.accumulate0 >> scomm.conf.oversample_bits));
-        scomm.idstage = IdStage_LD_ID;
-        scomm.idsub   = IdSubStage_ESETTLE_START;
+    case IdSubStage_ActiveSampling:
+      if (scomm.sampleCnt == 0) {
+        scomm.model.res_ohm = FDMC3P_VS2F(scomm.dcVinj_Q31) / FDMC3P_CS2F((scomm.accumulate0 >> scomm.conf.oversampleBits));
+        scomm.idStage       = IdStage_IndD;
+        scomm.idSub         = IdSubStage_SettleStart;
       }
       break;
     default: break;
     }
     break;
   }
-  case IdStage_LD_ID: {
-    state.eTheta_q31 = 0;
+  case IdStage_IndD: {
+    state.eTheta_Q31 = 0;
     // wait for electrical settling
-    switch (scomm.idsub) {
-    case IdSubStage_ESETTLE_START:
-      scomm.eSettle_start_tick = pTicks;
-      scomm.idsub              = IdSubStage_ESETTLE_WAIT;
-      scomm.accumulate0        = 0;
-      scomm.accumulate1        = 0;
-      scomm.samples_counter    = 1 << scomm.conf.oversample_bits;
+    switch (scomm.idSub) {
+    case IdSubStage_SettleStart:
+      scomm.eSettleStartTick = pTicks;
+      scomm.idSub            = IdSubStage_SettleWait;
+      scomm.accumulate0      = 0;
+      scomm.accumulate1      = 0;
+      scomm.sampleCnt        = 1 << scomm.conf.oversampleBits;
       break;
-    case IdSubStage_ESETTLE_WAIT:
-      if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks) { scomm.idsub = IdSubStage_ACTIVE_SAMPLING; }
+    case IdSubStage_SettleWait:
+      if (pTicks - scomm.eSettleStartTick > scomm.conf.minSettleTicks) { scomm.idSub = IdSubStage_ActiveSampling; }
       break;
-    case IdSubStage_ACTIVE_SAMPLING:
-      if (scomm.samples_counter == 0) {
-        q31_t Idd   = scomm.accumulate0 >> scomm.conf.oversample_bits;
-        q31_t Idq   = scomm.accumulate1 >> scomm.conf.oversample_bits;
-        q31_t Imag2 = (((int64_t)Idd * Idd) + ((int64_t)Idq * Idq)) >> 31;
-        q31_t Imag;
+    case IdSubStage_ActiveSampling:
+      if (scomm.sampleCnt == 0) {
+        int32_t Idd   = scomm.accumulate0 >> scomm.conf.oversampleBits;
+        int32_t Idq   = scomm.accumulate1 >> scomm.conf.oversampleBits;
+        int32_t Imag2 = (((int64_t)Idd * Idd) + ((int64_t)Idq * Idq)) >> 31;
+        int32_t Imag;
         arm_sqrt_q31(Imag2, &Imag);
-        float Zd       = voltage_q31_to_float(scomm.hfi_vinj_q31) / (current_q31_to_float(2 * Imag));
-        float Xd       = sqrt(Zd * Zd - scomm.model.R * scomm.model.R);
-        scomm.model.Ld = (Xd) / (angle_q31_to_float(scomm.hfi_Angv_RPT_q31) * pwm_freq_hz);
-        scomm.idsub    = IdSubStage_ESETTLE_START;
-        scomm.idstage  = IdStage_REST0;
+        float Zd           = vs2f(scomm.hfiVinj_Q31) / (cs2f(2 * Imag));
+        float Xd           = sqrt(Zd * Zd - scomm.model.res_ohm * scomm.model.res_ohm);
+        scomm.model.indD_h = (Xd) / (theta2f(scomm.hfiOmegaRpt) * pwm_hz);
+        scomm.idSub        = IdSubStage_SettleStart;
+        scomm.idStage      = IdStage_Rest0;
       }
       break;
     default: break;
     }
   }
-  case IdStage_REST0: {
-    switch (scomm.idsub) {
-    case IdSubStage_ESETTLE_START:
-      scomm.eSettle_start_tick = pTicks;
-      scomm.idsub              = IdSubStage_ESETTLE_WAIT;
-      scomm.accumulate0        = 0;
-      scomm.accumulate1        = 0;
-      scomm.samples_counter    = 1 << scomm.conf.oversample_bits;
-      state.eTheta_q31         = 0;
-      foc.state.ECd_sp_q31     = 0;
-      foc.state.ECq_sp_q31     = 0;
+  case IdStage_Rest0: {
+    switch (scomm.idSub) {
+    case IdSubStage_SettleStart:
+      scomm.eSettleStartTick = pTicks;
+      scomm.idSub            = IdSubStage_SettleWait;
+      scomm.accumulate0      = 0;
+      scomm.accumulate1      = 0;
+      scomm.sampleCnt        = 1 << scomm.conf.oversampleBits;
+      state.eTheta_Q31       = 0;
+      foc.state.dSp_Q31      = 0;
+      foc.state.qSp_Q31      = 0;
       break;
-    case IdSubStage_ESETTLE_WAIT:
-      if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks) {
-        scomm.idsub   = IdSubStage_ESETTLE_START;
-        scomm.idstage = IdStage_LQ_ID;
+    case IdSubStage_SettleWait:
+      if (pTicks - scomm.eSettleStartTick > scomm.conf.minSettleTicks) {
+        scomm.idSub   = IdSubStage_SettleStart;
+        scomm.idStage = IdStage_IndQ;
       }
       break;
     default: break;
     }
   }
-  case IdStage_LQ_ID: {
-    state.eTheta_q31 = 0;
+  case IdStage_IndQ: {
+    state.eTheta_Q31 = 0;
     // wait for electrical settling
-    switch (scomm.idsub) {
-    case IdSubStage_ESETTLE_START:
-      scomm.eSettle_start_tick = pTicks;
-      scomm.idsub              = IdSubStage_ESETTLE_WAIT;
-      scomm.accumulate0        = 0;
-      scomm.accumulate1        = 0;
-      scomm.samples_counter    = 1 << scomm.conf.oversample_bits;
+    switch (scomm.idSub) {
+    case IdSubStage_SettleStart:
+      scomm.eSettleStartTick = pTicks;
+      scomm.idSub            = IdSubStage_SettleWait;
+      scomm.accumulate0      = 0;
+      scomm.accumulate1      = 0;
+      scomm.sampleCnt        = 1 << scomm.conf.oversampleBits;
       break;
-    case IdSubStage_ESETTLE_WAIT:
-      if (pTicks - scomm.eSettle_start_tick > scomm.conf.esettle_min_ticks) {
-        scomm.eSettle_start_tick = pTicks;
-        scomm.idsub              = IdSubStage_ACTIVE_SAMPLING;
+    case IdSubStage_SettleWait:
+      if (pTicks - scomm.eSettleStartTick > scomm.conf.minSettleTicks) {
+        scomm.eSettleStartTick = pTicks;
+        scomm.idSub            = IdSubStage_ActiveSampling;
       }
       break;
-    case IdSubStage_ACTIVE_SAMPLING:
-      if (scomm.samples_counter == 0) {
-        q31_t Iqd   = scomm.accumulate0 >> (scomm.conf.oversample_bits);
-        q31_t Iqq   = scomm.accumulate1 >> (scomm.conf.oversample_bits);
-        q31_t Imag2 = (((int64_t)Iqd * Iqd) + ((int64_t)Iqq * Iqq)) >> 31;
-        q31_t Imag;
+    case IdSubStage_ActiveSampling:
+      if (scomm.sampleCnt == 0) {
+        int32_t Iqd   = scomm.accumulate0 >> (scomm.conf.oversampleBits);
+        int32_t Iqq   = scomm.accumulate1 >> (scomm.conf.oversampleBits);
+        int32_t Imag2 = (((int64_t)Iqd * Iqd) + ((int64_t)Iqq * Iqq)) >> 31;
+        int32_t Imag;
         arm_sqrt_q31(Imag2, &Imag);
-        float Zq       = voltage_q31_to_float(scomm.hfi_vinj_q31) / (current_q31_to_float(2 * Imag));
-        float Xq       = sqrt(Zq * Zq - scomm.model.R * scomm.model.R);
-        scomm.model.Lq = (Xq) / (angle_q31_to_float(scomm.hfi_Angv_RPT_q31) * pwm_freq_hz);
-        scomm.idsub    = IdSubStage_ESETTLE_START;
-        scomm.idstage  = IdStage_RS_ID;
+        float Zq           = vs2f(scomm.hfiVinj_Q31) / (cs2f(2 * Imag));
+        float Xq           = sqrt(Zq * Zq - scomm.model.res_ohm * scomm.model.res_ohm);
+        scomm.model.indQ_h = (Xq) / (theta2f(scomm.hfiOmegaRpt) * pwm_hz);
+        scomm.idSub        = IdSubStage_SettleStart;
+        scomm.idStage      = IdStage_Res;
       }
       break;
     default: break;

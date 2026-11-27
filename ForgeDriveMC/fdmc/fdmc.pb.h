@@ -12,80 +12,80 @@
 
 /* Enum definitions */
 typedef enum _Direction {
-    Direction_FORWARD = 0,
-    Direction_BACKWARD = 1
+    Direction_Forward = 0,
+    Direction_Backward = 1
 } Direction;
 
 typedef enum _MechMode {
-    MechMode_UNSPECIFIED = 0,
-    MechMode_TORQUE = 1,
-    MechMode_SPEED = 2,
-    MechMode_POSITION = 3
+    MechMode_Unspecified = 0,
+    MechMode_Torque = 1,
+    MechMode_Speed = 2,
+    MechMode_Position = 3
 } MechMode;
 
 typedef enum _PidType {
-    PidType_ID = 0,
-    PidType_IQ = 1,
-    PidType_SPEED = 2,
-    PidType_POSITION = 3
+    PidType_CD = 0,
+    PidType_CQ = 1,
+    PidType_Speed = 2,
+    PidType_Position = 3
 } PidType;
 
 typedef enum _McMode {
-    McMode_UNSPECIFIED = 0,
-    McMode_IDLE = 1,
-    McMode_FAULT = 2,
-    McMode_FOC = 3,
-    McMode_SCOMM = 4
+    McMode_Unspecified = 0,
+    McMode_Idle = 1,
+    McMode_Fault = 2,
+    McMode_Foc = 3,
+    McMode_Scomm = 4
 } McMode;
 
 typedef enum _ElecMode {
-    ElecMode_VOLTAGE = 0,
-    ElecMode_CURRENT = 1
+    ElecMode_Voltage = 0,
+    ElecMode_Current = 1
 } ElecMode;
 
 typedef enum _StopMode {
-    StopMode_COAST = 0,
-    StopMode_RAMP = 1,
-    StopMode_EMERGENCY_PLUG = 2
+    StopMode_Coast = 0,
+    StopMode_Ramp = 1,
+    StopMode_EmergencyPlug = 2
 } StopMode;
 
 typedef enum _PmsmFault {
-    PmsmFault_OK = 0,
-    PmsmFault_UVLO = 1,
-    PmsmFault_OVLO = 2,
-    PmsmFault_OLOAD = 4,
-    PmsmFault_CSFAULT = 8,
-    PmsmFault_OT = 16,
-    PmsmFault_OC = 32
+    PmsmFault_Ok = 0,
+    PmsmFault_Uvlo = 1,
+    PmsmFault_Ovlo = 2,
+    PmsmFault_Overload = 4,
+    PmsmFault_CurrentSense = 8,
+    PmsmFault_Overtemp = 16,
+    PmsmFault_Overcurrent = 32
 } PmsmFault;
 
 typedef enum _PmsmErr {
-    PmsmErr_OK = 0,
-    PmsmErr_UNKNOWN_ERROR = 1,
-    PmsmErr_NOT_INITIALIZED = 2,
-    PmsmErr_NOT_IMPLEMENTED = 3,
-    PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING = 64,
-    PmsmErr_CONFIG_BAD = 65
+    PmsmErr_Ok = 0,
+    PmsmErr_Unkown = 1,
+    PmsmErr_NotInitialized = 2,
+    PmsmErr_NotImplemented = 3,
+    PmsmErr_ConfigNotAllowed = 64,
+    PmsmErr_ConfigBad = 65
 } PmsmErr;
 
 typedef enum _IdStage {
-    IdStage_IDLE = 0,
-    IdStage_RS_ID = 1,
-    IdStage_LD_ID = 2,
-    IdStage_REST0 = 3,
-    IdStage_LQ_ID = 4
+    IdStage_Idle = 0,
+    IdStage_Res = 1,
+    IdStage_IndD = 2,
+    IdStage_Rest0 = 3,
+    IdStage_IndQ = 4
 } IdStage;
 
 typedef enum _IdSubStage {
-    IdSubStage_ESETTLE_START = 0,
-    IdSubStage_ESETTLE_WAIT = 1,
-    IdSubStage_ACTIVE_SAMPLING = 2
+    IdSubStage_SettleStart = 0,
+    IdSubStage_SettleWait = 1,
+    IdSubStage_ActiveSampling = 2
 } IdSubStage;
 
 /* Struct definitions */
 /* Profile */
 typedef struct _ProfilePoint2D {
-    float t;
+    float time;
     float v1;
     float v2;
 } ProfilePoint2D;
@@ -94,10 +94,10 @@ typedef struct _ProfilePoint2D {
 typedef struct _ConfigPwm {
     uint32_t pwm_hz;
     uint32_t deadtime_ns;
-    float duty_min;
-    float duty_max;
-    float dtc_thresh;
-    bool dtc_active;
+    float minDuty;
+    float maxDuty;
+    float dtcThresh;
+    bool dtcActive;
 } ConfigPwm;
 
 typedef struct _ElecSensorConfig {
@@ -107,72 +107,72 @@ typedef struct _ElecSensorConfig {
 
 /* Analog configuration */
 typedef struct _ConfigAnalog {
-    bool has_vsbus;
-    ElecSensorConfig vsbus;
-    bool has_vsu;
-    ElecSensorConfig vsu;
-    bool has_vsv;
-    ElecSensorConfig vsv;
-    bool has_vsw;
-    ElecSensorConfig vsw;
-    bool has_csu_csbus;
-    ElecSensorConfig csu_csbus;
-    bool has_csv;
-    ElecSensorConfig csv;
-    bool has_csw;
-    ElecSensorConfig csw;
-    bool offset_calibration;
+    bool has_vsBus;
+    ElecSensorConfig vsBus;
+    bool has_vsU;
+    ElecSensorConfig vsU;
+    bool has_vsV;
+    ElecSensorConfig vsV;
+    bool has_vsW;
+    ElecSensorConfig vsW;
+    bool has_csU_csBus;
+    ElecSensorConfig csU_csBus;
+    bool has_csV;
+    ElecSensorConfig csV;
+    bool has_csW;
+    ElecSensorConfig csW;
+    bool offsetCalib;
 } ConfigAnalog;
 
 /* Serial communication configuration */
 typedef struct _ConfigScomm {
-    uint32_t oversample_bits;
-    uint32_t esettle_min_ticks;
-    uint32_t hfi_n;
-    float dc_vinj;
-    float hfi_vinj;
+    uint32_t oversampleBits;
+    uint32_t minSettleTicks;
+    uint32_t hfiN;
+    float dcVinj;
+    float hfiVinj;
 } ConfigScomm;
 
 /* PMSM model */
 typedef struct _PmsmModel {
-    float R;
-    float Ld;
-    float Lq;
-    float psi;
-    float J;
-    float B;
-    uint32_t pole_pairs;
+    float res_ohm;
+    float indD_h;
+    float indQ_h;
+    float flux_wb;
+    float inertia_kgm2;
+    float friction_nms;
+    uint32_t polePairs;
 } PmsmModel;
 
 /* General configuration */
 typedef struct _ConfigGen {
-    uint32_t max_freq;
-    uint32_t min_freq;
-    uint32_t max_deadtime_ns;
-    uint32_t min_deadtime_ns;
-    float max_cmag;
-    float min_vbus;
-    float max_vbus;
-    uint32_t xtick_freq;
-    uint32_t pos_rate_div;
+    uint32_t maxPwm_hz;
+    uint32_t minPwm_hz;
+    uint32_t maxDeadtime_ns;
+    uint32_t minDeadtime_ns;
+    float maxCMag;
+    float minVBus;
+    float maxVBus;
+    uint32_t xtick_hz;
+    uint32_t posRate;
 } ConfigGen;
 
 /* PID controller */
 typedef struct _Pid {
-    float Kp;
-    float Ki;
-    float Kd;
+    float kp;
+    float ki;
+    float kd;
     PidType type;
 } Pid;
 
 typedef struct _Setpoint {
-    float value;
-    MechMode mech_mode; /* Defaults to MechMode_UNSPECIFIED (0) in proto3 */
+    float val;
+    MechMode mechMode; /* Defaults to MechMode_UNSPECIFIED (0) in proto3 */
 } Setpoint;
 
 typedef struct _ControlMode {
-    McMode mc_mode;
-    MechMode mech_mode;
+    McMode mcMode;
+    MechMode mechMode;
 } ControlMode;
 
 typedef struct _GetPidArg {
@@ -197,86 +197,86 @@ extern "C" {
 #endif
 
 /* Helper constants for enums */
-#define _Direction_MIN Direction_FORWARD
-#define _Direction_MAX Direction_BACKWARD
-#define _Direction_ARRAYSIZE ((Direction)(Direction_BACKWARD+1))
-#define Direction_Direction_FORWARD Direction_FORWARD
-#define Direction_Direction_BACKWARD Direction_BACKWARD
+#define _Direction_MIN Direction_Forward
+#define _Direction_MAX Direction_Backward
+#define _Direction_ARRAYSIZE ((Direction)(Direction_Backward+1))
+#define Direction_Direction_Forward Direction_Forward
+#define Direction_Direction_Backward Direction_Backward
 
-#define _MechMode_MIN MechMode_UNSPECIFIED
-#define _MechMode_MAX MechMode_POSITION
-#define _MechMode_ARRAYSIZE ((MechMode)(MechMode_POSITION+1))
-#define MechMode_MechMode_UNSPECIFIED MechMode_UNSPECIFIED
-#define MechMode_MechMode_TORQUE MechMode_TORQUE
-#define MechMode_MechMode_SPEED MechMode_SPEED
-#define MechMode_MechMode_POSITION MechMode_POSITION
+#define _MechMode_MIN MechMode_Unspecified
+#define _MechMode_MAX MechMode_Position
+#define _MechMode_ARRAYSIZE ((MechMode)(MechMode_Position+1))
+#define MechMode_MechMode_Unspecified MechMode_Unspecified
+#define MechMode_MechMode_Torque MechMode_Torque
+#define MechMode_MechMode_Speed MechMode_Speed
+#define MechMode_MechMode_Position MechMode_Position
 
-#define _PidType_MIN PidType_ID
-#define _PidType_MAX PidType_POSITION
-#define _PidType_ARRAYSIZE ((PidType)(PidType_POSITION+1))
-#define PidType_PidType_ID PidType_ID
-#define PidType_PidType_IQ PidType_IQ
-#define PidType_PidType_SPEED PidType_SPEED
-#define PidType_PidType_POSITION PidType_POSITION
+#define _PidType_MIN PidType_CD
+#define _PidType_MAX PidType_Position
+#define _PidType_ARRAYSIZE ((PidType)(PidType_Position+1))
+#define PidType_PidType_CD PidType_CD
+#define PidType_PidType_CQ PidType_CQ
+#define PidType_PidType_Speed PidType_Speed
+#define PidType_PidType_Position PidType_Position
 
-#define _McMode_MIN McMode_UNSPECIFIED
-#define _McMode_MAX McMode_SCOMM
-#define _McMode_ARRAYSIZE ((McMode)(McMode_SCOMM+1))
-#define McMode_McMode_UNSPECIFIED McMode_UNSPECIFIED
-#define McMode_McMode_IDLE McMode_IDLE
-#define McMode_McMode_FAULT McMode_FAULT
-#define McMode_McMode_FOC McMode_FOC
-#define McMode_McMode_SCOMM McMode_SCOMM
+#define _McMode_MIN McMode_Unspecified
+#define _McMode_MAX McMode_Scomm
+#define _McMode_ARRAYSIZE ((McMode)(McMode_Scomm+1))
+#define McMode_McMode_Unspecified McMode_Unspecified
+#define McMode_McMode_Idle McMode_Idle
+#define McMode_McMode_Fault McMode_Fault
+#define McMode_McMode_Foc McMode_Foc
+#define McMode_McMode_Scomm McMode_Scomm
 
-#define _ElecMode_MIN ElecMode_VOLTAGE
-#define _ElecMode_MAX ElecMode_CURRENT
-#define _ElecMode_ARRAYSIZE ((ElecMode)(ElecMode_CURRENT+1))
-#define ElecMode_ElecMode_VOLTAGE ElecMode_VOLTAGE
-#define ElecMode_ElecMode_CURRENT ElecMode_CURRENT
+#define _ElecMode_MIN ElecMode_Voltage
+#define _ElecMode_MAX ElecMode_Current
+#define _ElecMode_ARRAYSIZE ((ElecMode)(ElecMode_Current+1))
+#define ElecMode_ElecMode_Voltage ElecMode_Voltage
+#define ElecMode_ElecMode_Current ElecMode_Current
 
-#define _StopMode_MIN StopMode_COAST
-#define _StopMode_MAX StopMode_EMERGENCY_PLUG
-#define _StopMode_ARRAYSIZE ((StopMode)(StopMode_EMERGENCY_PLUG+1))
-#define StopMode_StopMode_COAST StopMode_COAST
-#define StopMode_StopMode_RAMP StopMode_RAMP
-#define StopMode_StopMode_EMERGENCY_PLUG StopMode_EMERGENCY_PLUG
+#define _StopMode_MIN StopMode_Coast
+#define _StopMode_MAX StopMode_EmergencyPlug
+#define _StopMode_ARRAYSIZE ((StopMode)(StopMode_EmergencyPlug+1))
+#define StopMode_StopMode_Coast StopMode_Coast
+#define StopMode_StopMode_Ramp StopMode_Ramp
+#define StopMode_StopMode_EmergencyPlug StopMode_EmergencyPlug
 
-#define _PmsmFault_MIN PmsmFault_OK
-#define _PmsmFault_MAX PmsmFault_OC
-#define _PmsmFault_ARRAYSIZE ((PmsmFault)(PmsmFault_OC+1))
-#define PmsmFault_PmsmFault_OK PmsmFault_OK
-#define PmsmFault_PmsmFault_UVLO PmsmFault_UVLO
-#define PmsmFault_PmsmFault_OVLO PmsmFault_OVLO
-#define PmsmFault_PmsmFault_OLOAD PmsmFault_OLOAD
-#define PmsmFault_PmsmFault_CSFAULT PmsmFault_CSFAULT
-#define PmsmFault_PmsmFault_OT PmsmFault_OT
-#define PmsmFault_PmsmFault_OC PmsmFault_OC
+#define _PmsmFault_MIN PmsmFault_Ok
+#define _PmsmFault_MAX PmsmFault_Overcurrent
+#define _PmsmFault_ARRAYSIZE ((PmsmFault)(PmsmFault_Overcurrent+1))
+#define PmsmFault_PmsmFault_Ok PmsmFault_Ok
+#define PmsmFault_PmsmFault_Uvlo PmsmFault_Uvlo
+#define PmsmFault_PmsmFault_Ovlo PmsmFault_Ovlo
+#define PmsmFault_PmsmFault_Overload PmsmFault_Overload
+#define PmsmFault_PmsmFault_CurrentSense PmsmFault_CurrentSense
+#define PmsmFault_PmsmFault_Overtemp PmsmFault_Overtemp
+#define PmsmFault_PmsmFault_Overcurrent PmsmFault_Overcurrent
 
-#define _PmsmErr_MIN PmsmErr_OK
-#define _PmsmErr_MAX PmsmErr_CONFIG_BAD
-#define _PmsmErr_ARRAYSIZE ((PmsmErr)(PmsmErr_CONFIG_BAD+1))
-#define PmsmErr_PmsmErr_OK PmsmErr_OK
-#define PmsmErr_PmsmErr_UNKNOWN_ERROR PmsmErr_UNKNOWN_ERROR
-#define PmsmErr_PmsmErr_NOT_INITIALIZED PmsmErr_NOT_INITIALIZED
-#define PmsmErr_PmsmErr_NOT_IMPLEMENTED PmsmErr_NOT_IMPLEMENTED
-#define PmsmErr_PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING PmsmErr_CONFIG_NOT_ALLOWED_MOTOR_RUNNING
-#define PmsmErr_PmsmErr_CONFIG_BAD PmsmErr_CONFIG_BAD
+#define _PmsmErr_MIN PmsmErr_Ok
+#define _PmsmErr_MAX PmsmErr_ConfigBad
+#define _PmsmErr_ARRAYSIZE ((PmsmErr)(PmsmErr_ConfigBad+1))
+#define PmsmErr_PmsmErr_Ok PmsmErr_Ok
+#define PmsmErr_PmsmErr_Unkown PmsmErr_Unkown
+#define PmsmErr_PmsmErr_NotInitialized PmsmErr_NotInitialized
+#define PmsmErr_PmsmErr_NotImplemented PmsmErr_NotImplemented
+#define PmsmErr_PmsmErr_ConfigNotAllowed PmsmErr_ConfigNotAllowed
+#define PmsmErr_PmsmErr_ConfigBad PmsmErr_ConfigBad
 
-#define _IdStage_MIN IdStage_IDLE
-#define _IdStage_MAX IdStage_LQ_ID
-#define _IdStage_ARRAYSIZE ((IdStage)(IdStage_LQ_ID+1))
-#define IdStage_IdStage_IDLE IdStage_IDLE
-#define IdStage_IdStage_RS_ID IdStage_RS_ID
-#define IdStage_IdStage_LD_ID IdStage_LD_ID
-#define IdStage_IdStage_REST0 IdStage_REST0
-#define IdStage_IdStage_LQ_ID IdStage_LQ_ID
+#define _IdStage_MIN IdStage_Idle
+#define _IdStage_MAX IdStage_IndQ
+#define _IdStage_ARRAYSIZE ((IdStage)(IdStage_IndQ+1))
+#define IdStage_IdStage_Idle IdStage_Idle
+#define IdStage_IdStage_Res IdStage_Res
+#define IdStage_IdStage_IndD IdStage_IndD
+#define IdStage_IdStage_Rest0 IdStage_Rest0
+#define IdStage_IdStage_IndQ IdStage_IndQ
 
-#define _IdSubStage_MIN IdSubStage_ESETTLE_START
-#define _IdSubStage_MAX IdSubStage_ACTIVE_SAMPLING
-#define _IdSubStage_ARRAYSIZE ((IdSubStage)(IdSubStage_ACTIVE_SAMPLING+1))
-#define IdSubStage_IdSubStage_ESETTLE_START IdSubStage_ESETTLE_START
-#define IdSubStage_IdSubStage_ESETTLE_WAIT IdSubStage_ESETTLE_WAIT
-#define IdSubStage_IdSubStage_ACTIVE_SAMPLING IdSubStage_ACTIVE_SAMPLING
+#define _IdSubStage_MIN IdSubStage_SettleStart
+#define _IdSubStage_MAX IdSubStage_ActiveSampling
+#define _IdSubStage_ARRAYSIZE ((IdSubStage)(IdSubStage_ActiveSampling+1))
+#define IdSubStage_IdSubStage_SettleStart IdSubStage_SettleStart
+#define IdSubStage_IdSubStage_SettleWait IdSubStage_SettleWait
+#define IdSubStage_IdSubStage_ActiveSampling IdSubStage_ActiveSampling
 
 
 
@@ -287,10 +287,10 @@ extern "C" {
 
 #define Pid_type_ENUMTYPE PidType
 
-#define Setpoint_mech_mode_ENUMTYPE MechMode
+#define Setpoint_mechMode_ENUMTYPE MechMode
 
-#define ControlMode_mc_mode_ENUMTYPE McMode
-#define ControlMode_mech_mode_ENUMTYPE MechMode
+#define ControlMode_mcMode_ENUMTYPE McMode
+#define ControlMode_mechMode_ENUMTYPE MechMode
 
 #define GetPidArg_n_ENUMTYPE PidType
 
@@ -330,61 +330,61 @@ extern "C" {
 #define Empty_init_zero                          {0}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define ProfilePoint2D_t_tag                     1
+#define ProfilePoint2D_time_tag                  1
 #define ProfilePoint2D_v1_tag                    2
 #define ProfilePoint2D_v2_tag                    3
 #define ConfigPwm_pwm_hz_tag                     1
 #define ConfigPwm_deadtime_ns_tag                2
-#define ConfigPwm_duty_min_tag                   3
-#define ConfigPwm_duty_max_tag                   4
-#define ConfigPwm_dtc_thresh_tag                 5
-#define ConfigPwm_dtc_active_tag                 6
+#define ConfigPwm_minDuty_tag                    3
+#define ConfigPwm_maxDuty_tag                    4
+#define ConfigPwm_dtcThresh_tag                  5
+#define ConfigPwm_dtcActive_tag                  6
 #define ElecSensorConfig_offset_tag              1
 #define ElecSensorConfig_gain_tag                2
-#define ConfigAnalog_vsbus_tag                   1
-#define ConfigAnalog_vsu_tag                     2
-#define ConfigAnalog_vsv_tag                     3
-#define ConfigAnalog_vsw_tag                     4
-#define ConfigAnalog_csu_csbus_tag               5
-#define ConfigAnalog_csv_tag                     6
-#define ConfigAnalog_csw_tag                     7
-#define ConfigAnalog_offset_calibration_tag      8
-#define ConfigScomm_oversample_bits_tag          1
-#define ConfigScomm_esettle_min_ticks_tag        2
-#define ConfigScomm_hfi_n_tag                    3
-#define ConfigScomm_dc_vinj_tag                  4
-#define ConfigScomm_hfi_vinj_tag                 5
-#define PmsmModel_R_tag                          1
-#define PmsmModel_Ld_tag                         2
-#define PmsmModel_Lq_tag                         3
-#define PmsmModel_psi_tag                        4
-#define PmsmModel_J_tag                          5
-#define PmsmModel_B_tag                          6
-#define PmsmModel_pole_pairs_tag                 7
-#define ConfigGen_max_freq_tag                   1
-#define ConfigGen_min_freq_tag                   2
-#define ConfigGen_max_deadtime_ns_tag            3
-#define ConfigGen_min_deadtime_ns_tag            4
-#define ConfigGen_max_cmag_tag                   5
-#define ConfigGen_min_vbus_tag                   6
-#define ConfigGen_max_vbus_tag                   7
-#define ConfigGen_xtick_freq_tag                 8
-#define ConfigGen_pos_rate_div_tag               9
-#define Pid_Kp_tag                               1
-#define Pid_Ki_tag                               2
-#define Pid_Kd_tag                               3
+#define ConfigAnalog_vsBus_tag                   1
+#define ConfigAnalog_vsU_tag                     2
+#define ConfigAnalog_vsV_tag                     3
+#define ConfigAnalog_vsW_tag                     4
+#define ConfigAnalog_csU_csBus_tag               5
+#define ConfigAnalog_csV_tag                     6
+#define ConfigAnalog_csW_tag                     7
+#define ConfigAnalog_offsetCalib_tag             8
+#define ConfigScomm_oversampleBits_tag           1
+#define ConfigScomm_minSettleTicks_tag           2
+#define ConfigScomm_hfiN_tag                     3
+#define ConfigScomm_dcVinj_tag                   4
+#define ConfigScomm_hfiVinj_tag                  5
+#define PmsmModel_res_ohm_tag                    1
+#define PmsmModel_indD_h_tag                     2
+#define PmsmModel_indQ_h_tag                     3
+#define PmsmModel_flux_wb_tag                    4
+#define PmsmModel_inertia_kgm2_tag               5
+#define PmsmModel_friction_nms_tag               6
+#define PmsmModel_polePairs_tag                  7
+#define ConfigGen_maxPwm_hz_tag                  1
+#define ConfigGen_minPwm_hz_tag                  2
+#define ConfigGen_maxDeadtime_ns_tag             3
+#define ConfigGen_minDeadtime_ns_tag             4
+#define ConfigGen_maxCMag_tag                    5
+#define ConfigGen_minVBus_tag                    6
+#define ConfigGen_maxVBus_tag                    7
+#define ConfigGen_xtick_hz_tag                   8
+#define ConfigGen_posRate_tag                    9
+#define Pid_kp_tag                               1
+#define Pid_ki_tag                               2
+#define Pid_kd_tag                               3
 #define Pid_type_tag                             4
-#define Setpoint_value_tag                       1
-#define Setpoint_mech_mode_tag                   2
-#define ControlMode_mc_mode_tag                  1
-#define ControlMode_mech_mode_tag                2
+#define Setpoint_val_tag                         1
+#define Setpoint_mechMode_tag                    2
+#define ControlMode_mcMode_tag                   1
+#define ControlMode_mechMode_tag                 2
 #define GetPidArg_n_tag                          1
 #define PmsmFaultRet_fault_tag                   1
 #define PmsmErrRet_err_tag                       1
 
 /* Struct field encoding specification for nanopb */
 #define ProfilePoint2D_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    t,                 1) \
+X(a, STATIC,   SINGULAR, FLOAT,    time,              1) \
 X(a, STATIC,   SINGULAR, FLOAT,    v1,                2) \
 X(a, STATIC,   SINGULAR, FLOAT,    v2,                3)
 #define ProfilePoint2D_CALLBACK NULL
@@ -393,10 +393,10 @@ X(a, STATIC,   SINGULAR, FLOAT,    v2,                3)
 #define ConfigPwm_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   pwm_hz,            1) \
 X(a, STATIC,   SINGULAR, UINT32,   deadtime_ns,       2) \
-X(a, STATIC,   SINGULAR, FLOAT,    duty_min,          3) \
-X(a, STATIC,   SINGULAR, FLOAT,    duty_max,          4) \
-X(a, STATIC,   SINGULAR, FLOAT,    dtc_thresh,        5) \
-X(a, STATIC,   SINGULAR, BOOL,     dtc_active,        6)
+X(a, STATIC,   SINGULAR, FLOAT,    minDuty,           3) \
+X(a, STATIC,   SINGULAR, FLOAT,    maxDuty,           4) \
+X(a, STATIC,   SINGULAR, FLOAT,    dtcThresh,         5) \
+X(a, STATIC,   SINGULAR, BOOL,     dtcActive,         6)
 #define ConfigPwm_CALLBACK NULL
 #define ConfigPwm_DEFAULT NULL
 
@@ -407,74 +407,74 @@ X(a, STATIC,   SINGULAR, FLOAT,    gain,              2)
 #define ElecSensorConfig_DEFAULT NULL
 
 #define ConfigAnalog_FIELDLIST(X, a) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  vsbus,             1) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  vsu,               2) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  vsv,               3) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  vsw,               4) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  csu_csbus,         5) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  csv,               6) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  csw,               7) \
-X(a, STATIC,   SINGULAR, BOOL,     offset_calibration,   8)
+X(a, STATIC,   OPTIONAL, MESSAGE,  vsBus,             1) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  vsU,               2) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  vsV,               3) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  vsW,               4) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  csU_csBus,         5) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  csV,               6) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  csW,               7) \
+X(a, STATIC,   SINGULAR, BOOL,     offsetCalib,       8)
 #define ConfigAnalog_CALLBACK NULL
 #define ConfigAnalog_DEFAULT NULL
-#define ConfigAnalog_vsbus_MSGTYPE ElecSensorConfig
-#define ConfigAnalog_vsu_MSGTYPE ElecSensorConfig
-#define ConfigAnalog_vsv_MSGTYPE ElecSensorConfig
-#define ConfigAnalog_vsw_MSGTYPE ElecSensorConfig
-#define ConfigAnalog_csu_csbus_MSGTYPE ElecSensorConfig
-#define ConfigAnalog_csv_MSGTYPE ElecSensorConfig
-#define ConfigAnalog_csw_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_vsBus_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_vsU_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_vsV_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_vsW_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_csU_csBus_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_csV_MSGTYPE ElecSensorConfig
+#define ConfigAnalog_csW_MSGTYPE ElecSensorConfig
 
 #define ConfigScomm_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UINT32,   oversample_bits,   1) \
-X(a, STATIC,   SINGULAR, UINT32,   esettle_min_ticks,   2) \
-X(a, STATIC,   SINGULAR, UINT32,   hfi_n,             3) \
-X(a, STATIC,   SINGULAR, FLOAT,    dc_vinj,           4) \
-X(a, STATIC,   SINGULAR, FLOAT,    hfi_vinj,          5)
+X(a, STATIC,   SINGULAR, UINT32,   oversampleBits,    1) \
+X(a, STATIC,   SINGULAR, UINT32,   minSettleTicks,    2) \
+X(a, STATIC,   SINGULAR, UINT32,   hfiN,              3) \
+X(a, STATIC,   SINGULAR, FLOAT,    dcVinj,            4) \
+X(a, STATIC,   SINGULAR, FLOAT,    hfiVinj,           5)
 #define ConfigScomm_CALLBACK NULL
 #define ConfigScomm_DEFAULT NULL
 
 #define PmsmModel_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    R,                 1) \
-X(a, STATIC,   SINGULAR, FLOAT,    Ld,                2) \
-X(a, STATIC,   SINGULAR, FLOAT,    Lq,                3) \
-X(a, STATIC,   SINGULAR, FLOAT,    psi,               4) \
-X(a, STATIC,   SINGULAR, FLOAT,    J,                 5) \
-X(a, STATIC,   SINGULAR, FLOAT,    B,                 6) \
-X(a, STATIC,   SINGULAR, UINT32,   pole_pairs,        7)
+X(a, STATIC,   SINGULAR, FLOAT,    res_ohm,           1) \
+X(a, STATIC,   SINGULAR, FLOAT,    indD_h,            2) \
+X(a, STATIC,   SINGULAR, FLOAT,    indQ_h,            3) \
+X(a, STATIC,   SINGULAR, FLOAT,    flux_wb,           4) \
+X(a, STATIC,   SINGULAR, FLOAT,    inertia_kgm2,      5) \
+X(a, STATIC,   SINGULAR, FLOAT,    friction_nms,      6) \
+X(a, STATIC,   SINGULAR, UINT32,   polePairs,         7)
 #define PmsmModel_CALLBACK NULL
 #define PmsmModel_DEFAULT NULL
 
 #define ConfigGen_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UINT32,   max_freq,          1) \
-X(a, STATIC,   SINGULAR, UINT32,   min_freq,          2) \
-X(a, STATIC,   SINGULAR, UINT32,   max_deadtime_ns,   3) \
-X(a, STATIC,   SINGULAR, UINT32,   min_deadtime_ns,   4) \
-X(a, STATIC,   SINGULAR, FLOAT,    max_cmag,          5) \
-X(a, STATIC,   SINGULAR, FLOAT,    min_vbus,          6) \
-X(a, STATIC,   SINGULAR, FLOAT,    max_vbus,          7) \
-X(a, STATIC,   SINGULAR, UINT32,   xtick_freq,        8) \
-X(a, STATIC,   SINGULAR, UINT32,   pos_rate_div,      9)
+X(a, STATIC,   SINGULAR, UINT32,   maxPwm_hz,         1) \
+X(a, STATIC,   SINGULAR, UINT32,   minPwm_hz,         2) \
+X(a, STATIC,   SINGULAR, UINT32,   maxDeadtime_ns,    3) \
+X(a, STATIC,   SINGULAR, UINT32,   minDeadtime_ns,    4) \
+X(a, STATIC,   SINGULAR, FLOAT,    maxCMag,           5) \
+X(a, STATIC,   SINGULAR, FLOAT,    minVBus,           6) \
+X(a, STATIC,   SINGULAR, FLOAT,    maxVBus,           7) \
+X(a, STATIC,   SINGULAR, UINT32,   xtick_hz,          8) \
+X(a, STATIC,   SINGULAR, UINT32,   posRate,           9)
 #define ConfigGen_CALLBACK NULL
 #define ConfigGen_DEFAULT NULL
 
 #define Pid_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    Kp,                1) \
-X(a, STATIC,   SINGULAR, FLOAT,    Ki,                2) \
-X(a, STATIC,   SINGULAR, FLOAT,    Kd,                3) \
+X(a, STATIC,   SINGULAR, FLOAT,    kp,                1) \
+X(a, STATIC,   SINGULAR, FLOAT,    ki,                2) \
+X(a, STATIC,   SINGULAR, FLOAT,    kd,                3) \
 X(a, STATIC,   SINGULAR, UENUM,    type,              4)
 #define Pid_CALLBACK NULL
 #define Pid_DEFAULT NULL
 
 #define Setpoint_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    value,             1) \
-X(a, STATIC,   SINGULAR, UENUM,    mech_mode,         2)
+X(a, STATIC,   SINGULAR, FLOAT,    val,               1) \
+X(a, STATIC,   SINGULAR, UENUM,    mechMode,          2)
 #define Setpoint_CALLBACK NULL
 #define Setpoint_DEFAULT NULL
 
 #define ControlMode_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UENUM,    mc_mode,           1) \
-X(a, STATIC,   SINGULAR, UENUM,    mech_mode,         2)
+X(a, STATIC,   SINGULAR, UENUM,    mcMode,            1) \
+X(a, STATIC,   SINGULAR, UENUM,    mechMode,          2)
 #define ControlMode_CALLBACK NULL
 #define ControlMode_DEFAULT NULL
 

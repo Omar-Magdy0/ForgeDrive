@@ -1,19 +1,19 @@
 
-struct SComm {
+struct Scomm {
   static constexpr float HFI_ANGLE_SCALE = 2.0f; // HFI angle spans 2 radians per cycle
   // Config runtime
   ConfigScomm conf;
-  q31_t       dc_vinj_q31;
-  q31_t       hfi_vinj_q31;
+  int32_t     dcVinj_Q31;
+  int32_t     hfiVinj_Q31;
   // States
   int64_t             accumulate0;
   int64_t             accumulate1;
-  q31_t               hfi_Angv_RPT_q31;
-  q31_t               hfi_angle_q31; /** High-frequency injection angle */
-  volatile uint32_t   eSettle_start_tick = 0;
-  volatile IdStage    idstage;
-  volatile IdSubStage idsub;
-  volatile uint16_t   samples_counter; /** Remaining samples for current step. */
+  int32_t             hfiOmegaRpt;  // Rad per tick
+  int32_t             hfiTheta_Q31; /** High-frequency injection angle */
+  volatile uint32_t   eSettleStartTick = 0;
+  volatile IdStage    idStage;
+  volatile IdSubStage idSub;
+  volatile uint16_t   sampleCnt; /** Remaining samples for current step. */
   // Results
   PmsmModel model;
 } scomm;
