@@ -1,4 +1,4 @@
-#include "AbfStream.h"
+#include "Abf.h"
 // ============================================
 // CRC-8/AUTOSAR Lookup Table
 // ============================================
@@ -19,92 +19,92 @@ static const uint8_t CRC8_AUTOSAR_LUT[] = {0x00, 0x2F, 0x5E, 0x71, 0xBC, 0x93, 0
 // ============================================
 // CRC-8/AUTOSAR Calculator
 // ============================================
-uint8_t crc8Calculate_autosar(const uint8_t* data, uint8_t len) {
+uint8_t Crc8CalculateAutosar(const uint8_t* data, uint8_t len) {
   uint8_t crc = 0xFF; // AUTOSAR init = 0xFF
   for (uint8_t i = 0; i < len; i++) { crc = CRC8_AUTOSAR_LUT[crc ^ data[i]]; }
   return crc ^ 0xFF; // AUTOSAR xorout = 0xFF
 }
-void abf_init_reader(AbfReader_t* reader) {
-  reader->state      = AbfReadState_HUNT_SYNC;
-  reader->header_pos = 0;
-  reader->next_zero  = 0;
+void Abf_InitReader(AbfReader* reader) {
+  reader->state    = AbfReadState_HuntSync;
+  reader->hdrPos   = 0;
+  reader->nextZero = 0;
 }
-AbfHeader_t abf_header_decode(uint8_t* header) {
-  AbfHeader_t ret;
-  ret.sync       = header[0];
-  ret.id         = header[1];
-  ret.size       = header[2];
-  ret.mcobs_code = header[3];
-  ret.crc        = header[4];
+AbfHdr Abf_HdrDecode(uint8_t* hdr) {
+  AbfHdr ret;
+  ret.sync      = hdr[0];
+  ret.id        = hdr[1];
+  ret.sz        = hdr[2];
+  ret.mcobsCode = hdr[3];
+  ret.crc       = hdr[4];
   return ret;
 }
-AbfErr abf_write(uint8_t* header, uint8_t* p_buf, uint8_t p_buf_sz, uint8_t id) {
-  if (p_buf_sz == 0 || p_buf_sz > 254) return AbfErr_UNKNOWN;
-  if (id == 0) return AbfErr_UNKNOWN;
-  header[0]             = ABF_SYNC_BYTE;
-  header[1]             = id;
-  header[2]             = p_buf_sz;
-  uint8_t* nextZeroPos  = header + 3;
+AbfErr Abf_Write(uint8_t* hdr, uint8_t* pBuf, uint8_t pBufSz, uint8_t id) {
+  if (pBufSz == 0 || pBufSz > 254) return AbfErr_Unkown;
+  if (id == 0) return AbfErr_Unkown;
+  hdr[0]                = 0;
+  hdr[1]                = id;
+  hdr[2]                = pBufSz;
+  uint8_t* nextZeroPos  = hdr + 3;
   uint8_t  zeroDistance = 0;
-  for (uint8_t i = 0; i < p_buf_sz; i++) {
+  for (uint8_t i = 0; i < pBufSz; i++) {
     zeroDistance++;
-    if (p_buf[i] == 0) {
+    if (pBuf[i] == 0) {
       *nextZeroPos = zeroDistance;
-      nextZeroPos  = p_buf + i;
+      nextZeroPos  = pBuf + i;
       zeroDistance = 0;
     }
   }
-  *nextZeroPos      = zeroDistance + 1;
-  uint8_t headerCrc = crc8Calculate_autosar(&header[1], 3);
-  if (headerCrc == 0x00) headerCrc = 0xFF;
-  header[4] = headerCrc;
-  return AbfErr_OK;
+  *nextZeroPos   = zeroDistance + 1;
+  uint8_t hdrCrc = Crc8CalculateAutosar(&hdr[1], 3);
+  if (hdrCrc == 0x00) hdrCrc = 0xFF;
+  hdr[4] = hdrCrc;
+  return AbfErr_Ok;
 }
-AbfReadEvent abf_read(AbfReader_t* reader, const uint8_t* data, uint16_t length, AbfRead_t* read) {
+AbfReadEvent Abf_Read(AbfReader* reader, const uint8_t* data, uint16_t length, AbfRead* read) {
   for (read->pos = 0; read->pos < length; read->pos++) {
-    if (reader->state == AbfReadState_READ_PAYLOAD) {
+    if (reader->state == AbfReadState_ReadPayload) {
       uint8_t xbyte = data[read->pos];
-      if (xbyte == ABF_SYNC_BYTE) {
-        abf_init_reader(reader);
-        read->err = AbfErr_PAYLOAD_INCOMPLETE;
-        return AbfReadEvent_ERROR;
-      } else if (reader->next_zero == 1) {
-        read->b_buf[reader->b_buf_pos] = 0x00;
-        reader->next_zero              = xbyte;
+      if (xbyte == 0) {
+        Abf_InitReader(reader);
+        read->err = AbfErr_PayloadIncomplete;
+        return AbfReadEvent_Err;
+      } else if (reader->nextZero == 1) {
+        read->bBuf[reader->bBufPos] = 0x00;
+        reader->nextZero            = xbyte;
       } else {
-        read->b_buf[reader->b_buf_pos] = xbyte;
-        reader->next_zero--;
+        read->bBuf[reader->bBufPos] = xbyte;
+        reader->nextZero--;
       }
-      reader->b_buf_pos++;
-      if (reader->b_buf_pos == read->header[2]) {
-        abf_init_reader(reader);
-        return AbfReadEvent_FRAME;
+      reader->bBufPos++;
+      if (reader->bBufPos == read->hdr[2]) {
+        Abf_InitReader(reader);
+        return AbfReadEvent_Frame;
       }
-    } else if (reader->state == AbfReadState_READ_HEADER) {
-      read->header[reader->header_pos++] = data[read->pos];
-      if (reader->header_pos == 5) {
-        uint8_t crc8 = crc8Calculate_autosar(&read->header[1], 3);
+    } else if (reader->state == AbfReadState_ReadHdr) {
+      read->hdr[reader->hdrPos++] = data[read->pos];
+      if (reader->hdrPos == 5) {
+        uint8_t crc8 = Crc8CalculateAutosar(&read->hdr[1], 3);
         if (crc8 == 0x00) crc8 = 0xFF;
-        if (crc8 != read->header[4]) {
-          abf_init_reader(reader);
-          read->err = AbfErr_HEADER_CRC_MISMATCH;
-          return AbfReadEvent_ERROR;
-        } else if (read->header[2] > read->b_buf_sz) {
-          abf_init_reader(reader);
-          read->err = AbfErr_RX_BUFFER_SMALL;
-          return AbfReadEvent_ERROR;
+        if (crc8 != read->hdr[4]) {
+          Abf_InitReader(reader);
+          read->err = AbfErr_HdrCrc;
+          return AbfReadEvent_Err;
+        } else if (read->hdr[2] > read->bBufSz) {
+          Abf_InitReader(reader);
+          read->err = AbfErr_RxBufSz;
+          return AbfReadEvent_Err;
         }
-        reader->next_zero = read->header[3];
-        reader->state     = AbfReadState_READ_PAYLOAD;
-        reader->b_buf_pos = 0;
+        reader->nextZero = read->hdr[3];
+        reader->state    = AbfReadState_ReadPayload;
+        reader->bBufPos  = 0;
       }
-    } else if (reader->state == AbfReadState_HUNT_SYNC) {
-      if (data[read->pos] == ABF_SYNC_BYTE) {
-        reader->state                      = AbfReadState_READ_HEADER;
-        reader->header_pos                 = 0;
-        read->header[reader->header_pos++] = ABF_SYNC_BYTE;
+    } else if (reader->state == AbfReadState_HuntSync) {
+      if (data[read->pos] == 0) {
+        reader->state               = AbfReadState_ReadHdr;
+        reader->hdrPos              = 0;
+        read->hdr[reader->hdrPos++] = 0;
       }
     }
   }
-  return AbfReadEvent_NONE;
+  return AbfReadEvent_None;
 }

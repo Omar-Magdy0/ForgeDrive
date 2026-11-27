@@ -4,50 +4,50 @@
 template <typename T> class ScopeStream {
 public:
   T*                 buf;
-  T                  trigger_level;
-  T                  hysteresis_level;
-  bool               hyst_trig;
+  T                  trigLvl;
+  T                  hysteresisLvl;
+  bool               hystTrig;
   uint8_t            decimation;
-  uint8_t            decimation_counter;
-  uint16_t           write_idx; // Simple linear index
-  uint8_t            channels_num;
-  uint32_t           sample_depth;
-  bool               triggered;
+  uint8_t            decimationCnt;
+  uint16_t           writeIdx; // Simple linear index
+  uint8_t            channelsNum;
+  uint32_t           sampleDepth;
+  bool               isTrig;
   volatile bool      frozen;
-  constexpr uint32_t buffer_size(uint8_t channels, uint32_t sample_depth) const { return sample_depth * channels * sizeof(T); }
-  ScopeStream(T* storage, uint8_t channels, uint32_t sample_depth) {
-    buf                = storage;
-    channels_num       = channels;
-    decimation         = 1;
-    decimation_counter = 1;
-    this->sample_depth = sample_depth;
-    trigger_level      = 0;
-    write_idx          = 0;
-    triggered          = false;
-    frozen             = false;
+  constexpr uint32_t BufferSize(uint8_t channels, uint32_t sampleDepth) const { return sampleDepth * channels * sizeof(T); }
+  ScopeStream(T* storage, uint8_t channels, uint32_t sampleDepth) {
+    buf               = storage;
+    channelsNum       = channels;
+    decimation        = 1;
+    decimationCnt     = 1;
+    this->sampleDepth = sampleDepth;
+    trigLvl           = 0;
+    writeIdx          = 0;
+    isTrig            = false;
+    frozen            = false;
   }
-  void write(const T* data) {
+  void Write(const T* data) {
     if (!frozen) {
       // 1. Decimation
-      if (--decimation_counter > 0) return;
-      decimation_counter = decimation;
+      if (--decimationCnt > 0) return;
+      decimationCnt = decimation;
       // 2. Trigger Logic
-      if (!triggered) {
-        if (data[0] > trigger_level + hysteresis_level && !hyst_trig) {
-          hyst_trig = true;
-          triggered = true;
-          write_idx = 0; // Start filling from the beginning
-        } else if (data[0] < trigger_level - hysteresis_level && hyst_trig) {
-          hyst_trig = false;
+      if (!isTrig) {
+        if (data[0] > trigLvl + hysteresisLvl && !hystTrig) {
+          hystTrig = true;
+          isTrig   = true;
+          writeIdx = 0; // Start filling from the beginning
+        } else if (data[0] < trigLvl - hysteresisLvl && hystTrig) {
+          hystTrig = false;
         }
       }
       // 3. Sequential Fill
-      if (triggered) {
+      if (isTrig) {
         // Copy channels for this specific sample
-        memcpy(buf + write_idx * channels_num, data, sizeof(T) * channels_num);
-        write_idx++;
+        memcpy(buf + writeIdx * channelsNum, data, sizeof(T) * channelsNum);
+        writeIdx++;
         // 4. Check if Full
-        if (write_idx >= sample_depth) { frozen = true; }
+        if (writeIdx >= sampleDepth) { frozen = true; }
       }
     }
   }
@@ -55,38 +55,38 @@ public:
    * Since the buffer is now linear and aligned, we just
    * copy the whole thing or even read it directly.
    */
-  bool read(T* out_buffer, uint16_t buffer_size) {
+  bool Read(T* out_buffer, uint16_t buffer_size) {
     if (!frozen) return false;
-    if (buffer_size < sample_depth * channels_num * sizeof(T)) return false;
+    if (buffer_size < sampleDepth * channelsNum * sizeof(T)) return false;
     // Copy the captured window to your display buffer
-    memcpy(out_buffer, buf, sample_depth * channels_num * sizeof(T));
+    memcpy(out_buffer, buf, sampleDepth * channelsNum * sizeof(T));
     return true;
   }
-  bool read(uint8_t channel, T* out_buffer, uint16_t buffer_size) {
+  bool Read(uint8_t channel, T* out_buffer, uint16_t buffer_size) {
     if (!frozen) return false;
-    if (buffer_size < sample_depth * sizeof(T)) return false;
+    if (buffer_size < sampleDepth * sizeof(T)) return false;
     // Copy the captured window to your display buffer
-    for (uint16_t i = 0; i < sample_depth; i++) { out_buffer[i] = buf[i * channels_num + channel]; }
+    for (uint16_t i = 0; i < sampleDepth; i++) { out_buffer[i] = buf[i * channelsNum + channel]; }
     return true;
   }
-  bool isFrozen() const { return frozen; }
-  bool isTriggered() const { return triggered; }
-  void reset() {
-    write_idx          = 0;
-    triggered          = false;
-    frozen             = false;
-    decimation_counter = decimation;
+  bool IsFrozen() const { return frozen; }
+  bool IsisTrig() const { return isTrig; }
+  void Reset() {
+    writeIdx      = 0;
+    isTrig        = false;
+    frozen        = false;
+    decimationCnt = decimation;
   }
-  const T* get_buffer() const { return buf; }
-  void     set_trigger_level(T level) { trigger_level = level; }
-  void     update_decimation(uint8_t divisions, uint32_t time_per_div_us, uint32_t sample_rate) {
-    uint32_t samples_per_div      = (sample_depth / divisions);
+  const T* GetBuffer() const { return buf; }
+  void     SetTriggerLevel(T level) { trigLvl = level; }
+  void     UpdateDecimation(uint8_t divisions, uint32_t time_per_div_us, uint32_t sample_rate) {
+    uint32_t samples_per_div      = (sampleDepth / divisions);
     uint32_t base_time_per_div_us = (uint64_t(samples_per_div) * 1000000) / sample_rate;
     decimation                    = (time_per_div_us > base_time_per_div_us) ? (uint8_t)((float(time_per_div_us) / base_time_per_div_us) + 0.5) : 1;
-    decimation_counter            = decimation;
+    decimationCnt                 = decimation;
   }
-  void update_decimation(uint8_t decimation) {
-    this->decimation   = decimation;
-    decimation_counter = decimation;
+  void UpdateDecimation(uint8_t decimation) {
+    this->decimation = decimation;
+    decimationCnt    = decimation;
   }
 };

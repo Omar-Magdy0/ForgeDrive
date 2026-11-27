@@ -8,10 +8,10 @@ constexpr uint32_t POS_MAX_ERROR_STEP = INT32_MAX / 3600;
 // Speed scaling: convert from Q32.31 delta-angle to Q7.24 angular velocity
 void PmsmControlCore::Foc_init() {}
 void PmsmControlCore::Foc_onEnter(McMode prev_mct) {
-  foc.state.Id_pid.reset();
-  foc.state.Iq_pid.reset();
-  control.position_pid.reset();
-  control.speed_pid.reset();
+  foc.state.Id_pid.Reset();
+  foc.state.Iq_pid.Reset();
+  control.position_pid.Reset();
+  control.speed_pid.Reset();
   control.pos_loop_counter = 0;
   control.elec_mode        = ElecMode_CURRENT;
 }
@@ -25,20 +25,20 @@ void PmsmControlCore::Foc_xmcLoop() {
                        state
                            .theta_q32p31; // saturate the position error to be a max of 1 rev (for higher position errors, a profiler should exist for stepping)
       int32_t e_theta_q31   = (e_temp > POS_MAX_ERROR_STEP) ? POS_MAX_ERROR_STEP : (e_temp < -POS_MAX_ERROR_STEP) ? -POS_MAX_ERROR_STEP : e_temp;
-      int32_t diff_Omega    = control.position_pid.step(e_theta_q31);
+      int32_t diff_Omega    = control.position_pid.Step(e_theta_q31);
       state.omega_sp_q16p15 = fd::sat_add(state.omega_sp_q16p15, diff_Omega);
     } else {
-      control.position_pid.step(0);
+      control.position_pid.Step(0);
     }
     control.pos_loop_counter = conf.pos_rate_div - 1;
   }
   control.pos_loop_counter--;
   if (control.mech_mode == MechMode_SPEED || control.mech_mode == MechMode_POSITION) {
     int32_t e_omega_q16p15 = (state.omega_sp_q16p15 - state.omega_q16p15) >> 2;
-    int32_t diff_torque    = control.speed_pid.step(e_omega_q16p15);
+    int32_t diff_torque    = control.speed_pid.Step(e_omega_q16p15);
     state.iTorque_sp_q31   = fd::sat_add(state.iTorque_sp_q31, diff_torque);
   } else {
-    control.speed_pid.step(0);
+    control.speed_pid.Step(0);
   }
   // Clamping logic here for Id/Iq and Possibly MPTA // for now just map to Iq no MPTA (TODO)
   // TODO: Ultra optimized fixed point MPTA , precompute cooffetients, max-alpha-min-beta square root, turning it into semi linear
@@ -48,7 +48,7 @@ void PmsmControlCore::Foc_xmcLoop() {
     foc.state.ECd_sp_q31 = 0;
   } else {
   }
-  uint32_t imag_uq31 = maxa_minb_uq31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
+  uint32_t imag_uq31 = MaxaMinb_UQ31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
   if (imag_uq31 > control.max_imag_uq31 && imag_uq31 != 0) {
     uint32_t scale       = ((uint64_t)control.max_imag_uq31 << 31) / imag_uq31;
     foc.state.ECd_sp_q31 = ((int64_t)foc.state.ECd_sp_q31 * scale) >> 31;
@@ -71,7 +71,7 @@ void PmsmControlCore::Foc_pwmLoop() {
   int64_t power_q61 = (((int64_t)foc.state.Id_q31 * foc.state.Vd_q31) >> 1) + (((int64_t)foc.state.Iq_q31 * foc.state.Vq_q31) >> 1);
   state.power_q31   = (int32_t)(power_q61 >> 30);
   state.Ibus_q31    = (int32_t)((power_q61 / state.Vbus_q31) * 6);
-  state.imag_uq31   = maxa_minb_uq31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
+  state.imag_uq31   = MaxaMinb_UQ31(foc.state.ECq_sp_q31, foc.state.ECd_sp_q31);
   // if (state.imag_uq31 > control.max_imag_uq31) state.fault |= (uint32_t)PmsmFault_OC;
   //  if (state.Ibus_q31 > control.max_ibus_uq31 || state.Ibus_q31 < -control.max_ibus_uq31) state.fault |= (uint32_t)PmsmFault_OC;
   if (state.fault != (uint32_t)PmsmFault_OK) {
@@ -81,19 +81,19 @@ void PmsmControlCore::Foc_pwmLoop() {
   if (control.elec_mode == ElecMode_CURRENT) {
     int32_t ed       = (foc.state.ECd_sp_q31 - foc.state.Id_q31) >> 2;
     int32_t eq       = (foc.state.ECq_sp_q31 - foc.state.Iq_q31) >> 2;
-    int32_t delta_Vd = foc.state.Id_pid.step(ed);
-    int32_t delta_Vq = foc.state.Iq_pid.step(eq);
+    int32_t delta_Vd = foc.state.Id_pid.Step(ed);
+    int32_t delta_Vq = foc.state.Iq_pid.Step(eq);
     foc.state.Vd_q31 = fd::sat_add(foc.state.Vd_q31, delta_Vd);
     foc.state.Vq_q31 = fd::sat_add(foc.state.Vq_q31, delta_Vq);
   } else {
-    foc.state.Id_pid.step(0);
-    foc.state.Iq_pid.step(0);
+    foc.state.Id_pid.Step(0);
+    foc.state.Iq_pid.Step(0);
     foc.state.Vd_q31 = foc.state.ECd_sp_q31;
     foc.state.Vq_q31 = foc.state.ECq_sp_q31;
   }
   // Circular overmodulation clamping
   // Here overmodulation logic is intended
-  uint32_t vmag_q31 = maxa_minb_uq31(foc.state.Vd_q31, foc.state.Vq_q31);
+  uint32_t vmag_q31 = MaxaMinb_UQ31(foc.state.Vd_q31, foc.state.Vq_q31);
   uint32_t vlim_q31 = (uint64_t(state.Vbus_q31) * (MC3P1.maxDuty - MC3P1.minDuty) * foc.state.modidxInvSqrt3_uq15) >> 30;
   if (vmag_q31 > vlim_q31 && vmag_q31 != 0U) {
     uint32_t scale_q31 = ((uint64_t)vlim_q31 << 31) / vmag_q31;

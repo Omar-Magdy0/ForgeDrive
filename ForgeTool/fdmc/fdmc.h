@@ -1,14 +1,14 @@
+#include "FdrpcTool.h"
 #include "ForgeTool.h"
-#include "fdrpcTool.h"
 #include <iostream>
 extern "C" {
-#include "AbfStream.h"
+#include "Abf.h"
 }
 class LaunchFdmc : public Launchable {
   FdrpcTool            rpctool;
   IComm*               comm;
-  AbfReader_t          frame_reader;
-  AbfRead_t            frame;
+  AbfReader            frame_reader;
+  AbfRead              frame;
   std::vector<uint8_t> tx_buf;
   std::vector<uint8_t> b_buf;
   std::vector<uint8_t> rx_buf;
@@ -21,9 +21,9 @@ public:
     tx_buf.resize(255);
     b_buf.resize(255);
     rx_buf.resize(1 << 15);
-    frame.b_buf    = b_buf.data();
-    frame.b_buf_sz = b_buf.capacity();
-    abf_init_reader(&frame_reader);
+    frame.bBuf   = b_buf.data();
+    frame.bBufSz = b_buf.capacity();
+    Abf_InitReader(&frame_reader);
   }
   void frameHandle(uint8_t id, std::span<uint8_t> data);
   void setComm(IComm* comm_) {

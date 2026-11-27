@@ -1,4 +1,4 @@
-#include "fdrpcTool.h"
+#include "FdrpcTool.h"
 #include <algorithm>
 #include <format>
 const FdrpcTool::Method* FdrpcTool::methodSelection() {
@@ -325,28 +325,28 @@ bool FdrpcTool::Call(std::vector<uint8_t>& data) {
   return true;
 }
 Rpc::RpcType FdrpcTool::Process(std::span<uint8_t> data) {
-  if (data.size() < 4) return Rpc::RpcType_NONE;
+  if (data.size() < 4) return Rpc::RpcType_None;
   const uint16_t id = static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8);
   Rpc::RpcType   tp = Rpc::idRpcType(id);
   switch (tp) {
-  case Rpc::RpcType::RpcType_ERROR: {
-    if (data.size() < 7) return Rpc::RpcType_NONE;
+  case Rpc::RpcType::RpcType_Err: {
+    if (data.size() < 7) return Rpc::RpcType_None;
     err_handle.id  = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
     err_handle.rid = static_cast<uint16_t>(data[4]) | (static_cast<uint16_t>(data[5]) << 8);
-    err_handle.err = static_cast<Rpc::DispatchStatus>(data[6]);
-    dispatch_err.emplace_back(std::format("Dispatch Error |ID:{}|REQ:{}|{}", err_handle.id, err_handle.rid, Rpc::dispatchStatusToString(err_handle.err)));
-    return Rpc::RpcType_ERROR;
+    err_handle.err = static_cast<Rpc::DispatchSts>(data[6]);
+    dispatch_err.emplace_back(std::format("Dispatch Error |ID:{}|REQ:{}|{}", err_handle.id, err_handle.rid, Rpc::DispatchStsToString(err_handle.err)));
+    return Rpc::RpcType_Err;
   }
-  case Rpc::RpcType::RpcType_CALL: {
+  case Rpc::RpcType::RpcType_Call: {
     const uint16_t rid = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
     if (id != getRpcId(call_handle.desc) || rid != call_handle.rid) // only one ongoing call and associated return associated
-      return Rpc::RpcType_NONE;
-    if (!call_handle.ret->ParseFromArray(data.data() + 4, static_cast<int>(data.size() - 4))) { return Rpc::RpcType_NONE; }
+      return Rpc::RpcType_None;
+    if (!call_handle.ret->ParseFromArray(data.data() + 4, static_cast<int>(data.size() - 4))) { return Rpc::RpcType_None; }
     call_handle.complete = true;
-    return Rpc::RpcType_CALL;
+    return Rpc::RpcType_Call;
   }
   }
-  return Rpc::RpcType_NONE;
+  return Rpc::RpcType_None;
 }
 void FdrpcTool::DrawError(ImVec2 dim) {
   ImGui::BeginChild("DispatchErrors", dim, ImGuiChildFlags_Borders);

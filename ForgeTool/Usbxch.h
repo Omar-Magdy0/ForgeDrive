@@ -1,6 +1,6 @@
 #pragma once
 #include "IComm.h"
-#include "fd/ring.h"
+#include "Ring.h"
 #include <atomic>
 #include <cstdint>
 #include <deque>
@@ -73,10 +73,10 @@ private:
   std::atomic<bool>                            rx_active_{false};
   std::atomic<bool>                            tx_active_{false};
   std::unique_ptr<uint8_t[]>                   rxbuf_;
-  fd::ring_fast<uint8_t>                       rx_stream;
+  Fd::RingFast<uint8_t>                        rx_stream;
   std::atomic<bool>                            rx_paused_{false};
   std::unique_ptr<uint8_t[]>                   txbuf_;
-  fd::ring_fast<uint8_t>                       tx_stream;
+  Fd::RingFast<uint8_t>                        tx_stream;
   int                                          interface_number_ = 0;
   static void LIBUSB_CALL                      tx_callback(libusb_transfer* transfer);
   static void LIBUSB_CALL                      rx_callback(libusb_transfer* transfer);

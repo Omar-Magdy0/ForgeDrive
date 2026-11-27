@@ -11,13 +11,13 @@ std::string read_string_descriptor(libusb_device_handle* handle, uint8_t index) 
 } // namespace
 Usbxch::~Usbxch() { disconnect(); }
 int Usbxch::arm_rx() {
-  const size_t available = rx_stream.capacity() - rx_stream.size();
+  const size_t available = rx_stream.Capacity() - rx_stream.Size();
   if (available == 0) return false;
   bool expected = false;
   if (!rx_active_.compare_exchange_strong(expected, true, std::memory_order_acquire)) { return false; }
   size_t   c1, c2;
   uint8_t *w1, *w2;
-  rx_stream.write_reserve(available, &w1, &c1, &w2, &c2);
+  rx_stream.WriteReserve(available, &w1, &c1, &w2, &c2);
   libusb_fill_bulk_transfer(rx_transfer, handle_, BULK_IN_EP, w1, c1, rx_callback, this, 0);
   const int rc = libusb_submit_transfer(rx_transfer);
   if (rc != LIBUSB_SUCCESS) {
@@ -30,11 +30,11 @@ int Usbxch::arm_rx() {
 int Usbxch::arm_tx() {
   bool expected = false;
   if (!tx_active_.compare_exchange_strong(expected, true, std::memory_order_acquire)) { return false; }
-  const size_t to_send = tx_stream.size();
+  const size_t to_send = tx_stream.Size();
   if (to_send == 0) return false;
   size_t   c1, c2;
   uint8_t *r1, *r2;
-  tx_stream.read_reserve(&r1, &c1, &r2, &c2);
+  tx_stream.ReadReserve(&r1, &c1, &r2, &c2);
   libusb_fill_bulk_transfer(tx_transfer, handle_, BULK_OUT_EP, r1, c1, tx_callback, this, 0);
   const int rc = libusb_submit_transfer(tx_transfer);
   if (rc != LIBUSB_SUCCESS) {
@@ -164,8 +164,8 @@ Usbxch* Usbxch::connect(const UsbDeviceInfo& device, std::string& error) {
     return nullptr;
   }
   // If we reached here , creation was a success
-  ret->rx_stream.clear();
-  ret->tx_stream.clear();
+  ret->rx_stream.Clear();
+  ret->tx_stream.Clear();
   ret->disconnect_req.store(false);
   ret->tx_active_.store(false);
   ret->rx_active_.store(false);
@@ -207,22 +207,22 @@ bool Usbxch::write(std::span<const uint8_t> data) {
   // Arm using the asynchronous libusb API
   size_t   c1, c2;
   uint8_t *w1, *w2;
-  bool     suc = tx_stream.write_reserve(data.size(), &w1, &c1, &w2, &c2);
+  bool     suc = tx_stream.WriteReserve(data.size(), &w1, &c1, &w2, &c2);
   if (!suc) return false;
   memcpy(w1, data.data(), c1);
   if (c2) memcpy(w2, data.data() + c1, c2);
-  tx_stream.write_commit(data.size());
+  tx_stream.WriteCommit(data.size());
   arm_tx();
   return suc;
 }
 size_t Usbxch::read(std::span<uint8_t> data) {
-  auto c = rx_stream.size();
+  auto c = rx_stream.Size();
   if (!c || data.size() == 0) return 0;
   auto     rd = std::min(c, data.size());
   size_t   c1, c2;
   uint8_t* r1;
   uint8_t* r2;
-  rx_stream.read_reserve(&r1, &c1, &r2, &c2);
+  rx_stream.ReadReserve(&r1, &c1, &r2, &c2);
   size_t remaining = rd;
   size_t n1        = std::min<size_t>(c1, remaining);
   memcpy(data.data(), r1, n1);
@@ -231,7 +231,7 @@ size_t Usbxch::read(std::span<uint8_t> data) {
     size_t n2 = std::min<size_t>(c2, remaining);
     memcpy(data.data() + n1, r2, n2);
   }
-  rx_stream.read_commit(rd);
+  rx_stream.ReadCommit(rd);
   if (rx_paused_.load(std::memory_order_acquire)) {
     rx_paused_.store(false, std::memory_order_release);
     // re-arm
@@ -239,7 +239,7 @@ size_t Usbxch::read(std::span<uint8_t> data) {
   }
   return static_cast<int>(rd);
 }
-size_t Usbxch::available() { return rx_stream.size(); }
+size_t Usbxch::available() { return rx_stream.Size(); }
 void   Usbxch::event_loop() {
   while (running) {
     timeval tv{};
@@ -272,9 +272,9 @@ void LIBUSB_CALL Usbxch::rx_callback(libusb_transfer* transfer) {
     // Ring buffer/memory pointer update and commit memory
     // Check for the written ammount
     auto len = transfer->actual_length;
-    ctx->rx_stream.write_commit(len);
+    ctx->rx_stream.WriteCommit(len);
     ctx->rx_active_.store(false);
-    auto empty_space = ctx->rx_stream.capacity() - ctx->rx_stream.size();
+    auto empty_space = ctx->rx_stream.Capacity() - ctx->rx_stream.Size();
     if (empty_space == 0) // if empty space is zero, pause and return early, we will rearm in read/consumption
     {
       ctx->rx_paused_.store(true, std::memory_order_release);
@@ -294,7 +294,7 @@ void LIBUSB_CALL Usbxch::tx_callback(libusb_transfer* transfer) {
     // Ring buffer/memory pointer update and commit memory
     ctx->tx_active_.store(false);
     auto len = transfer->actual_length;
-    ctx->tx_stream.read_commit(len);
+    ctx->tx_stream.ReadCommit(len);
     ctx->arm_tx();
   } else if (transfer->status == LIBUSB_TRANSFER_CANCELLED || transfer->status == LIBUSB_TRANSFER_NO_DEVICE) {
     ctx->tx_active_.store(false);

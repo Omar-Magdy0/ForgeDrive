@@ -30,15 +30,15 @@ def generate_service_registry(service, methods):
         "{",
         "#define FDRPC_MAX(a, b) ( ((a) > (b)) ? (a) : (b))\n"
         "using namespace Rpc;",
-        "constexpr uint16_t MAX_REQUEST_ENCODED_SIZE = " + max_expression(request_sizes) + ";",
-        "constexpr uint16_t MAX_RESPONSE_ENCODED_SIZE = " + max_expression(response_sizes) + ";",
-        "constexpr uint16_t MAX_REQUEST_STRUCT_SIZE = " + max_expression(request_struct_sizes) + ";",
-        "constexpr uint16_t MAX_RESPONSE_STRUCT_SIZE = " + max_expression(response_struct_sizes) + ";",
+        "constexpr uint16_t MaxArgEncodeSz = " + max_expression(request_sizes) + ";",
+        "constexpr uint16_t MaxRetEncodeSz = " + max_expression(response_sizes) + ";",
+        "constexpr uint16_t MaxArgStructSz = " + max_expression(request_struct_sizes) + ";",
+        "constexpr uint16_t MaxRetStructSz = " + max_expression(response_struct_sizes) + ";",
         generate_service_enum(service),
         "template<Id id>\nstruct MethodTraits;"
         ""
     ]
-    for method in methods: lines.append(f"Rpc::DispatchStatus {method['name']}(DispatchStack);")
+    for method in methods: lines.append(f"Rpc::DispatchSts {method['name']}(DispatchStack);")
     lines.append("inline constexpr Method registry[] = {")
     for method in sorted(methods, key=lambda m: m["id"]):
         lines.append(f"  {{ Id_{method['name']}, &{method['input']}_msg, &{method['output']}_msg, {method['name']} }},")

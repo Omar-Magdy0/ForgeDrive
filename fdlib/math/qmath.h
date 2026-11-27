@@ -94,19 +94,19 @@ public:
     x[0] = 0;
     x[1] = 0;
   };
-  int32_t step(int32_t e) {
+  int32_t Step(int32_t e) {
     int64_t acum = (int64_t)A[0] * e + (int64_t)A[1] * x[0] + (int64_t)A[2] * x[1];
     int32_t diff = acum >> 31;
     x[1]         = x[0];
     x[0]         = e;
     return diff;
   }
-  void reset() {
+  void Reset() {
     x[0] = 0;
     x[1] = 0;
   }
 };
-static inline uint32_t maxa_minb_uq31(int32_t i1, int32_t i2) {
+static inline uint32_t MaxaMinb_UQ31(int32_t i1, int32_t i2) {
   uint32_t a   = i1 < 0 ? 0u - (uint32_t)i1 : (uint32_t)i1;
   uint32_t b   = i2 < 0 ? 0u - (uint32_t)i2 : (uint32_t)i2;
   uint32_t max = a > b ? a : b;

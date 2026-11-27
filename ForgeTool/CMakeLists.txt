@@ -52,7 +52,7 @@ pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 add_subdirectory(${THIRDPARTY_DIR}/etl etl)
 
 set(MIDDLEWARE_SRC    
-    ${FDLIB_DIR}/middleware/AbfStream.c
+    ${FDLIB_DIR}/middleware/Abf.c
     ${FDLIB_DIR}/middleware/fdrpc/fdrpc.pb.cc
 )
 
@@ -62,7 +62,7 @@ add_executable(${PROJECT_NAME}
     ${CMAKE_SOURCE_DIR}/Usbxch.cpp
     ${CMAKE_SOURCE_DIR}/ConnectionPage.cpp
     ${CMAKE_SOURCE_DIR}/LaunchablesPage.cpp
-    ${CMAKE_SOURCE_DIR}/fdrpcTool.cpp
+    ${CMAKE_SOURCE_DIR}/FdrpcTool.cpp
     ${CMAKE_SOURCE_DIR}/fdmc/fdmc.cpp
     ${MIDDLEWARE_SRC}
     ${IMGUI_SRC}

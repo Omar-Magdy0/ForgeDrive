@@ -1,12 +1,12 @@
 #pragma once
+#include "ScopeStream.h"
+#include "sil.h"
 #include <GLFW/glfw3.h>
+#include <cmath>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <implot.h>
-#include "ScopeStream.h"
-#include "sil.h"
-#include <cmath>
 #include <iostream>
 #include <pthread.h>
 #include <vector>
@@ -74,11 +74,11 @@ static void drawControlPanel() {
   int temp = scope.decimation;
   if (ImGui::InputInt("Decimation", &temp, 1, 100)) {
     if (temp < 1) temp = 1;
-    scope.update_decimation(temp);
+    scope.UpdateDecimation(temp);
   }
   ImGui::Separator();
-  ImGui::InputFloat("Trigger", &scope.trigger_level, 0.1, 1, "%.6g");
-  ImGui::InputFloat("Hysteresis", &scope.hysteresis_level, 0.1, 1, "%.6g");
+  ImGui::InputFloat("Trigger", &scope.trigLvl, 0.1, 1, "%.6g");
+  ImGui::InputFloat("Hysteresis", &scope.hysteresisLvl, 0.1, 1, "%.6g");
   ImGui::Separator();
   if (ImGui::BeginCombo("Display", display_mode_names[(int)display_mode])) {
     for (int i = 0; i < IM_ARRAYSIZE(display_mode_names); i++) {
@@ -225,7 +225,7 @@ static void drawPhaseCurrentPlot(float height) {
     }
     linespec.LineColor = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
     linespec.Flags     = ImPlotInfLinesFlags_Horizontal;
-    ImPlot::PlotInfLines("Horizontal", &scope.trigger_level, 1, linespec);
+    ImPlot::PlotInfLines("Horizontal", &scope.trigLvl, 1, linespec);
     pthread_mutex_unlock(&scope_mutex);
     ImPlot::EndPlot();
   }
@@ -301,8 +301,8 @@ static void renderDashboard() {
 // ======================= MAIN =======================
 inline void silgui_render() { renderDashboard(); }
 inline void silgui_init() {
-  scope.trigger_level    = 2;
-  scope.hysteresis_level = 1;
+  scope.trigLvl       = 2;
+  scope.hysteresisLvl = 1;
 }
 inline void silgui_updateData() {
   float scope_data[CHANNELS];
@@ -365,7 +365,7 @@ inline void silgui_updateData() {
   default: break;
   }
   scope_data[6] = sil.state.torque_sp;
-  scope.write(scope_data);
+  scope.Write(scope_data);
   // 3-wire two wattmeter method
   summary.sum_mechanical_power += sil.state.torque_sp * sil.state.omega;
   summary.sum_electrical_power += (sil.state.vp[0] - sil.state.vp[1]) * sil.state.ip[0] + (sil.state.vp[2] - sil.state.vp[1]) * sil.state.ip[2];
@@ -374,18 +374,18 @@ inline void silgui_updateData() {
   summary.sum_torque           += sil.state.torque_sp;
   summary.sum_omega            += sil.state.omega;
   summary.sample_count++;
-  int   arrSize = sizeof(channel_buffer[0]) / sizeof(float);
-  float filterBuf[arrSize];
-  if (scope.isFrozen()) {
+  const int arrSz = sizeof(channel_buffer[0]) / sizeof(float);
+  float     filterBuf[arrSz];
+  if (scope.IsFrozen()) {
     pthread_mutex_lock(&scope_mutex);
     if (!freeze_scope) {
-      scope.read(0, (float*)channel_buffer[0], sizeof(channel_buffer));
-      scope.read(1, (float*)channel_buffer[1], sizeof(channel_buffer));
-      scope.read(2, (float*)channel_buffer[2], sizeof(channel_buffer));
-      scope.read(3, (float*)channel_buffer[3], sizeof(channel_buffer));
-      scope.read(4, (float*)channel_buffer[4], sizeof(channel_buffer));
-      scope.read(5, (float*)channel_buffer[5], sizeof(channel_buffer));
-      scope.read(6, (float*)channel_buffer[6], sizeof(channel_buffer));
+      scope.Read(0, (float*)channel_buffer[0], sizeof(channel_buffer));
+      scope.Read(1, (float*)channel_buffer[1], sizeof(channel_buffer));
+      scope.Read(2, (float*)channel_buffer[2], sizeof(channel_buffer));
+      scope.Read(3, (float*)channel_buffer[3], sizeof(channel_buffer));
+      scope.Read(4, (float*)channel_buffer[4], sizeof(channel_buffer));
+      scope.Read(5, (float*)channel_buffer[5], sizeof(channel_buffer));
+      scope.Read(6, (float*)channel_buffer[6], sizeof(channel_buffer));
       // 3-wire two wattmeter method
       summary.rms_phase_current    = sqrt(summary.sum_current_sq / summary.sample_count);
       summary.rms_phase_voltage    = sqrt(summary.sum_voltage_sq / summary.sample_count);
@@ -403,7 +403,7 @@ inline void silgui_updateData() {
       summary.sum_electrical_power = 0;
       summary.sample_count         = 0;
     }
-    scope.reset();
+    scope.Reset();
     pthread_mutex_unlock(&scope_mutex);
   }
 }

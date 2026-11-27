@@ -139,7 +139,7 @@ set(APPLICATION_SRC
     ${PMSMCONTROL_DIR}/PmsmControlCore.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_Foc.cpp
     ${PMSMCONTROL_DIR}/PmsmControlCore_SComm.cpp
-    ${PMSMCONTROL_DIR}/sys.cpp
+    ${PMSMCONTROL_DIR}/Sys.cpp
     ${PMSMCONTROL_DIR}/FdmcRpcDef.cpp
     ${POSDRIVER}
     ${PLATFORM_SRC}
@@ -147,7 +147,7 @@ set(APPLICATION_SRC
 )
 
 set(MIDDLEWARE_SRC    
-    ${FDLIB_DIR}/middleware/AbfStream.c
+    ${FDLIB_DIR}/middleware/Abf.c
     ${FDMC_DIR}/fdmc.pb.c
     ${NANOPB_DIR}/pb_common.c
     ${NANOPB_DIR}/pb_decode.c

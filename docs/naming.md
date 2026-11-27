@@ -89,7 +89,7 @@ Unit aliases are lowercase, compact, and documented here. Use these spellings co
 | ampere | `amp` | electric current |
 | volt | `vlt` | electric potential / voltage |
 | hertz | `hz` | cycles per second, including frequency |
-| radian per second | `rdps` | angular speed |
+| radian per second | `rps` | angular speed |
 | revolution per minute | `rpm` | rotational speed |
 | second | `s` | time |
 | millisecond | `ms` | time |
@@ -228,6 +228,224 @@ Property modifiers include `max`, `min`, `mag`, `peak`, `rms`, and `avg`.
 Semantic role modifiers include `Sp` (setpoint), `Fb` (feedback), and `Ref` (reference).
 
 Do not use underscores between these modifiers and the quantity.
+
+
+## 12. Identifier Abbreviations
+
+Use the following standardized abbreviations when naming identifiers. Prefer the abbreviated form consistently instead of mixing abbreviated and full-length words.
+
+Abbreviations follow the normal identifier casing rules:
+- PascalCase: `BufferSize` → `BufferSz`
+- camelCase: `bufferSize` → `bufferSz`
+- Compound identifiers retain their established component separators.
+
+### 12.1 General
+
+| Full term | Abbreviation |
+|---|---|
+| Size | `Sz` |
+| Length | `Len` |
+| Index | `Idx` |
+| Position | `Pos` |
+| Count | `Cnt` |
+| Capacity | `Cap` |
+| Maximum | `Max` |
+| Minimum | `Min` |
+| Average | `Avg` |
+| Magnitude | `Mag` |
+| Maximum magnitude | `MaxMag` |
+| Minimum magnitude | `MinMag` |
+| Value | `Val` |
+| Number | `Num` |
+| Amount | `Amt` |
+| Rate | `Rate` |
+| Ratio | `Ratio` |
+| Factor | `Fac` |
+| Offset | `Ofs` |
+| Difference | `Diff` |
+| Threshold | `Thres` |
+| Limit | `Lim` |
+| Range | `Rng` |
+| Step | `Step` |
+| Period | `Per` |
+| Interval | `Intvl` |
+| Resolution | `Res` |
+| Scale | `Scl` |
+
+### 12.2 Memory and Data
+
+| Full term | Abbreviation |
+|---|---|
+| Buffer | `Buf` |
+| Pointer | `Ptr` |
+| Reference | `Ref` |
+| Address | `Addr` |
+| Memory | `Mem` |
+| Array | `Arr` |
+| Element | `Elem` |
+| Entry | `Entry` |
+| Data | `Data` |
+| Structure | `Struct` |
+| Configuration | `Cfg` |
+| Descriptor | `Desc` |
+| Context | `Ctx` |
+| Parameter | `Param` |
+| Argument | `Arg` |
+| Payload | `Payload` |
+| Header | `Hdr` |
+| Field | `Field` |
+| Record | `Rec` |
+
+### 12.3 Communication and Protocols
+
+| Full term | Abbreviation |
+|---|---|
+| Transmit | `Tx` |
+| Receive | `Rx` |
+| Transmission | `Tx` |
+| Reception | `Rx` |
+| Message | `Msg` |
+| Packet | `Pkt` |
+| Frame | `Frame` |
+| Command | `Cmd` |
+| Request | `Req` |
+| Response | `Rsp` |
+| Service | `Svc` |
+| Channel | `Ch` |
+| Interface | `If` |
+| Protocol | `Proto` |
+| Sequence | `Seq` |
+| Timeout | `Tmo` |
+| Retry | `Retry` |
+| Checksum | `Csum` |
+| Cyclic redundancy check | `Crc` |
+| Encoding | `Enc` |
+| Decoding | `Dec` |
+| Serializer | `Ser` |
+| Deserializer | `Des` |
+
+### 12.4 State and Control
+
+| Full term | Abbreviation |
+|---|---|
+| State | `St` |
+| Status | `Sts` |
+| Event | `Evt` |
+| Error | `Err` |
+| Result | `Res` |
+| Flag | `Flag` |
+| Mode | `Mode` |
+| Control | `Ctrl` |
+| Controller | `Ctrl` |
+| Reference | `Ref` |
+| Setpoint | `Sp` |
+| Feedback | `Fb` |
+| Target | `Tgt` |
+| Commanded | `Cmd` |
+| Actual | `Act` |
+| Enable | `En` |
+| Disable | `Dis` |
+| Active | `Act` |
+| Inactive | `Inact` |
+| Ready | `Rdy` |
+| Busy | `Busy` |
+| Valid | `Valid` |
+| Invalid | `Invalid` |
+
+### 12.5 Hardware and Embedded Systems
+
+| Full term | Abbreviation |
+|---|---|
+| Driver | `Drv` |
+| Device | `Dev` |
+| Hardware | `Hw` |
+| Peripheral | `Periph` |
+| Register | `Reg` |
+| Interrupt | `Irq` |
+| Interrupt service routine | `Isr` |
+| Direct memory access | `Dma` |
+| Clock | `Clk` |
+| Timer | `Tim` |
+| Counter | `Cnt` |
+| Prescaler | `Psc` |
+| Compare | `Cmp` |
+| Capture | `Cap` |
+| Input | `In` |
+| Output | `Out` |
+| General-purpose input/output | `Gpio` |
+| Analog-to-digital converter | `Adc` |
+| Digital-to-analog converter | `Dac` |
+| Pulse-width modulation | `Pwm` |
+| Complementary | `Comp` |
+| Polarity | `Pol` |
+| Deadtime | `Dtc` |
+
+### 12.6 Motor Control and Electrical Quantities
+
+| Full term | Abbreviation |
+|---|---|
+| Current | `Amp` |
+| Voltage | `Vlt` |
+| Power | `Pwr` |
+| Torque | `Trq` |
+| Speed | `Speed` |
+| Velocity | `Vel` |
+| Position | `Pos` |
+| Angle | `Ang` |
+| Frequency | `Freq` |
+| Temperature | `Temp` |
+| Resistance | `Res` |
+| Inductance | `Ind` |
+| Capacitance | `Cap` |
+| Flux | `Flux` |
+| Phase | `Ph` |
+| Electrical | `Elec` |
+| Mechanical | `Mech` |
+| Magnitude | `Mag` |
+| Direct axis | `D` |
+| Quadrature axis | `Q` |
+| Bus | `Bus` |
+| Sensor | `Sens` |
+| Calibration | `Cal` |
+| Compensation | `Comp` |
+| Estimation | `Est` |
+| Reference | `Ref` |
+| Setpoint | `Sp` |
+| Feedback | `Fb` |
+
+### 12.7 Mathematical and Signal Processing Terms
+
+| Full term | Abbreviation |
+|---|---|
+| Sine | `Sin` |
+| Cosine | `Cos` |
+| Square root | `Sqrt` |
+| Absolute | `Abs` |
+| Reciprocal | `Inv` |
+| Derivative | `Dv` |
+| Integral | `Int` |
+| Proportional | `Prop` |
+| Integral (controller term) | `Int` |
+| Derivative (controller term) | `Dv` |
+| Filter | `Filt` |
+| Coefficient | `Cof` |
+| Sample | `Spl` |
+| Sampling | `Spl` |
+| Moving average | `MovAvg` |
+| Root mean square | `Rms` |
+| Peak | `Peak` |
+| Normalized | `Norm` |
+| Transform | `Xform` |
+| Interpolation | `Interp` |
+
+### 12.8 Naming Rules
+
+1. Prefer the standardized abbreviation whenever one is listed.
+2. Do not abbreviate words that are already short and unambiguous, such as `Data`, `Bus`, `Mode`, and `Step`.
+3. Preserve established engineering abbreviations such as `Pwm`, `Adc`, `Dma`, `Foc`, `Svm`, and `Pmsm`.
+4. Do not introduce additional underscores between abbreviated words. They remain part of the same camelCase or PascalCase component.
+5. Engineering units and numerical representations remain separate suffix components, following the established `Prefix_Name_Suffix` convention.
+6. Use abbreviations consistently across declarations, definitions, APIs, and generated code.
 
 ## 11. Applying the convention
 

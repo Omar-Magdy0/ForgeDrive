@@ -50,9 +50,9 @@ public:
     Clock::time_point        deadline;
   };
   struct ErrHandle {
-    uint16_t            id;
-    uint16_t            rid;
-    Rpc::DispatchStatus err;
+    uint16_t         id;
+    uint16_t         rid;
+    Rpc::DispatchSts err;
   };
   struct NotificationHandle {};
   Rpc::RpcType              last_type;

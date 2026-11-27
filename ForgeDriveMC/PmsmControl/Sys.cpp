@@ -1,4 +1,5 @@
-#include "sys.h"
+#include "Sys.h"
+#include "Abf.h"
 #include "Timer.h"
 #include <stdalign.h>
 #include <stddef.h>
@@ -15,24 +16,24 @@ void FdMc3p_MC3P1_SyncPostScanCallback(void) { Sys::pmsm1.pwmLoop(); }
 void FdMc3p_MC3P1_BgPostScanCallback(void) {}
 void FdTimer_TIMERxMC_PeriodCallback(void) { Sys::pmsm1.xmcLoop(); }
 // dispatch incoming rpc command and respond
-inline void rpcHandle(etl::span<uint8_t> data) {
-  size_t                       to_write = 0;
-  alignas(max_align_t) uint8_t arg_stack[Fdmc::MAX_REQUEST_STRUCT_SIZE];
-  alignas(max_align_t) uint8_t ret_stack[Fdmc::MAX_RESPONSE_STRUCT_SIZE];
-  uint8_t                      tx_buf[Fdmc::MAX_RESPONSE_ENCODED_SIZE + 20];
-  uint8_t                      abf_header[ABF_HEADER_SIZE];
-  Rpc::DispatchStack           stack = {0, 0, arg_stack, ret_stack};
-  Sys::rpcServer.dispatch(data, tx_buf, stack, to_write);
-  if (abf_write(abf_header, tx_buf, to_write, (uint8_t)AbfId_RPC) == AbfErr_OK) {
-    FdUsbxch_Write(USB1, abf_header, ABF_HEADER_SIZE);
-    FdUsbxch_Write(USB1, tx_buf, to_write);
+inline void RpcHandle(etl::span<uint8_t> data) {
+  size_t                       toWrite = 0;
+  alignas(max_align_t) uint8_t argStack[Fdmc::MaxArgStructSz];
+  alignas(max_align_t) uint8_t retStack[Fdmc::MaxRetStructSz];
+  uint8_t                      txBuf[Fdmc::MaxRetEncodeSz + 20];
+  uint8_t                      abfHdr[ABF_HDR_SZ];
+  Rpc::DispatchStack           stack = {0, 0, argStack, retStack};
+  Sys::rpcServer.Dispatch(data, txBuf, stack, toWrite);
+  if (Abf_Write(abfHdr, txBuf, toWrite, (uint8_t)AbfId_Rpc) == AbfErr_Ok) {
+    FdUsbxch_Write(USB1, abfHdr, ABF_HDR_SZ);
+    FdUsbxch_Write(USB1, txBuf, toWrite);
     FdUsbxch_Flush(USB1);
   }
 }
-void frameHandle(uint8_t id, etl::span<uint8_t> data) {
+void FrameHandle(uint8_t id, etl::span<uint8_t> data) {
   switch (id) {
-  case AbfId_RPC: return rpcHandle(data);
-  case AbfId_DAQStream: return;
+  case AbfId_Rpc: return RpcHandle(data);
+  case AbfId_DaqStream: return;
   default: return;
   }
 }
@@ -41,12 +42,12 @@ void lcom(void* _ctx) {
   TickType_t             last_wake   = xTaskGetTickCount();
   constexpr unsigned int LCOM_PERIOD = 1; // 1ms
   constexpr TickType_t   period      = pdMS_TO_TICKS(LCOM_PERIOD);
-  uint8_t                rx_buf[255];
-  AbfReader_t            frame_reader;
-  AbfRead_t              frame;
-  frame.b_buf    = rx_buf;
-  frame.b_buf_sz = sizeof(rx_buf);
-  abf_init_reader(&frame_reader);
+  uint8_t                rxBuf[255];
+  AbfReader              frameReader;
+  AbfRead                frame;
+  frame.bBuf   = rxBuf;
+  frame.bBufSz = sizeof(rxBuf);
+  Abf_InitReader(&frameReader);
   for (;;) {
     // Reading here
     auto available = FdUsbxch_ReadAvailable(USB1);
@@ -54,20 +55,20 @@ void lcom(void* _ctx) {
       void *   r1, *r2;
       uint16_t c1, c2;
       FdUsbxch_ReadReserve(USB1, &r1, &c1, &r2, &c2);
-      auto process = [&](const uint8_t* data, size_t length) {
+      auto Process = [&](const uint8_t* data, size_t length) {
         size_t offset = 0;
         while (offset < length) {
-          AbfReadEvent e  = abf_read(&frame_reader, data + offset, length - offset, &frame);
+          AbfReadEvent e  = Abf_Read(&frameReader, data + offset, length - offset, &frame);
           offset         += frame.pos;
-          if (e == AbfReadEvent_FRAME) {
-            AbfHeader_t h = abf_header_decode(frame.header);
-            frameHandle(h.id, etl::span<uint8_t>(frame.b_buf, h.size));
-          } else if (e == AbfReadEvent_ERROR) {
+          if (e == AbfReadEvent_Frame) {
+            AbfHdr h = Abf_HdrDecode(frame.hdr);
+            FrameHandle(h.id, etl::span<uint8_t>(frame.bBuf, h.sz));
+          } else if (e == AbfReadEvent_Err) {
           }
         }
       };
-      if (c1) process(static_cast<const uint8_t*>(r1), c1);
-      if (c2) process(static_cast<const uint8_t*>(r2), c2);
+      if (c1) Process(static_cast<const uint8_t*>(r1), c1);
+      if (c2) Process(static_cast<const uint8_t*>(r2), c2);
       FdUsbxch_ReadCommit(USB1, c1 + c2);
     }
     // Check for writers requests

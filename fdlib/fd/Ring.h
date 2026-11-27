@@ -4,7 +4,7 @@
 #include <stdint.h>
 #ifdef __cplusplus
 class UnitTest;
-namespace fd {
+namespace Fd {
 template <typename T> class RingFast {
   friend UnitTest;
   size_t capacity_;
@@ -14,7 +14,7 @@ public:
     assert((capacity_ & (capacity_ - 1)) == 0);
     mask_ = capacity_ - 1;
   }
-  RingFast(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data()) {
+  RingFast(etl::span<T> buffer) : capacity_(buffer.Size()), head_(0), tail_(0), buffer_(buffer.data()) {
     assert((capacity_ & (capacity_ - 1)) == 0);
     mask_ = capacity_ - 1;
   }
@@ -51,7 +51,7 @@ public:
     return true;
   }
   bool Advance(uint16_t n) {
-    if (n > size()) return false;
+    if (n > Size()) return false;
     tail_ = (tail_ + n) & mask_;
     return true;
   }
@@ -60,7 +60,7 @@ public:
     // Distance from tail to idx (modulo buffer size)
     uint32_t d = (idx - tail_) & mask_;
     // Is idx inside the valid FIFO contents?
-    if (d >= size()) return false;
+    if (d >= Size()) return false;
     distance = d;
     return true;
   }
@@ -103,7 +103,7 @@ public:
   }
   void WriteCommit(size_t count) { head_ = (head_ + count) & mask_; }
   bool ReadReserve(T** readptr1, size_t* cont1, T** readptr2, size_t* cont2) {
-    size_t cnt = this->size();
+    size_t cnt = this->Size();
     if (cnt == 0) {
       *readptr1 = nullptr;
       *readptr2 = nullptr;
@@ -147,7 +147,7 @@ template <typename T> class Ring {
   }
 public:
   Ring(T* buffer, size_t size) : capacity_(size), head_(0), tail_(0), buffer_(buffer) { assert(capacity_ > 1); }
-  Ring(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data()) { assert(capacity_ > 1); }
+  Ring(etl::span<T> buffer) : capacity_(buffer.Size()), head_(0), tail_(0), buffer_(buffer.data()) { assert(capacity_ > 1); }
   // Push element - ISR safe (single producer)
   // Returns false if full
   bool Push(const T& item) {
@@ -185,7 +185,7 @@ public:
   }
   // Advance read position by n elements.
   bool Advance(size_t n) {
-    if (n > size()) return false;
+    if (n > Size()) return false;
     tail_ = Increment(tail_, n);
     return true;
   }
@@ -199,7 +199,7 @@ public:
     size_t d;
     if (i >= tail_) d = i - tail_;
     else d = capacity_ - tail_ + i;
-    if (d >= size()) return false;
+    if (d >= Size()) return false;
     distance = d;
     return true;
   }
@@ -279,6 +279,6 @@ public:
   size_t Tail() const { return tail_; }
   size_t Head() const { return head_; }
 };
-} // namespace fd
+} // namespace Fd
 #else
 #endif
