@@ -5,7 +5,7 @@ template <typename AxisT, typename ValueT> class Lut1D {
   etl::span<const AxisT>  x;
   etl::span<const ValueT> a;
   Lut() = delete;
-  size_t findInterval(AxisT xval) const {
+  size_t FindInterval(AxisT xval) const {
     // Clamp below range
     if (xval <= x[0]) return 0;
     // Clamp above range
@@ -22,14 +22,14 @@ public:
     assert(a.size() >= 2);
     assert(a.size() == x.size());
   }
-  ValueT lookupNearest(AxisT xval) const {
-    size_t i  = findInterval(xval);
+  ValueT : LookupNearest(AxisT xval) const {
+    size_t i  = FindInterval(xval);
     AxisT  d0 = xval - x[i];
     AxisT  d1 = x[i + 1] - xval;
     return (d0 <= d1) ? a[i] : a[i + 1];
   }
-  ValueT lookupLinear(AxisT xval) const {
-    size_t       i  = findInterval(xval);
+  ValueT LookupLinear(AxisT xval) const {
+    size_t       i  = FindInterval(xval);
     const AxisT  x0 = x[i];
     const AxisT  x1 = x[i + 1];
     const ValueT y0 = a[i];
@@ -48,14 +48,14 @@ public:
     assert(step > 0);
     assert(a.size() >= 2);
   }
-  ValueT lookupNearest(AxisT xval) const {
+  ValueT LookupNearest(AxisT xval) const {
     float   f   = float(xval - origin) / float(step);
     int32_t idx = int32_t(f + 0.5f);
     if (idx < 0) idx = 0;
     else if (idx >= int32_t(a.size())) idx = a.size() - 1;
     return a[idx];
   }
-  ValueT lookupLinear(AxisT xval) const {
+  ValueT LookupLinear(AxisT xval) const {
     float   f   = float(xval - origin) / float(step);
     int32_t idx = int32_t(f);
     if (idx < 0) idx = 0;

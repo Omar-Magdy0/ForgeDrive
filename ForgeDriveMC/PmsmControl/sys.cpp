@@ -1,8 +1,8 @@
 #include "sys.h"
-#include "fd_timer.h"
+#include "Timer.h"
 #include <stdalign.h>
 #include <stddef.h>
-#ifdef FD_PLATFORM_HOST
+#ifdef FDDRV_PLATFORM_HOST
 #include <thread>
 #endif
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char* name) {
@@ -11,9 +11,9 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t task, char* name) {
   taskDISABLE_INTERRUPTS();
   for (;;) {}
 }
-void fd_mc3p_MC3P1_sync_postScanCallback(void) { Sys::pmsm1.pwmLoop(); }
-void fd_mc3p_MC3P1_bg_postScanCallback(void) {}
-void fd_timer_TIMERxMC_periodCallback(void) { Sys::pmsm1.xmcLoop(); }
+void FdMc3p_MC3P1_SyncPostScanCallback(void) { Sys::pmsm1.pwmLoop(); }
+void FdMc3p_MC3P1_BgPostScanCallback(void) {}
+void FdTimer_TIMERxMC_PeriodCallback(void) { Sys::pmsm1.xmcLoop(); }
 // dispatch incoming rpc command and respond
 inline void rpcHandle(etl::span<uint8_t> data) {
   size_t                       to_write = 0;
@@ -24,9 +24,9 @@ inline void rpcHandle(etl::span<uint8_t> data) {
   Rpc::DispatchStack           stack = {0, 0, arg_stack, ret_stack};
   Sys::rpcServer.dispatch(data, tx_buf, stack, to_write);
   if (abf_write(abf_header, tx_buf, to_write, (uint8_t)AbfId_RPC) == AbfErr_OK) {
-    fd_usbxch_write(USB1, abf_header, ABF_HEADER_SIZE);
-    fd_usbxch_write(USB1, tx_buf, to_write);
-    fd_usbxch_flush(USB1);
+    FdUsbxch_Write(USB1, abf_header, ABF_HEADER_SIZE);
+    FdUsbxch_Write(USB1, tx_buf, to_write);
+    FdUsbxch_Flush(USB1);
   }
 }
 void frameHandle(uint8_t id, etl::span<uint8_t> data) {
@@ -49,11 +49,11 @@ void lcom(void* _ctx) {
   abf_init_reader(&frame_reader);
   for (;;) {
     // Reading here
-    auto available = fd_usbxch_read_available(USB1);
+    auto available = FdUsbxch_ReadAvailable(USB1);
     if (available) {
       void *   r1, *r2;
       uint16_t c1, c2;
-      fd_usbxch_read_reserve(USB1, &r1, &c1, &r2, &c2);
+      FdUsbxch_ReadReserve(USB1, &r1, &c1, &r2, &c2);
       auto process = [&](const uint8_t* data, size_t length) {
         size_t offset = 0;
         while (offset < length) {
@@ -68,7 +68,7 @@ void lcom(void* _ctx) {
       };
       if (c1) process(static_cast<const uint8_t*>(r1), c1);
       if (c2) process(static_cast<const uint8_t*>(r2), c2);
-      fd_usbxch_read_commit(USB1, c1 + c2);
+      FdUsbxch_ReadCommit(USB1, c1 + c2);
     }
     // Check for writers requests
     // TODO: add daq stream / codec processing and writing
@@ -78,18 +78,18 @@ void lcom(void* _ctx) {
 ConfigGen Sys::configGen = {.max_freq        = 40000,
                             .min_freq        = 5000,
                             .max_deadtime_ns = 1000,
-                            .min_deadtime_ns = 0,
+                            .min_deadtime_ns = 300,
                             .max_cmag        = 20,
                             .min_vbus        = 30,
                             .max_vbus        = 40,
                             .xtick_freq      = 4000,
                             .pos_rate_div    = 10};
 void      Sys::init() {
-  fd_drv_init(&DRV); // Driver initialization
+  FdDrv_Init(&DRV); // Driver initialization
   platform_init();
-  fd_usbxch_init(USB1);
-  fd_timer_init(TIMERxMC, configGen.xtick_freq);
-  fd_timer_enable(TIMERxMC, true);
+  FdUsbxch_Init(USB1);
+  FdTimer_Init(TIMERxMC, configGen.xtick_freq);
+  FdTimer_Enable(TIMERxMC, true);
   lcom_handle    = xTaskCreateStatic(lcom, "lcom", LCOM_STACK_SIZE, NULL, LCOM_PRIO, lcom_stack, &lcom_buf);
   bool config_ok = true;
   // enable motor control
@@ -131,7 +131,7 @@ void      Sys::init() {
   pmsm1.init();
   pmsm1.setSetpoint({5});
 // FreeRtos initialization
-#ifndef FD_PLATFORM_HOST
+#ifndef FDDRV_PLATFORM_HOST
   vTaskStartScheduler();
   while (true); // never reach here
 #else

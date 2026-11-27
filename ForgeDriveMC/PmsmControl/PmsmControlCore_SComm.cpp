@@ -5,8 +5,8 @@ void PmsmControlCore::SComm_onEnter(McMode prev_mct) {
   scomm.idstage          = IdStage_RS_ID;
   control.elec_mode      = ElecMode_VOLTAGE;
   scomm.hfi_Angv_RPT_q31 = static_cast<q31_t>((scomm.HFI_ANGLE_SCALE / scomm.conf.hfi_n) * INT32_MAX);
-  scomm.dc_vinj_q31      = FD_MC3P_FLOAT_TO_VS(scomm.conf.dc_vinj);
-  scomm.hfi_vinj_q31     = FD_MC3P_FLOAT_TO_VS(scomm.conf.hfi_vinj);
+  scomm.dc_vinj_q31      = FDMC3P_F2VS(scomm.conf.dc_vinj);
+  scomm.hfi_vinj_q31     = FDMC3P_F2VS(scomm.conf.hfi_vinj);
 }
 void PmsmControlCore::SComm_onExit() {}
 void PmsmControlCore::SComm_pwmLoop() {
@@ -77,7 +77,7 @@ void PmsmControlCore::SComm_xmcLoop() {
       break;
     case IdSubStage_ACTIVE_SAMPLING:
       if (scomm.samples_counter == 0) {
-        scomm.model.R = FD_MC3P_VS_TO_FLOAT(scomm.dc_vinj_q31) / FD_MC3P_CS_TO_FLOAT((scomm.accumulate0 >> scomm.conf.oversample_bits));
+        scomm.model.R = FDMC3P_VS2F(scomm.dc_vinj_q31) / FDMC3P_CS2F((scomm.accumulate0 >> scomm.conf.oversample_bits));
         scomm.idstage = IdStage_LD_ID;
         scomm.idsub   = IdSubStage_ESETTLE_START;
       }

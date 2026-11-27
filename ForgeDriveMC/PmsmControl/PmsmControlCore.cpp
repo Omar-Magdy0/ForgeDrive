@@ -1,5 +1,4 @@
 #include "PmsmControlCore.h"
-#include "fd_mc3p.h"
 #include "fdmc.pb.h"
 #include "qmath.h"
 PmsmErr PmsmControlCore::init() {
@@ -16,14 +15,14 @@ PmsmErr PmsmControlCore::init() {
   Foc_init();
   /* hardware initialization */
   POS1.init();
-  fd_mc3p_init(MC3P1);
-  fd_mc3p_write_float(MC3P1);
+  FdMc3p_Init(MC3P1);
+  FdMc3p_WriteFloat(MC3P1);
   return PmsmErr_OK;
 };
 void PmsmControlCore::configGenUpdate() {
-  control.max_imag_uq31 = FD_MC3P_FLOAT_TO_CS(fd::Clamp(fd::Abs(conf.max_cmag), 0, FD_MC3P_CS_SCALE));
-  control.min_vbus_uq31 = FD_MC3P_FLOAT_TO_VS(fd::Clamp(fd::Abs(conf.min_vbus), 0, FD_MC3P_VS_SCALE));
-  control.max_vbus_uq31 = FD_MC3P_FLOAT_TO_VS(fd::Clamp(fd::Abs(conf.max_vbus), 0, FD_MC3P_VS_SCALE));
+  control.max_imag_uq31 = FDMC3P_F2CS(fd::Clamp(fd::Abs(conf.max_cmag), 0, FDMC3P_CS_SCALE));
+  control.min_vbus_uq31 = FDMC3P_F2VS(fd::Clamp(fd::Abs(conf.min_vbus), 0, FDMC3P_VS_SCALE));
+  control.max_vbus_uq31 = FDMC3P_F2VS(fd::Clamp(fd::Abs(conf.max_vbus), 0, FDMC3P_VS_SCALE));
   xTicks_period_ns      = 1'000'000'000 / conf.xtick_freq;
 }
 void PmsmControlCore::modelUpdate() {
@@ -41,25 +40,25 @@ void PmsmControlCore::xmcLoop() {
 void PmsmControlCore::pwmConfigUpdate(ConfigPwm cfg) {
   pwm_freq_hz              = cfg.pwm_hz;
   pTick_period_ns          = static_cast<uint32_t>(1'000'000'000 / static_cast<float>(pwm_freq_hz));
-  MC3P1.config.pwm_Hz      = pwm_freq_hz;
-  MC3P1.config.deadtime_nS = cfg.deadtime_ns;
-  MC3P1.config.duty_min    = cfg.duty_min;
-  MC3P1.config.duty_max    = cfg.duty_max;
-  MC3P1.config.dtc_thresh  = cfg.dtc_thresh;
-  MC3P1.config.dtc_active  = cfg.dtc_active;
-  fd_mc3p_reconfigure_pwm(MC3P1);
+  MC3P1.config.pwm_hz      = pwm_freq_hz;
+  MC3P1.config.deadtime_ns = cfg.deadtime_ns;
+  MC3P1.config.minDuty     = cfg.duty_min;
+  MC3P1.config.maxDuty     = cfg.duty_max;
+  MC3P1.config.dtcThresh   = cfg.dtc_thresh;
+  MC3P1.config.dtcActive   = cfg.dtc_active;
+  FdMc3p_ReconfigurePwm(MC3P1);
 }
 void PmsmControlCore::pwmLoop() {
-  uint32_t start = fd_dwt_tick();
-  fd_mc3p_read_sync(MC3P1, &mc3p_sync_meas);
+  uint32_t start = FdDrv_DwtTick();
+  FdMc3p_ReadSync(MC3P1, &mc3p_sync_meas);
   switch (control.mc_mode) {
-  case McMode_IDLE: fd_mc3p_write_float(MC3P1); break;
+  case McMode_IDLE: FdMc3p_WriteFloat(MC3P1); break;
   case McMode_FOC: Foc_pwmLoop(); break;
   case McMode_SCOMM: SComm_pwmLoop(); break;
   default: break;
   }
   pTicks                    = pTicks + 1;
-  volatile uint32_t elapsed = fd_dwt_tick() - start;
+  volatile uint32_t elapsed = FdDrv_DwtTick() - start;
 }
 void PmsmControlCore::setControlMode(McMode mc_mode) {
   if (control.mc_mode != mc_mode) {

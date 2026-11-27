@@ -1,7 +1,7 @@
 
 
 
-#include "fd_drv.h"
+#include "Drv.h"
 #include "stm32{{device.family}}xx.h"
 #include "stm32{{device.family}}xx_hal.h"
 #include "stm32{{device.family}}xx_ll_rcc.h"
@@ -14,9 +14,9 @@
 #define FD_DWT_CYCCNT_SUPPORTED 0 
 #endif
 
-fd_drv_t DRV;
+FdDrv DRV;
 
-void fd_dwt_init(void)
+void FdDrv_DwtInit(void)
 {
     #if FD_DWT_CYCCNT_SUPPORTED
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -25,31 +25,31 @@ void fd_dwt_init(void)
     #endif
 }
 
-uint32_t fd_dwt_tick(void)
+uint32_t FdDrv_DwtTick(void)
 {
     #if FD_DWT_CYCCNT_SUPPORTED
     return DWT->CYCCNT;
     #endif
 }
 
-uint32_t fd_atomic_start(void)
+uint32_t FdDrv_AtomicStart(void)
 {
     uint32_t primask = __get_PRIMASK();
     __disable_irq();
     return primask;
 }
 
-void fd_atomic_end(uint32_t primask)
+void FdDrv_AtomicEnd(uint32_t primask)
 {
     __set_PRIMASK(primask);
 }
 
-void fd_delay(uint32_t delay_ms)
+void FdDrv_Delay(uint32_t delay_ms)
 {
     HAL_Delay(delay_ms);
 }
 
-void fd_drv_init(fd_drv_t *h)
+void FdDrv_Init(FdDrv *h)
 {
     SystemClock_Config();
     __HAL_RCC_SYSCFG_CLK_ENABLE();
@@ -60,6 +60,6 @@ void fd_drv_init(fd_drv_t *h)
     SystemGPIO_Init();
     if (h != NULL)
     {
-        h->adc_to_V = (3.3/4095.0);
+        h->adc2Vlt = (3.3/4095.0);
     }
 }

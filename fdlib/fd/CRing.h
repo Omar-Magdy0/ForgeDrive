@@ -11,34 +11,34 @@ typedef struct {
   uint16_t          capacity; // total capacity of the buffer (number of elements)
   volatile uint16_t head;
   volatile uint16_t tail;
-} fd_ring_t;
-static inline void fd_ring_init(fd_ring_t* cb, void* storage, uint16_t capacity) {
+} FdCRing;
+static inline void FdCRing_Init(FdCRing* cb, void* storage, uint16_t capacity) {
   cb->buffer   = (uint8_t*)storage;
   cb->capacity = capacity;
   cb->head     = 0;
   cb->tail     = 0;
 }
-static inline uint16_t fd_ring_size(const fd_ring_t* cb) {
+static inline uint16_t FdCRing_Size(const FdCRing* cb) {
   uint16_t head = cb->head;
   uint16_t tail = cb->tail;
   if (head >= tail) return head - tail;
   return cb->capacity - tail + head;
 }
-static inline uint16_t fd_ring_free(const fd_ring_t* cb) { return cb->capacity - fd_ring_size(cb) - 1; }
-static inline void     fd_ring_write_commit(fd_ring_t* cb, uint16_t count) {
+static inline uint16_t FdCRing_Free(const FdCRing* cb) { return cb->capacity - FdCRing_Size(cb) - 1; }
+static inline void     FdCRing_WriteCommit(FdCRing* cb, uint16_t count) {
   uint16_t head  = cb->head;
   head          += count;
   if (head >= cb->capacity) head -= cb->capacity;
   cb->head = head;
 }
-static inline void fd_ring_read_commit(fd_ring_t* cb, uint16_t count) {
+static inline void FdCRing_ReadCommit(FdCRing* cb, uint16_t count) {
   uint16_t tail  = cb->tail;
   tail          += count;
   if (tail >= cb->capacity) tail -= cb->capacity;
   cb->tail = tail;
 }
-static inline bool fd_ring_write_reserve(fd_ring_t* cb, uint16_t count, void** writeptr1, uint16_t* cont1, void** writeptr2, uint16_t* cont2) {
-  if (count > fd_ring_free(cb)) { return false; }
+static inline bool FdCRing_WriteReserve(FdCRing* cb, uint16_t count, void** writeptr1, uint16_t* cont1, void** writeptr2, uint16_t* cont2) {
+  if (count > FdCRing_Free(cb)) { return false; }
   uint16_t head = cb->head;
   uint16_t tail = cb->tail;
   uint16_t cont_space;
@@ -56,8 +56,8 @@ static inline bool fd_ring_write_reserve(fd_ring_t* cb, uint16_t count, void** w
   }
   return true;
 }
-static inline bool fd_ring_read_reserve(fd_ring_t* cb, void** readptr1, uint16_t* cont1, void** readptr2, uint16_t* cont2) {
-  uint16_t count = fd_ring_size(cb);
+static inline bool FdCRing_ReadReserve(FdCRing* cb, void** readptr1, uint16_t* cont1, void** readptr2, uint16_t* cont2) {
+  uint16_t count = FdCRing_Size(cb);
   if (count == 0) {
     *readptr1 = NULL;
     *cont1    = 0;

@@ -5,57 +5,57 @@
 #ifdef __cplusplus
 class UnitTest;
 namespace fd {
-template <typename T> class ring_fast {
+template <typename T> class RingFast {
   friend UnitTest;
   size_t capacity_;
   size_t mask_;
 public:
-  ring_fast(T* buffer, size_t size_) : capacity_(size_), head_(0), tail_(0), buffer_(buffer) {
+  RingFast(T* buffer, size_t size_) : capacity_(size_), head_(0), tail_(0), buffer_(buffer) {
     assert((capacity_ & (capacity_ - 1)) == 0);
     mask_ = capacity_ - 1;
   }
-  ring_fast(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data()) {
+  RingFast(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data()) {
     assert((capacity_ & (capacity_ - 1)) == 0);
     mask_ = capacity_ - 1;
   }
-  bool isPowerOfTwo(size_t x) { return x && ((x & (x - 1)) == 0); }
+  bool IsPowerOfTwo(size_t x) { return x && ((x & (x - 1)) == 0); }
   // Push element - ISR safe (single producer)
   // Returns false if full
-  bool push(const T& item) {
+  bool Push(const T& item) {
     uint16_t next = (head_ + 1) & mask_;
     if (next == tail_) { return false; }
     buffer_[head_] = item;
     head_          = next;
     return true;
   }
-  void pushFast(const T& item) {
+  void PushFast(const T& item) {
     buffer_[head_] = item;
     head_          = (head_ + 1) & mask_;
   }
   // Pop element - ISR safe (single consumer)
   // Returns false if empty
-  bool pop(T& item) {
+  bool Pop(T& item) {
     if (head_ == tail_) { return false; }
     item  = buffer_[tail_];
     tail_ = (tail_ + 1) & mask_;
     return true;
   }
-  bool peek(T& item) {
+  bool Peek(T& item) {
     if (head_ == tail_) { return false; }
     item = buffer_[tail_];
     return true;
   }
-  bool peek(T& item, uint16_t idx) const {
+  bool Peek(T& item, uint16_t idx) const {
     if (idx >= capacity_) return false;
     item = buffer_[idx];
     return true;
   }
-  bool advance(uint16_t n) {
+  bool Advance(uint16_t n) {
     if (n > size()) return false;
     tail_ = (tail_ + n) & mask_;
     return true;
   }
-  bool distanceFromTail(size_t idx, size_t& distance) {
+  bool DistanceFromTail(size_t idx, size_t& distance) {
     if (idx >= capacity_) return false;
     // Distance from tail to idx (modulo buffer size)
     uint32_t d = (idx - tail_) & mask_;
@@ -64,20 +64,20 @@ public:
     distance = d;
     return true;
   }
-  void clear() {
+  void Clear() {
     head_ = 0;
     tail_ = 0;
   }
-  bool   empty() const { return head_ == tail_; }
-  bool   full() const { return ((head_ + 1) & mask_) == tail_; }
-  size_t free() const { return (capacity() - size()); }
-  size_t size() const { return (head_ - tail_) & mask_; }
-  size_t capacity() const { return capacity_ - 1; }
+  bool   Empty() const { return head_ == tail_; }
+  bool   Full() const { return ((head_ + 1) & mask_) == tail_; }
+  size_t Free() const { return (Capacity() - Size()); }
+  size_t Size() const { return (head_ - tail_) & mask_; }
+  size_t Capacity() const { return capacity_ - 1; }
   // Multibyte Reserve/Commit pattern
   //  Reserve space for writing 'count' elements.
   // Returns false if insufficient space.
-  bool write_reserve(size_t count, T** writeptr1, size_t* cont1, T** writeptr2, size_t* cont2) {
-    if (count > (capacity() - this->size())) {
+  bool WriteReserve(size_t count, T** writeptr1, size_t* cont1, T** writeptr2, size_t* cont2) {
+    if (count > (Capacity() - this->Size())) {
       *writeptr1 = nullptr;
       *writeptr2 = nullptr;
       *cont1     = 0;
@@ -101,8 +101,8 @@ public:
     }
     return true;
   }
-  void write_commit(size_t count) { head_ = (head_ + count) & mask_; }
-  bool read_reserve(T** readptr1, size_t* cont1, T** readptr2, size_t* cont2) {
+  void WriteCommit(size_t count) { head_ = (head_ + count) & mask_; }
+  bool ReadReserve(T** readptr1, size_t* cont1, T** readptr2, size_t* cont2) {
     size_t cnt = this->size();
     if (cnt == 0) {
       *readptr1 = nullptr;
@@ -126,32 +126,32 @@ public:
     }
     return true;
   }
-  void   read_commit(size_t count) { tail_ = (tail_ + count) & mask_; }
-  size_t tail() const { return tail_; }
-  size_t head() const { return head_; }
+  void   ReadCommit(size_t count) { tail_ = (tail_ + count) & mask_; }
+  size_t Tail() const { return tail_; }
+  size_t Head() const { return head_; }
 private:
   volatile size_t head_;
   volatile size_t tail_;
   T*              buffer_;
 };
-template <typename T> class ring {
+template <typename T> class Ring {
   friend UnitTest;
   size_t          capacity_;
   volatile size_t head_;
   volatile size_t tail_;
   T*              buffer_;
-  size_t          increment(size_t index, size_t amount = 1) const {
+  size_t          Increment(size_t index, size_t amount = 1) const {
     index += amount;
     if (index >= capacity_) index -= capacity_;
     return index;
   }
 public:
-  ring(T* buffer, size_t size) : capacity_(size), head_(0), tail_(0), buffer_(buffer) { assert(capacity_ > 1); }
-  ring(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data()) { assert(capacity_ > 1); }
+  Ring(T* buffer, size_t size) : capacity_(size), head_(0), tail_(0), buffer_(buffer) { assert(capacity_ > 1); }
+  Ring(etl::span<T> buffer) : capacity_(buffer.size()), head_(0), tail_(0), buffer_(buffer.data()) { assert(capacity_ > 1); }
   // Push element - ISR safe (single producer)
   // Returns false if full
-  bool push(const T& item) {
-    size_t next = increment(head_);
+  bool Push(const T& item) {
+    size_t next = Increment(head_);
     if (next == tail_) return false;
     buffer_[head_] = item;
     head_          = next;
@@ -159,41 +159,41 @@ public:
   }
   // Push without checking for available space.
   // Caller must guarantee the buffer is not full.
-  void pushFast(const T& item) {
+  void PushFast(const T& item) {
     buffer_[head_] = item;
-    head_          = increment(head_);
+    head_          = Increment(head_);
   }
   // Pop element - ISR safe (single consumer)
   // Returns false if empty
-  bool pop(T& item) {
+  bool Pop(T& item) {
     if (head_ == tail_) return false;
     item  = buffer_[tail_];
-    tail_ = increment(tail_);
+    tail_ = Increment(tail_);
     return true;
   }
   // Peek next element without removing it.
-  bool peek(T& item) {
+  bool Peek(T& item) {
     if (head_ == tail_) return false;
     item = buffer_[tail_];
     return true;
   }
   // Peek element at an absolute buffer index.
-  bool peek(T& item, size_t idx) const {
+  bool Peek(T& item, size_t idx) const {
     if (idx >= capacity_) return false;
     item = buffer_[idx];
     return true;
   }
   // Advance read position by n elements.
-  bool advance(size_t n) {
+  bool Advance(size_t n) {
     if (n > size()) return false;
-    tail_ = increment(tail_, n);
+    tail_ = Increment(tail_, n);
     return true;
   }
   // Find distance from tail to an absolute buffer index.
   //
   // Returns false if idx is not currently part of the
   // valid FIFO contents.
-  bool distanceFromTail(int16_t idx, size_t& distance) {
+  bool DistanceFromTail(int16_t idx, size_t& distance) {
     if (idx < 0 || idx >= capacity_) return false;
     size_t i = static_cast<size_t>(idx);
     size_t d;
@@ -203,14 +203,14 @@ public:
     distance = d;
     return true;
   }
-  void clear() {
+  void Clear() {
     head_ = 0;
     tail_ = 0;
   }
-  bool   empty() const { return head_ == tail_; }
-  bool   full() const { return increment(head_) == tail_; }
-  size_t free() const { return capacity() - size(); }
-  size_t size() const {
+  bool   Empty() const { return head_ == tail_; }
+  bool   Full() const { return Increment(head_) == tail_; }
+  size_t Free() const { return Capacity() - Size(); }
+  size_t Size() const {
     if (head_ >= tail_) return head_ - tail_;
     return capacity_ - tail_ + head_;
   }
@@ -218,10 +218,10 @@ public:
   //
   // One slot is intentionally left unused to distinguish
   // full from empty.
-  size_t capacity() const { return capacity_ - 1; }
+  size_t Capacity() const { return capacity_ - 1; }
   // Multibyte Reserve/Commit pattern
-  bool write_reserve(size_t count, T** writeptr1, size_t* cont1, T** writeptr2, size_t* cont2) {
-    if (count > (capacity() - size())) {
+  bool WriteReserve(size_t count, T** writeptr1, size_t* cont1, T** writeptr2, size_t* cont2) {
+    if (count > (Capacity() - Size())) {
       *writeptr1 = nullptr;
       *writeptr2 = nullptr;
       *cont1     = 0;
@@ -250,9 +250,9 @@ public:
     }
     return true;
   }
-  void write_commit(size_t count) { head_ = increment(head_, count); }
-  bool read_reserve(T** readptr1, size_t* cont1, T** readptr2, size_t* cont2) {
-    size_t cnt = size();
+  void WriteCommit(size_t count) { head_ = Increment(head_, count); }
+  bool ReadReserve(T** readptr1, size_t* cont1, T** readptr2, size_t* cont2) {
+    size_t cnt = Size();
     if (cnt == 0) {
       *readptr1 = nullptr;
       *readptr2 = nullptr;
@@ -275,9 +275,9 @@ public:
     }
     return true;
   }
-  void   read_commit(size_t count) { tail_ = increment(tail_, count); }
-  size_t tail() const { return tail_; }
-  size_t head() const { return head_; }
+  void   ReadCommit(size_t count) { tail_ = Increment(tail_, count); }
+  size_t Tail() const { return tail_; }
+  size_t Head() const { return head_; }
 };
 } // namespace fd
 #else

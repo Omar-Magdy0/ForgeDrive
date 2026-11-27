@@ -1,26 +1,19 @@
-#include "fd_adc.h"
+#include "Adc.h"
 #include "stm32{{device.family}}xx_ll_adc.h"
 #include "stm32{{device.family}}xx_ll_tim.h"
 #include "stm32{{device.family}}xx_ll_rcc.h"
 #include "stm32{{device.family}}xx_ll_tim.h"
 #include "stm32{{device.family}}xx_ll_bus.h"
 #include "stm32{{device.family}}xx_ll_gpio.h"
-#include "fd_drv.h"
+#include "Drv.h"
 
-
-#define ADC_GpioInit(port, pin)do{\
-    LL_GPIO_InitTypeDef GPIO_InitStruct = {0};\
-    GPIO_InitStruct.Pin = pin;\
-    GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;\
-    LL_GPIO_Init(port, &GPIO_InitStruct);\
-}while(0)
 
 #define VREFIN_CAL_ADDR (uint16_t *)0x1FFF7A2A
 #define VREFIN_CAL_VOLTAGE 3.3f
-uint8_t adc_common_initialized = 0;
+uint8_t FdAdc_CommonInitialized = 0;
 
 //adc calibration sequence
-uint16_t adc_Sample_Single(uint32_t channel)
+uint16_t FdAdc_SampleSingle(uint32_t channel)
 {
     // Save current configuration
     uint32_t old_sqr1 = ADC1->SQR1;
@@ -47,12 +40,12 @@ uint16_t adc_Sample_Single(uint32_t channel)
 }
 
 // TODO: External reference voltage adc calibration support
-void adc_calibrate()
+void FdAdc_Calibrate()
 {
     uint32_t sum = 0;
     const uint8_t num_samples = 30;
 
-    #ifdef FD_ADC_VREFEXT
+    #ifdef FDADC_VREFEXT
     ADC_GpioInit(); //initialize vref gpio
     volatile uint32_t wait = 10000;
     while(wait){wait = wait - 1;};
@@ -71,9 +64,9 @@ void adc_calibrate()
     // Set longer sampling time for VREFINT
     LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_480CYCLES);
     //Discard first sample
-    adc_Sample_Single(LL_ADC_CHANNEL_VREFINT);
+    FdAdc_SampleSingle(LL_ADC_CHANNEL_VREFINT);
     for (int i = 0; i < num_samples; i++) {
-        sum += adc_Sample_Single(LL_ADC_CHANNEL_VREFINT);
+        sum += FdAdc_SampleSingle(LL_ADC_CHANNEL_VREFINT);
     }
     uint32_t inRef_div_adcRef = sum / num_samples;
 
@@ -81,8 +74,8 @@ void adc_calibrate()
     internal_ref_V = (*VREFIN_CAL_ADDR / (float)((1<<12) - 1) ) * VREFIN_CAL_VOLTAGE;
 
     // Calculate actual ADC reference voltage (your supply voltage)
-    (DRV.adc_ref_V) = internal_ref_V * ((1<<12) - 1) / (float)inRef_div_adcRef;
+    (DRV.adcRefVlt) = internal_ref_V * ((1<<12) - 1) / (float)inRef_div_adcRef;
     #endif
-    (DRV.adc_to_V) = (DRV.adc_ref_V) / (float)((1<<12) - 1);
+    (DRV.adc2Vlt) = (DRV.adcRefVlt) / (float)((1<<12) - 1);
 }
 

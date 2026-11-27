@@ -1,20 +1,20 @@
 #pragma once
-#include <cstdint>
-#pragma once
 #include <math.h>
 #include <stdint.h>
 #define FORCE_INLINE __attribute__((always_inline))
-namespace fd {
 #if defined(__arm__) || defined(__thumb__) || defined(_M_ARM)
-#include "cmsis_compiler.h"
+extern "C" {
+#include "cmsis_gcc.h"
+}
 #endif
+namespace fd {
 #if defined(__ARM_FEATURE_DSP) && (__ARM_FEATURE_DSP == 1)
 // Requires the appropriate CMSIS core instruction header.
 #define FD_HAS_ARM_SAT_ARITH 1
 #else
 #define FD_HAS_ARM_SAT_ARITH 0
 #endif
-// Signed saturating addition
+//  Signed saturating addition
 FORCE_INLINE static inline int32_t sat_add(int32_t a, int32_t b) {
 #if FD_HAS_ARM_SAT_ARITH
   return __QADD(a, b);

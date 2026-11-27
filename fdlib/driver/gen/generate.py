@@ -1,4 +1,3 @@
-
 import argparse
 import importlib
 import importlib.util
@@ -12,12 +11,14 @@ from drv import drv
 from pprint import pprint
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 
-FDGEN_RE = re.compile(r"^[ \t]*__FDGEN__(\w+)\s*\(([^()\n]*)\)[ \t]*;?[ \t]*(?:\r?\n|$)", re.MULTILINE)
+FDGEN_RE = re.compile(
+    r"^[ \t]*__FDGEN__(\w+)\s*\(([^()\n]*)\)[ \t]*;?[ \t]*(?:\r?\n|$)", re.MULTILINE
+)
 DRIVER_EXTENSIONS = (".c", ".h", ".cpp")
 MANIFEST_NAME = ".fd_manifest"
 GEN_DIR = Path(__file__).resolve().parent
 DRIVER_ROOT = GEN_DIR.parent
-CMSIS_DIR = DRIVER_ROOT.parent.parent/"thirdparty/CMSIS"
+CMSIS_DIR = DRIVER_ROOT.parent.parent / "thirdparty/CMSIS"
 SHARED_HEADER_DIR = DRIVER_ROOT
 
 context = {}
@@ -29,28 +30,35 @@ context["warning"] = []
 context["generated"] = []
 context["cmsis_dir"] = CMSIS_DIR
 
+
 def resolve_drivers():
     for name in context["config"]:
         if name not in context["drivers"]:
             context["drivers"].append(name)
     for driver in context["drivers"]:
         for ext in DRIVER_EXTENSIONS:
-            filename = f"fd_{driver}{ext}"
-            context["gen"][filename]=None
+            filename = f"{driver.capitalize()}{ext}"
+            context["gen"][filename] = None
+
 
 def generate_drivers():
-    temp_dir= context["output_path"]/"temp"
+    temp_dir = context["output_path"] / "temp"
     context["temp_dir"] = temp_dir
     context["generated"] = set()
     temp_dir.mkdir(parents=True, exist_ok=True)
     try:
         drv(context)
-        context["gen_sDir"].extend([
-            DRIVER_ROOT / context["device"]["platform"],
-            DRIVER_ROOT,
-        ])
+        context["gen_sDir"].extend(
+            [
+                DRIVER_ROOT / context["device"]["platform"],
+                DRIVER_ROOT,
+            ]
+        )
         gen_file = DRIVER_ROOT / context["device"]["platform"] / "gen" / "gen.py"
-        spec = importlib.util.spec_from_file_location(f"{context["device"]["platform"]}_gen", gen_file, )
+        spec = importlib.util.spec_from_file_location(
+            f"{context["device"]["platform"]}_gen",
+            gen_file,
+        )
         if spec is None or spec.loader is None:
             raise ImportError(f"Cannot load platform generator: {gen_file}")
         module = importlib.util.module_from_spec(spec)
@@ -90,13 +98,14 @@ def generate_drivers():
     for item in temp_dir.iterdir():
         shutil.move(str(item), str(output_dir / item.name))
     shutil.rmtree(temp_dir)
-        
+
+
 def generate_manifest():
     manifest = {
         "device": context["device"],
         "generated_files": sorted(context["generated"]),
         "error": context["error"],
-        "warning": context["warning"]
+        "warning": context["warning"],
     }
     for i, err in enumerate(context["error"]):
         print(f"ERROR_{i} : {err}")
@@ -105,6 +114,7 @@ def generate_manifest():
         json.dumps(manifest, indent=4) + "\n",
         encoding="utf-8",
     )
+
 
 def resolve_device():
     device = context["device"]
@@ -125,6 +135,7 @@ def resolve_device():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.device_meta(context)
+
 
 def load_config():
     path = context["config_path"]
@@ -153,17 +164,19 @@ def main():
     parser.add_argument(
         "config_file",
         nargs="?",
-        default="fd_driver_conf",
+        default="fd_driver_conf.py",
         help="Configuration file path or importable module name.",
     )
     parser.add_argument(
-        "-d", "--device",
+        "-d",
+        "--device",
         nargs="?",
-        default="stm32f4",
+        default="Host",
         help="device used",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=Path,
         default=Path("./output"),
         help="Output directory for generated files (relative or absolute path). Defaults to './output'.",
@@ -171,15 +184,14 @@ def main():
     args = parser.parse_args()
 
     try:
-        context["config_path"] =  Path(args.config_file).resolve()
+        context["config_path"] = Path(args.config_file).resolve()
         context["output_path"] = Path(args.output).resolve()
-        context["device"] = { "name": args.device }
+        context["device"] = {"name": args.device}
         resolve_device()
         load_config()
         resolve_drivers()
         generate_drivers()
         generate_manifest()
-
 
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)

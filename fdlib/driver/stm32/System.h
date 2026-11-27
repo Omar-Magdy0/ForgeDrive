@@ -3,7 +3,7 @@
 #include "stm32{{device.family}}xx_ll_rcc.h"
 
 
-static inline uint32_t get_periph_bus_clk(const void *periph)
+static inline uint32_t PeriphBusClk(const void *periph)
 {
     {% for p in device.periph %}
     {% if p.name.startswith("TIM") and p.bus in device.bus_psc_getter %}

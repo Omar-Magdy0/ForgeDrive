@@ -57,7 +57,7 @@ void PmsmControlCore::Foc_xmcLoop() {
   POS1.xTick_exit();
 }
 void PmsmControlCore::Foc_pwmLoop() {
-  state.Vbus_q31 = mc3p_sync_meas.svm.vbus_q31;
+  state.Vbus_q31 = mc3p_sync_meas.svm.vBus_vsQ31;
   if (state.Vbus_q31 > control.max_vbus_uq31) state.fault |= (uint32_t)PmsmFault_OVLO;
   else if (state.Vbus_q31 < control.min_vbus_uq31) state.fault |= (uint32_t)PmsmFault_UVLO;
   POS1.pTick_enter(pTicks);
@@ -66,7 +66,7 @@ void PmsmControlCore::Foc_pwmLoop() {
   int32_t Ialpha_q31, Ibeta_q31;
   int32_t valpha_q31, vbeta_q31;
   arm_sin_cos_q31(state.eTheta_q31, &sin, &cos);
-  arm_clarke_q31(mc3p_sync_meas.svm.cu_q31, mc3p_sync_meas.svm.cv_q31, &Ialpha_q31, &Ibeta_q31);
+  arm_clarke_q31(mc3p_sync_meas.svm.cU_csQ31, mc3p_sync_meas.svm.cV_csQ31, &Ialpha_q31, &Ibeta_q31);
   arm_park_q31(Ialpha_q31, Ibeta_q31, &foc.state.Id_q31, &foc.state.Iq_q31, sin, cos);
   int64_t power_q61 = (((int64_t)foc.state.Id_q31 * foc.state.Vd_q31) >> 1) + (((int64_t)foc.state.Iq_q31 * foc.state.Vq_q31) >> 1);
   state.power_q31   = (int32_t)(power_q61 >> 30);
@@ -75,7 +75,7 @@ void PmsmControlCore::Foc_pwmLoop() {
   // if (state.imag_uq31 > control.max_imag_uq31) state.fault |= (uint32_t)PmsmFault_OC;
   //  if (state.Ibus_q31 > control.max_ibus_uq31 || state.Ibus_q31 < -control.max_ibus_uq31) state.fault |= (uint32_t)PmsmFault_OC;
   if (state.fault != (uint32_t)PmsmFault_OK) {
-    fd_mc3p_write_float(MC3P1);
+    FdMc3p_WriteFloat(MC3P1);
     return;
   }
   if (control.elec_mode == ElecMode_CURRENT) {
@@ -94,7 +94,7 @@ void PmsmControlCore::Foc_pwmLoop() {
   // Circular overmodulation clamping
   // Here overmodulation logic is intended
   uint32_t vmag_q31 = maxa_minb_uq31(foc.state.Vd_q31, foc.state.Vq_q31);
-  uint32_t vlim_q31 = (uint64_t(state.Vbus_q31) * (MC3P1.duty_max_q15 - MC3P1.duty_min_q15) * foc.state.modidxInvSqrt3_uq15) >> 30;
+  uint32_t vlim_q31 = (uint64_t(state.Vbus_q31) * (MC3P1.maxDuty - MC3P1.minDuty) * foc.state.modidxInvSqrt3_uq15) >> 30;
   if (vmag_q31 > vlim_q31 && vmag_q31 != 0U) {
     uint32_t scale_q31 = ((uint64_t)vlim_q31 << 31) / vmag_q31;
     foc.state.Vd_q31   = (int32_t)(((int64_t)foc.state.Vd_q31 * scale_q31) >> 31);
@@ -104,6 +104,6 @@ void PmsmControlCore::Foc_pwmLoop() {
   arm_inv_park_q31(foc.state.Vd_q31, foc.state.Vq_q31, &valpha_q31, &vbeta_q31, sin, cos);
   dalpha_q15 = (valpha_q31) / (state.Vbus_q31 >> 15);
   dbeta_q15  = (vbeta_q31) / (state.Vbus_q31 >> 15);
-  fd_mc3p_write_svm(MC3P1, dalpha_q15, dbeta_q15);
+  FdMc3p_WriteSvm(MC3P1, dalpha_q15, dbeta_q15);
   POS1.pTick_exit();
 }

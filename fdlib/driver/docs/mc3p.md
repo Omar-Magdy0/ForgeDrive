@@ -173,7 +173,7 @@ The synchronized scaling input is an array of `MC3P_SYNC_CHANNELS_MAX` entries, 
 |---|---|
 | `fd_mc3p_write_phase_state(inst, state_u, state_v, state_w)` | Writes the requested switching state for each phase. |
 | `fd_mc3p_write_phase_duty(inst, duty_u, duty_v, duty_w)` | Writes the three phase duty commands in Q15 representation. |
-| `fd_mc3p_write_float(inst)` | Requests all phases to float and clears the phase duty commands. |
+| `FdMc3p_WriteFloat(inst)` | Requests all phases to float and clears the phase duty commands. |
 | `fd_mc3p_write_trap(inst, sector, duty)` | Applies a trapezoidal sector and a common duty command. |
 | `fd_mc3p_write_svm(inst, alpha, beta)` | Calculates phase commands from normalized αβ input, selects an SVM sector, applies zero-sequence injection, and writes the resulting duties. |
 

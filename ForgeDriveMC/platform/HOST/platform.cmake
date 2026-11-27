@@ -35,7 +35,7 @@ set(IMGUI_SRC
 
 set(platform_src
     ${CMAKE_CURRENT_LIST_DIR}/platform.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/fd_mc3p.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Mc3p.cpp
 )
 
 find_package(Threads REQUIRED)

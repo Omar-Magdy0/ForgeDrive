@@ -26,26 +26,23 @@ GPIO_MODE = {
     "AF": "LL_GPIO_MODE_ALTERNATE",
     "IN": "LL_GPIO_MODE_INPUT",
     "OUT": "LL_GPIO_MODE_OUTPUT",
-    "AN": "LL_GPIO_MODE_ANALOG"
+    "AN": "LL_GPIO_MODE_ANALOG",
 }
 OUTPUT_TYPE = {
     None: "LL_GPIO_OUTPUT_PUSHPULL",
     "PP": "LL_GPIO_OUTPUT_PUSHPULL",
-    "OD": "LL_GPIO_OUTPUT_OPENDRAIN"
+    "OD": "LL_GPIO_OUTPUT_OPENDRAIN",
 }
 PULL_TYPE = {
     None: "LL_GPIO_PULL_NO",
     "PU": "LL_GPIO_PULL_UP",
-    "PD": "LL_GPIO_PULL_DOWN"
+    "PD": "LL_GPIO_PULL_DOWN",
 }
 DMA_RE = {
-    "stream": re.compile(
-        r"DMA(?P<dma>\d+)_STREAM(?P<stream>\d+)_CH(?P<channel>\d+)"
-    ),
-    "channel": re.compile(
-        r"DMA(?P<dma>\d+)_CH(?P<channel>\d+)"
-    ),
+    "stream": re.compile(r"DMA(?P<dma>\d+)_STREAM(?P<stream>\d+)_CH(?P<channel>\d+)"),
+    "channel": re.compile(r"DMA(?P<dma>\d+)_CH(?P<channel>\d+)"),
 }
+
 
 def dma_parse(cfg, arch):
     name, priority = cfg
@@ -55,22 +52,31 @@ def dma_parse(cfg, arch):
         raise ValueError(f"Invalid {arch} DMA identifier: {name}")
 
     fields = match.groupdict()
-    if(arch == "stream"):
-        irq_name =  f"DMA{fields['dma']}_Stream{fields['stream']}"
+    if arch == "stream":
+        irq_name = f"DMA{fields['dma']}_Stream{fields['stream']}"
     else:
         irq_name = f"DMA{fields['dma']}_Channel{fields['channel']}"
-        
+
     return {
         "irq_name": irq_name,
         "dma": f"DMA{fields['dma']}",
-        "irq_flag_num": fields.get("stream") if fields.get("stream") is not None else fields['channel'],
-        "stream": f"LL_DMA_STREAM_{fields['stream']}" if fields.get("stream") is not None else None,
+        "irq_flag_num": (
+            fields.get("stream")
+            if fields.get("stream") is not None
+            else fields["channel"]
+        ),
+        "stream": (
+            f"LL_DMA_STREAM_{fields['stream']}"
+            if fields.get("stream") is not None
+            else None
+        ),
         "channel": f"LL_DMA_CHANNEL_{fields['channel']}",
         "prio": f"LL_DMA_PRIORITY_{priority.upper()}",
     }
 
+
 def gpio_init(pin_config):
-    port, pin, mode_expr,  pull, speed = pin_config
+    port, pin, mode_expr, pull, speed = pin_config
     # Resolve portable values into STM32 LL expressions.
     parts = mode_expr.split("_", mode_expr.count("_"))
     mode = parts[0]
@@ -105,7 +111,10 @@ def gpio_init(pin_config):
     }}
     """
 
+
 PERIPH_EXCLUDE = {"FLASH", "FLASH_R"}
+
+
 def resolve_periph_clock(name, macros, seen=None):
     seen = set() if seen is None else seen
     if name in seen or name not in macros:
@@ -120,6 +129,7 @@ def resolve_periph_clock(name, macros, seen=None):
             return bus
     return None
 
+
 def irq_match(ctx, irq, loc="<unknown>"):
     irqs = ctx["device"]["irq"]
 
@@ -130,9 +140,7 @@ def irq_match(ctx, irq, loc="<unknown>"):
     matches = [name for name in irqs if irq in name]
 
     if not matches:
-        ctx.setdefault("error", []).append(
-            f"{loc}: unknown IRQ '{irq}'"
-        )
+        ctx.setdefault("error", []).append(f"{loc}: unknown IRQ '{irq}'")
         return None
 
     if len(matches) > 1:
@@ -143,15 +151,18 @@ def irq_match(ctx, irq, loc="<unknown>"):
 
     return matches[0]
 
+
 def clk_en(ctx, loc, periph):
     clocks = ctx["device"].setdefault("clk_en", [])
     if periph not in clocks:
         clocks.append(periph)
 
+
 def irq_bind(ctx, loc, irq_name, handler):
     irq = irq_match(ctx, irq_name, loc)
     bindings = ctx["device"].setdefault("irq_bind", {})
     bindings.setdefault(irq, []).append(handler)
+
 
 def irq_en(ctx, loc, irq_name, prio):
     try:
@@ -165,6 +176,7 @@ def irq_en(ctx, loc, irq_name, prio):
     priorities = ctx["device"].setdefault("irq_en", {})
     priorities[irq] = min(priorities.get(irq, prio), prio)
 
+
 def emit_system(ctx):
     generated = [Path(p) for p in ctx["generated"]]
     system_c = next((p for p in generated if p.name == "System.c"), None)
@@ -174,11 +186,11 @@ def emit_system(ctx):
             "FDGEN: System.c or System.h not found in generated files"
         )
         return
-    
+
     device = ctx["device"]
     code = []
 
-    #CLOCK CODE GENERATED
+    # CLOCK CODE GENERATED
     code.append("\nvoid SystemPeriphClock_Init(void)\n{\n")
     for periph in device.get("clk_en", []):
         code.append(f"    __HAL_RCC_{periph}_CLK_ENABLE();\n")
@@ -191,7 +203,7 @@ def emit_system(ctx):
     code.append("}\n")
 
     ##Now lets spit out IRQ handlers
-        # IRQ HANDLERS
+    # IRQ HANDLERS
     bindings = device.get("irq_bind", {})
     methods = {method for handlers in bindings.values() for method in handlers}
 
@@ -209,15 +221,15 @@ def emit_system(ctx):
         f.write("".join(code))
 
     code = []
-    for key,value in device.items():
-        code.append(f"set(DEVICE_{key.upper()} \"{str(value).upper()}\")\n")
-    output_path = ctx["temp_dir"]/"device.cmake"
+    for key, value in device.items():
+        code.append(f'set(DEVICE_{key.upper()} "{str(value).upper()}")\n')
+    output_path = ctx["temp_dir"] / "device.cmake"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("a", encoding="utf-8") as f:
         f.writelines(code)
     ctx["generated"].add(str(output_path))
-    
-        
+
+
 def fdgen_macro(ctx):
     handlers = {
         "CLK_EN": clk_en,
@@ -235,11 +247,14 @@ def fdgen_macro(ctx):
 
             handler = handlers.get(name)
             if handler is None:
-                ctx.setdefault("error", []).append(f"{loc}: unknown FDGEN directive '{name}'")
+                ctx.setdefault("error", []).append(
+                    f"{loc}: unknown FDGEN directive '{name}'"
+                )
                 continue
-            
+
             args = [arg.strip() for arg in raw_args.split(",")]
             handler(ctx, loc, *args)
+
 
 def pre_macro(ctx):
     generated = [Path(p) for p in ctx["generated"]]
@@ -255,23 +270,28 @@ def pre_macro(ctx):
     code.append("\nvoid SystemGPIO_Init(void)\n{\n")
     for name, data in device["gpio"].items():
         code.append(f"// GPIO {name}  Owner: {data['owner']}\n")
-        code.append("   " + gpio_init(data['config']).strip() + "\n")
+        code.append("   " + gpio_init(data["config"]).strip() + "\n")
     code.append("}\n")
     with open(system_c, "a", encoding="utf-8") as f:
         f.write("".join(code))
+
 
 def fdgen(ctx):
     pre_macro(ctx)
     fdgen_macro(ctx)
     emit_system(ctx)
 
+
 def setup(ctx):
-    #add the cmake file needed
-    #get the product code, flash/ density and so on letters and variants and add them to device dictionary
+    # add the cmake file needed
+    # get the product code, flash/ density and so on letters and variants and add them to device dictionary
     device = ctx["device"]
-    #parse CMSIS headers for device information
-    ctx["device_def"] = parse_header(ctx["cmsis_dir"]/f"Device/ST/STM32{device["family"].upper()}xx/Include/stm32{device["family"][0]}{device["product"]}x{device["density_code"]}.h") 
-    #now we have device definitions... Awesome, we can get most information such as IRQ handler names, peripheral instances, clock buses and much more
+    # parse CMSIS headers for device information
+    ctx["device_def"] = parse_header(
+        ctx["cmsis_dir"]
+        / f"Device/ST/STM32{device["family"].upper()}xx/Include/stm32{device["family"][0]}{device["product"]}x{device["density_code"]}.h"
+    )
+    # now we have device definitions... Awesome, we can get most information such as IRQ handler names, peripheral instances, clock buses and much more
     ctx["device"]["irq"] = [
         name.removesuffix("_IRQn")
         for name in ctx["device_def"]["enums"].get("IRQn_Type", [])
@@ -280,37 +300,45 @@ def setup(ctx):
         {"name": name, "bus": bus}
         for macro in ctx["device_def"]["macros"]
         if macro.endswith("_BASE")
-        if (name := macro.removesuffix("_BASE")) not in {b.removesuffix("_BASE") for b in BUS_ROOTS}
+        if (name := macro.removesuffix("_BASE"))
+        not in {b.removesuffix("_BASE") for b in BUS_ROOTS}
         if name not in PERIPH_EXCLUDE
         if not re.fullmatch(r"DMA\d+_Stream\d+", name)
         if (bus := resolve_periph_clock(macro, ctx["device_def"]["macros"])) is not None
     ]
     ctx["device"]["bus_clk_getter"] = BUS_CLK_GETTER
     ctx["device"]["bus_psc_getter"] = BUS_PSC_GETTER
-    
-    #path and search additions
-    ctx["gen_sDir"].append(f"{DRIVER_ROOT}/{ctx["device"]["platform"]}/stm32{(ctx["device"]["family"]).lower()}")
-    ctx.setdefault("gen", {}).update({
-        "CMakeLists.txt": None,
-        "stm32f4xx_hal_conf.h": None,
-        "System.h": None,
-        "fd_adc.c": None,
-        "fd_adc.h": None,
-        "System.c": None,
-        "post_build.cmake": None,
-        "toolchain.cmake": None,
-        "usbd/usbd_conf.c": "usbd/usbd_conf.c",
-        "usbd/usbd_conf.h": "usbd/usbd_conf.h",
-        "usbd/usbd_desc.c": "usbd/usbd_desc.c",
-        "usbd/usbd_desc.h": "usbd/usbd_desc.h",
-    })
-    if "usb" in ctx["config"]:
-        ctx["gen"].update({
+
+    # path and search additions
+    ctx["gen_sDir"].append(
+        f"{DRIVER_ROOT}/{ctx["device"]["platform"]}/stm32{(ctx["device"]["family"]).lower()}"
+    )
+    ctx.setdefault("gen", {}).update(
+        {
+            "CMakeLists.txt": None,
+            "stm32f4xx_hal_conf.h": None,
+            "System.h": None,
+            "Adc.c": None,
+            "Adc.h": None,
+            "System.c": None,
+            "post_build.cmake": None,
+            "toolchain.cmake": None,
             "usbd/usbd_conf.c": "usbd/usbd_conf.c",
             "usbd/usbd_conf.h": "usbd/usbd_conf.h",
             "usbd/usbd_desc.c": "usbd/usbd_desc.c",
             "usbd/usbd_desc.h": "usbd/usbd_desc.h",
-        })
+        }
+    )
+    if "usb" in ctx["config"]:
+        ctx["gen"].update(
+            {
+                "usbd/usbd_conf.c": "usbd/usbd_conf.c",
+                "usbd/usbd_conf.h": "usbd/usbd_conf.h",
+                "usbd/usbd_desc.c": "usbd/usbd_desc.c",
+                "usbd/usbd_desc.h": "usbd/usbd_desc.h",
+            }
+        )
+
 
 def env_macros(ctx):
     env = ctx["env"]

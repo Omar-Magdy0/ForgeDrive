@@ -1,19 +1,19 @@
-#include "fd_drv.h"
+#include "Drv.h"
 #include <pthread.h>
 #include <stdint.h>
-#include "fd_SILServer.h"
-#include "fd_SILTick.h"
+#include "SILServer.h"
+#include "SILTick.h"
 
 pthread_mutex_t fd_atomic_mutex;
-fd_drv_t DRV;
+FdDrv DRV;
 
-void fd_drv_init(fd_drv_t *h)
+void FdDrv_Init(FdDrv *h)
 {
-    SILTick::init(SILTick::Mode::INTERNAL);
+    SILTick::Init(SILTick::Mode::INTERNAL);
 }
 
-__attribute__((weak)) void fd_dwt_init(){};
-__attribute__((weak)) uint32_t fd_dwt_tick(void){return 0;};
+__attribute__((weak)) void FdDrv_DwtInit(){};
+__attribute__((weak)) uint32_t FdDrv_DwtTick(void){return 0;};
 /* Static Inline Implementation */
 
 /**
@@ -21,7 +21,7 @@ __attribute__((weak)) uint32_t fd_dwt_tick(void){return 0;};
  * @retval uint32_t: Lock indicator (non-zero = locked).
  * @note   Host implementation: Uses pthread_mutex_t to emulate interrupt disabling.
  */
-uint32_t fd_atomic_start(void) {
+uint32_t FdDrv_AtomicStart(void) {
     pthread_mutex_lock(&fd_atomic_mutex);
     return 1;
 }
@@ -31,7 +31,7 @@ uint32_t fd_atomic_start(void) {
  * @param  primask: Lock state indicator (unused, kept for API compatibility).
  * @note   Host implementation: Uses pthread_mutex_t to emulate interrupt enabling.
  */
-void fd_atomic_end(uint32_t primask) {
+void FdDrv_AtomicEnd(uint32_t primask) {
     (void)primask;
     pthread_mutex_unlock(&fd_atomic_mutex);
 }
@@ -41,7 +41,7 @@ void fd_atomic_end(uint32_t primask) {
 #else
     #include <unistd.h>
 #endif
-void fd_delay(uint32_t delay_ms)
+void FdDrv_Delay(uint32_t delay_ms)
 {
 #ifdef _WIN32
     Sleep(delay_ms);

@@ -42,7 +42,7 @@ private:
     }
 
 public:
-    static SILServer &instance()
+    static SILServer &Instance()
     {
         static SILServer inst;
         return inst;
@@ -57,7 +57,7 @@ public:
     }
 
     // Register a port for a peripheral and start its background accept loop
-    bool register_port(uint16_t port, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024)
+    bool RegisterPort(uint16_t port, size_t rx_buf_kb = 1024, size_t tx_buf_kb = 1024)
     {
         if (ports_.find(port) != ports_.end())
             return false;
@@ -89,7 +89,7 @@ public:
         return true;
     }
 
-    bool write(uint16_t port, const uint8_t *data, size_t len, size_t &written)
+    bool Write(uint16_t port, const uint8_t *data, size_t len, size_t &written)
     {
         auto it = ports_.find(port);
         if (it == ports_.end())
@@ -99,7 +99,7 @@ public:
         return !ec;
     }
 
-    size_t read(uint16_t port, uint8_t *buffer, size_t max_len, asio::error_code &ec)
+    size_t Read(uint16_t port, uint8_t *buffer, size_t max_len, asio::error_code &ec)
     {
         auto it = ports_.find(port);
         if (it == ports_.end())
@@ -115,7 +115,7 @@ public:
         return ec ? 0 : n;
     }
 
-    size_t read_available(uint16_t port)
+    size_t ReadAvailable(uint16_t port)
     {
         auto it = ports_.find(port);
         if (it == ports_.end())
@@ -127,7 +127,7 @@ public:
     }
 
     // Check if a client is currently connected to a specific peripheral port
-    bool connected(uint16_t port) const
+    bool Connected(uint16_t port) const
     {
         auto it = ports_.find(port);
         if (it == ports_.end() || !it->second)

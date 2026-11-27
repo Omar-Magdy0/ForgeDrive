@@ -41,7 +41,7 @@ class SILTick {
     inline static SILTick* instance_ = nullptr;
     std::priority_queue<Event, std::vector<Event>, EventCompare> events;
 
-    void advance(uint64_t t)
+    void Advance(uint64_t t)
     {
         uint64_t final_time;
         {
@@ -66,7 +66,7 @@ class SILTick {
                 e.cb();
         }
     }
-    void run()
+    void Run()
     {
         using namespace std::chrono;
         auto next = steady_clock::now();
@@ -74,7 +74,7 @@ class SILTick {
         while (running_)
         {
             next += milliseconds(1);
-            advance(1'000'000);
+            Advance(1'000'000);
             std::this_thread::sleep_until(next);
         }
     }
@@ -83,21 +83,21 @@ class SILTick {
         if (mode_ == Mode::INTERNAL)
         {
             running_ = true;
-            worker_ = std::thread(&SILTick::run, this);
+            worker_ = std::thread(&SILTick::Run, this);
         }
     }
     public:
-    static void init(Mode mode)
+    static void Init(Mode mode)
     {
         if (!instance_)
             instance_ = new SILTick(mode);
     }
-    static SILTick& instance()
+    static SILTick& Instance()
     {
         assert(instance_);
         return *instance_;
     }
-    void register_event(uint64_t delay_ns, std::function<void()> cb)
+    void RegisterEvent(uint64_t delay_ns, std::function<void()> cb)
     {
         std::lock_guard lock(mutex_);
         events.push({
@@ -107,13 +107,13 @@ class SILTick {
             std::move(cb)
         });
     }
-    void advance_ext(uint64_t t)
+    void AdvanceExt(uint64_t t)
     {
         assert(mode_ == Mode::EXTERNAL);
-        advance(t);
+        Advance(t);
     }
-    uint64_t now(){return now_ns;}
-    bool empty() const
+    uint64_t Now(){return now_ns;}
+    bool Empty() const
     {
         return events.empty();
     }
