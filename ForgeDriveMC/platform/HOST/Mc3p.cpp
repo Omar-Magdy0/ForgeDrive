@@ -1,5 +1,5 @@
 #include "Mc3p.h"
-#include "SILTick.h"
+#include "SilTick.h"
 #include "platform.h"
 #include "sil.h"
 #include "silgui.h"
@@ -14,7 +14,7 @@ void             postScanMethod() {
   sil.step(sil_input);
   silgui_updateData();
   silLogger.log(sil, sil_input);
-  SILTick::Instance().RegisterEvent((uint64_t)(1e9 / MC3P1.config.pwm_hz), postScanMethod);
+  SilTick::Instance().RegisterEvent((uint64_t)(1e9 / MC3P1.config.pwm_hz), postScanMethod);
 }
 static void dPsim_dTheta_Sine(double theta_e, double dPsi_dTheta[3]) {
   double amplitude = sil.param.motor_fluxLinkage; // Back EMF amplitude
@@ -54,7 +54,7 @@ void PrvMc3p_MC3P1_HwInit(FdMc3pHandle* h) {
   h->maxDuty                  = (uint16_t)((h->config.maxDuty) * 0x7FFF);
   h->minDuty                  = (uint16_t)((h->config.minDuty) * 0x7FFF);
   // compute deadtme compensation
-  SILTick::Instance().RegisterEvent((uint64_t)(1e9 / h->config.pwm_hz), postScanMethod);
+  SilTick::Instance().RegisterEvent((uint64_t)(1e9 / h->config.pwm_hz), postScanMethod);
 }
 void PrvMc3p_MC3P1_SectorUpdate(FdMc3pHandle* h, FdMc3pSector sector) {
   FdMc3pMode cm = FdMc3p_Sector2Mode(sector);

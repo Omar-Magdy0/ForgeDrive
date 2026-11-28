@@ -1,6 +1,5 @@
 #include "FdrpcTool.h"
 #include "ForgeTool.h"
-#include <iostream>
 extern "C" {
 #include "Abf.h"
 }
@@ -25,17 +24,17 @@ public:
     frame.bBufSz = b_buf.capacity();
     Abf_InitReader(&frame_reader);
   }
-  void frameHandle(uint8_t id, std::span<uint8_t> data);
-  void setComm(IComm* comm_) {
+  void FrameHdl(uint8_t id, std::span<uint8_t> data);
+  void SetComm(IComm* comm_) {
     if (!comm_) return;
     comm               = comm_;
-    comm->onDisconnect = [this]() {
+    comm->OnDisconnect = [this]() {
       this->comm = nullptr;
       this->open = false;
     };
-    comm->onError = [this](int) {
+    comm->OnError = [this](int) {
       // Handle communication error
     };
   }
-  void renderImpl() override;
+  void RenderImpl() override;
 };

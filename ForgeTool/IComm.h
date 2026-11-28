@@ -7,11 +7,11 @@ class IComm {
 public:
   virtual ~IComm() = default;
   // Data transfer
-  virtual bool   write(std::span<const uint8_t> data) = 0;
-  virtual size_t read(std::span<uint8_t> data)        = 0;
-  virtual size_t available()                          = 0;
+  virtual bool   Write(std::span<const uint8_t> data) = 0;
+  virtual size_t Read(std::span<uint8_t> data)        = 0;
+  virtual size_t Available() const                    = 0;
   // Events
-  std::function<void()>    onConnect;
-  std::function<void()>    onDisconnect;
-  std::function<void(int)> onError;
+  std::function<void()>    OnConnect;
+  std::function<void()>    OnDisconnect;
+  std::function<void(int)> OnError;
 };

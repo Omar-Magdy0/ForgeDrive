@@ -25,34 +25,34 @@ struct UsbDeviceInfo {
   uint8_t                       address;
   std::string                   manufacturer;
   std::string                   product;
-  std::string                   serial_number;
+  std::string                   serialNumber;
   std::vector<UsbInterfaceInfo> interfaces;
   libusb_device*                _libusb_device;
-  friend bool operator==(const UsbDeviceInfo& a, const UsbDeviceInfo& b) { return a.vid == b.vid && a.pid == b.pid && a.serial_number == b.serial_number; }
+  friend bool operator==(const UsbDeviceInfo& a, const UsbDeviceInfo& b) { return a.vid == b.vid && a.pid == b.pid && a.serialNumber == b.serialNumber; }
 };
 class Usbxch : public IComm {
 private:
-  Usbxch() : rxbuf_(new uint8_t[RXBUF_SIZE]), rx_stream(rxbuf_.get(), RXBUF_SIZE), txbuf_(new uint8_t[TXBUF_SIZE]), tx_stream(txbuf_.get(), TXBUF_SIZE) {}
+  Usbxch() : rxbuf_(new uint8_t[RxBufSz]), rx_stream(rxbuf_.get(), RxBufSz), txbuf_(new uint8_t[TxBufSz]), tx_stream(txbuf_.get(), TxBufSz) {}
   ~Usbxch() override;
-  void disconnect();
+  void Disconnect();
 public:
-  static constexpr uint32_t                BULK_IN_EP  = 0x81;
-  static constexpr uint32_t                BULK_OUT_EP = 0x01;
-  static constexpr size_t                  RXBUF_SIZE  = (1 << 24);
-  static constexpr size_t                  TXBUF_SIZE  = (1 << 24);
-  static std::vector<UsbDeviceInfo>&       scan();
-  static bool                              init(unsigned int timeout_ms);
-  static bool                              deinit();
-  static Usbxch*                           connect(const UsbDeviceInfo& device, std::string& error);
-  static void                              disconnect(Usbxch* device);
-  static const std::vector<Usbxch*>&       getConnectedDevices();
-  static const std::vector<UsbDeviceInfo>& getDiscoveredDevices();
-  static Usbxch*                           findConnection(const UsbDeviceInfo& device);
+  static constexpr uint32_t                BulkInEp  = 0x81;
+  static constexpr uint32_t                BulkOutEp = 0x01;
+  static constexpr size_t                  RxBufSz   = (1 << 24);
+  static constexpr size_t                  TxBufSz   = (1 << 24);
+  static std::vector<UsbDeviceInfo>&       Scan();
+  static bool                              Init(unsigned int timeout_ms);
+  static bool                              DeInit();
+  static Usbxch*                           Connect(const UsbDeviceInfo& device, std::string& error);
+  static void                              Disconnect(Usbxch* device);
+  static const std::vector<Usbxch*>&       GetConnectedDevices();
+  static const std::vector<UsbDeviceInfo>& GetDiscoveredDevices();
+  static Usbxch*                           FindConnection(const UsbDeviceInfo& device);
   inline static int                        timeout = 100;
-  const UsbDeviceInfo&                     getDeviceInfo() const;
-  bool                                     write(std::span<const uint8_t> data) override;
-  size_t                                   read(std::span<uint8_t> data) override;
-  size_t                                   available() override;
+  const UsbDeviceInfo&                     GetDeviceInfo() const;
+  bool                                     Write(std::span<const uint8_t> data) override;
+  size_t                                   Read(std::span<uint8_t> data) override;
+  size_t                                   Available() const override;
 private:
   static inline libusb_context*                context_ = nullptr;
   static inline std::mutex                     connected_devices_mutex_;
@@ -62,7 +62,7 @@ private:
   static inline std::thread                    event_thread_;
   static inline void                           event_loop();
   static inline libusb_hotplug_callback_handle hotplug_handle;
-  void                                         finish_disconnect();
+  void                                         FinishDisconnect();
   int                                          arm_rx();
   int                                          arm_tx();
   UsbDeviceInfo                                device_info;

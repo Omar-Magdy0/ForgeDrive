@@ -55,11 +55,11 @@ public:
     Rpc::DispatchSts err;
   };
   struct NotificationHandle {};
-  Rpc::RpcType              last_type;
-  CallHandle                call_handle;
+  Rpc::RpcType              lastType;
+  CallHandle                callHdl;
   std::chrono::milliseconds timeout{3000};
-  ErrHandle                 err_handle;
-  NotificationHandle        notify_handle;
+  ErrHandle                 errHdl;
+  NotificationHandle        notifyHdl;
 private:
   ForgeTool&                                            fg;
   ErrorCollector                                        error_collector;
@@ -68,10 +68,10 @@ private:
   const google::protobuf::FileDescriptor*               fdesc = nullptr;
   //"Generic" render states
   std::string              err;
-  std::vector<std::string> dispatch_err;
-  bool                     waiting           = false;
-  int                      selected_service_ = 0;
-  int                      selected_method_  = 0;
+  std::vector<std::string> dispatchErr;
+  bool                     waiting          = false;
+  int                      selectedService_ = 0;
+  int                      selectedMethod_  = 0;
 public:
   FdrpcTool(ForgeTool& fg_, std::vector<std::filesystem::path> paths, const std::filesystem::path file) : fg(fg_) {
     google::protobuf::compiler::DiskSourceTree source_tree;
@@ -82,21 +82,21 @@ public:
       err = error_collector.toString();
       err.push_back('\0');
     }
-    call_handle.complete = true;
-    call_handle.rid      = 0;
+    callHdl.complete = true;
+    callHdl.rid      = 0;
   }
-  const Method*   methodSelection();
+  const Method*   MethodSelection();
   static bool     DrawOneofInput(Message* msg, const Field* field);
   static void     DrawFieldInputRepeated(Message* msg, const Field* field);
   static void     DrawFieldInput(Message* msg, const Field* field);
   static void     DrawMessageInput(Message* msg, const std::string& name = "");
   static void     DrawMessageOutput(Message* msg, const std::string& name = "");
-  static uint32_t getRpcId(const Method* method);
-  static bool     deserialize(Message* msg, const std::vector<uint8_t>& data);
-  void            update();
+  static uint32_t GetRpcId(const Method* method);
+  static bool     Deserialize(Message* msg, const std::vector<uint8_t>& data);
+  void            Update();
   bool            Call(std::vector<uint8_t>& data);
   Rpc::RpcType    Process(std::span<uint8_t> data);
   void            DrawError(ImVec2 dim);
-  bool            renderRpcEx(ImVec2 dim);
-  bool            renderRpcRet(ImVec2 dim);
+  bool            RenderRpcEx(ImVec2 dim);
+  bool            RenderRpcRet(ImVec2 dim);
 };

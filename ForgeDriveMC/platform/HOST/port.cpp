@@ -56,7 +56,7 @@
 #ifdef __linux__
 #define _GNU_SOURCE
 #endif
-#include "SILTick.h"
+#include "SilTick.h"
 #include "portmacro.h"
 #include <errno.h>
 #include <limits.h>
@@ -309,7 +309,7 @@ UBaseType_t xPortSetInterruptMask(void) {
 /*-----------------------------------------------------------*/
 void vPortClearInterruptMask(UBaseType_t uxMask) { (void)uxMask; }
 /*-----------------------------------------------------------*/
-static uint64_t prvGetTimeNs(void) { return SILTick::Instance().Now(); }
+static uint64_t prvGetTimeNs(void) { return SilTick::Instance().Now(); }
 /*-----------------------------------------------------------*/
 /* commented as part of the code below in vPortSystemTickHandler,
  * to adjust timing according to full demo requirements */
@@ -321,8 +321,8 @@ static void prvTimerTickHandler() {
    */
   Thread_t* thread = prvGetThreadFromTask(xTaskGetCurrentTaskHandle());
   pthread_kill(thread->pthread, SIGALRM);
-  prvStartTimeNs = SILTick::Instance().Now();
-  SILTick::Instance().RegisterEvent(portTICK_RATE_MICROSECONDS * 1000ULL, prvTimerTickHandler);
+  prvStartTimeNs = SilTick::Instance().Now();
+  SilTick::Instance().RegisterEvent(portTICK_RATE_MICROSECONDS * 1000ULL, prvTimerTickHandler);
 }
 /*-----------------------------------------------------------*/
 /*
@@ -330,8 +330,8 @@ static void prvTimerTickHandler() {
  * frequency.
  */
 void prvSetupTimerInterrupt(void) {
-  SILTick::Instance().RegisterEvent(portTICK_RATE_MICROSECONDS * 1000ULL, prvTimerTickHandler);
-  prvStartTimeNs = SILTick::Instance().Now();
+  SilTick::Instance().RegisterEvent(portTICK_RATE_MICROSECONDS * 1000ULL, prvTimerTickHandler);
+  prvStartTimeNs = SilTick::Instance().Now();
 }
 /*-----------------------------------------------------------*/
 static void vPortSystemTickHandler(int sig) {

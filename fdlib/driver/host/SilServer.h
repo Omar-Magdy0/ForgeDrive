@@ -12,18 +12,23 @@ using asio::ip::tcp;
 #ifndef SILSERVER_IP_ADDRESS
 #define SILSERVER_IP_ADDRESS "127.0.0.1"
 #endif
+enum SilServerPort
+{
+    SilServerPort_Usbxch = 5001
+};
 
-class SILServer
+
+class SilServer
 {
 
 private:
-    struct SILPort
+    struct SilPort
     {
         uint16_t port;
         tcp::acceptor acceptor;
         tcp::socket socket;
         bool connected = false;
-        SILPort(asio::io_context &io, uint16_t p, const char *address)
+        SilPort(asio::io_context &io, uint16_t p, const char *address)
             : port(p),
               acceptor(io, tcp::endpoint(asio::ip::make_address(address), p)),
               socket(io) {}
@@ -32,9 +37,9 @@ private:
     asio::executor_work_guard<asio::io_context::executor_type> work_guard_{asio::make_work_guard(io_context_)};
     std::thread io_thread_;
     bool running_ = false;
-    std::unordered_map<uint16_t, std::unique_ptr<SILPort>> ports_;
+    std::unordered_map<uint16_t, std::unique_ptr<SilPort>> ports_;
 
-    SILServer() : io_context_(1)
+    SilServer() : io_context_(1)
     {
         running_ = true;
         io_thread_ = std::thread([this]()
@@ -42,13 +47,13 @@ private:
     }
 
 public:
-    static SILServer &Instance()
+    static SilServer &Instance()
     {
-        static SILServer inst;
+        static SilServer inst;
         return inst;
     }
 
-    ~SILServer()
+    ~SilServer()
     {
         running_ = false;
         io_context_.stop();
@@ -61,7 +66,7 @@ public:
     {
         if (ports_.find(port) != ports_.end())
             return false;
-        auto channel = std::make_unique<SILPort>(io_context_, port, SILSERVER_IP_ADDRESS);
+        auto channel = std::make_unique<SilPort>(io_context_, port, SILSERVER_IP_ADDRESS);
         auto *chan = channel.get();
         ports_[port] = std::move(channel);
         asio::co_spawn(io_context_, [chan, port, rx_buf_kb, tx_buf_kb]() -> asio::awaitable<void>

@@ -26,8 +26,8 @@ def setup(ctx):
             "toolchain.cmake": None,
             "System.h": None,
             "System.cpp": None,
-            "SILTick.h": None,
-            "SILServer.h": None,
+            "SilTick.h": None,
+            "SilServer.h": None,
             "TCPClient.h": None,
         }
     )

@@ -1,15 +1,15 @@
 #include "Drv.h"
 #include <pthread.h>
 #include <stdint.h>
-#include "SILServer.h"
-#include "SILTick.h"
+#include "SilServer.h"
+#include "SilTick.h"
 
 pthread_mutex_t fd_atomic_mutex;
 FdDrv DRV;
 
 void FdDrv_Init(FdDrv *h)
 {
-    SILTick::Init(SILTick::Mode::INTERNAL);
+    SilTick::Init(SilTick::Mode::INTERNAL);
 }
 
 __attribute__((weak)) void FdDrv_DwtInit(){};

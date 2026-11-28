@@ -2,11 +2,11 @@
 #define BOTTOM_MENU_H 36
 #define SIDE_MENU_W   48
 int main() {
-  Usbxch::init(10);
-  TCPClient::init();
+  Usbxch::Init(10);
+  TcpClient::Init();
   { ForgeTool app; }
-  Usbxch::deinit();
-  TCPClient::deinit();
+  Usbxch::DeInit();
+  TcpClient::DeInit();
   return 0;
 }
 #include <imgui_impl_glfw.h>
@@ -22,7 +22,7 @@ ForgeTool::ForgeTool() : connectionPage(*this) {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
   const char* glsl_version = "#version 150";
-  window                   = glfwCreateWindow(display_w, display_h, "ForgeTool", nullptr, nullptr);
+  window                   = glfwCreateWindow(displayWidth, displayHeight, "ForgeTool", nullptr, nullptr);
   if (!window) {
     glfwTerminate();
     return;
@@ -30,8 +30,8 @@ ForgeTool::ForgeTool() : connectionPage(*this) {
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1);
   IMGUI_CHECKVERSION();
-  gui_ctx                         = ImGui::CreateContext();
-  plt_ctx                         = ImPlot::CreateContext();
+  guiCtx                          = ImGui::CreateContext();
+  pltCtx                          = ImPlot::CreateContext();
   ImGuiIO& io                     = ImGui::GetIO();
   io.ConfigFlags                 |= ImGuiConfigFlags_NavEnableKeyboard;
   io.ConfigFlags                 |= ImGuiConfigFlags_DockingEnable;
@@ -46,17 +46,17 @@ ForgeTool::ForgeTool() : connectionPage(*this) {
   io.FontDefault = style.fonts.N;
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
-  pState       = cState;
-  exec_running = true;
-  exec_thread  = std::thread([this]() {
-    while (exec_running) {
+  pState      = cState;
+  execRunning = true;
+  execThread  = std::thread([this]() {
+    while (execRunning) {
       std::function<void()> task;
       {
-        std::unique_lock lock(exec_mutex);
-        exec_cv.wait(lock, [this]() { return !exec_queue.empty() || !exec_running; });
-        if (!exec_running && exec_queue.empty()) break;
-        task = std::move(exec_queue.front());
-        exec_queue.pop();
+        std::unique_lock lock(execMutex);
+        execCv.wait(lock, [this]() { return !execQueue.empty() || !execRunning; });
+        if (!execRunning && execQueue.empty()) break;
+        task = std::move(execQueue.front());
+        execQueue.pop();
       }
       if (task) {
         try {
@@ -76,19 +76,19 @@ ForgeTool::ForgeTool() : connectionPage(*this) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    render();
+    Render();
     for (auto it = launchables.begin(); it != launchables.end();) {
       auto& r = *it;
-      if (r->shouldClose()) {
+      if (r->ShouldClose()) {
         it = launchables.erase(it);
       } else {
-        r->render();
+        r->Render();
         ++it;
       }
     }
     ImGui::Render();
-    glfwGetFramebufferSize(window, &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
+    glfwGetFramebufferSize(window, &displayWidth, &displayHeight);
+    glViewport(0, 0, displayWidth, displayHeight);
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -104,11 +104,11 @@ ForgeTool::ForgeTool() : connectionPage(*this) {
 ForgeTool::~ForgeTool() {
   // Cleanup
   {
-    std::lock_guard lock(exec_mutex);
-    exec_running = false;
+    std::lock_guard lock(execMutex);
+    execRunning = false;
   }
-  exec_cv.notify_one();
-  if (exec_thread.joinable()) exec_thread.join();
+  execCv.notify_one();
+  if (execThread.joinable()) execThread.join();
   launchables.clear();
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
@@ -122,14 +122,14 @@ void ForgeTool::SetStatus(const ImVec4& statusCol, const std::string& statusTxt)
   pState.statusTxt = statusTxt;
   pState.statusCol = statusCol;
 }
-void ForgeTool::exec(std::function<void()> task) {
+void ForgeTool::Exec(std::function<void()> task) {
   {
-    std::lock_guard lock(exec_mutex);
-    exec_queue.push(std::move(task));
+    std::lock_guard lock(execMutex);
+    execQueue.push(std::move(task));
   }
-  exec_cv.notify_one();
+  execCv.notify_one();
 }
-void ForgeTool::render() {
+void ForgeTool::Render() {
   ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowViewport(viewport->ID);
   ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -145,7 +145,6 @@ void ForgeTool::render() {
   ImGui::End();
 }
 void ForgeTool::DrawSideMenu() {
-  const float height  = ImGui::GetContentRegionAvail().y - BOTTOM_MENU_H;
   const float padding = ImGui::GetStyle().WindowPadding.x;
   ImGui::SetCursorPosX(ImGui::GetCursorPosX() - padding);
   ImGui::BeginGroup();
@@ -160,11 +159,11 @@ void ForgeTool::DrawSideMenu() {
                                        {MainPage::Launchables, ICON_FA_UP_RIGHT_FROM_SQUARE, "Launchables"},
                                        {MainPage::About, ICON_FA_CIRCLE_INFO, "About"}};
   for (const auto& item : items) {
-    bool selected = pState.current_page == item.page;
+    bool selected = pState.currentPage == item.page;
     ImGui::PushID(static_cast<int>(item.page));
     ImGui::PushFont(style.fonts.IconM);
     ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f, 0.5f));
-    if (ImGui::Selectable(item.icon, selected, ImGuiSelectableFlags_None, ImVec2(SIDE_MENU_W + padding, 48.0f))) pState.current_page = item.page;
+    if (ImGui::Selectable(item.icon, selected, ImGuiSelectableFlags_None, ImVec2(SIDE_MENU_W + padding, 48.0f))) pState.currentPage = item.page;
     ImGui::PopFont();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", item.tooltip);
     ImGui::PopStyleVar();
@@ -217,24 +216,24 @@ void ForgeTool::DrawMainPanel() {
   ImGui::BeginChild("MainPanel", ImVec2(0, height - BOTTOM_MENU_H), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground);
   ImGui::PopStyleColor();
   ImGui::PopStyleVar();
-  switch (cState.current_page) {
-  case MainPage::Connections: connectionPage.render(); break;
+  switch (cState.currentPage) {
+  case MainPage::Connections: connectionPage.Render(); break;
   case MainPage::Devices: break;
   case MainPage::Settings: break;
-  case MainPage::Launchables: launchablePage.render(); break;
+  case MainPage::Launchables: launchablePage.Render(); break;
   case MainPage::About: break;
   }
   ImGui::EndChild();
 }
-void Launchable::render() {
-  if (ImGui::Begin(window_name.c_str(), &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar)) {
+void Launchable::Render() {
+  if (ImGui::Begin(windowName.c_str(), &open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar)) {
     viewport     = ImGui::GetWindowViewport();
     auto* native = static_cast<GLFWwindow*>(viewport->PlatformHandle);
     if (native) {
       ImGuiStyle& imstyle = ImGui::GetStyle();
       glfwSetWindowSizeLimits(native, imstyle.WindowMinSize.x, imstyle.WindowMinSize.x, GLFW_DONT_CARE, GLFW_DONT_CARE);
     }
-    renderImpl();
+    RenderImpl();
   }
   ImGui::End();
 }

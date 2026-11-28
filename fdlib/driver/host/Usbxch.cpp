@@ -1,11 +1,10 @@
 #include "Usbxch.h"
-#include "SILServer.h"
+#include "SilServer.h"
 #include <stdio.h>
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
-#define SILSERVER_PORT_USBXCH 5001
 
 {% set inst = usbxch %}
 FdUsbxchHandle {{inst.name}};
@@ -15,8 +14,8 @@ std::vector<uint8_t> rxring_mock2;
 
 void FdUsbxch_{{inst.name}}_Init(FdUsbxchHandle *h)
 {
-    SILServer &server = SILServer::Instance();
-    auto suc = server.RegisterPort(SILSERVER_PORT_USBXCH);
+    SilServer &server = SilServer::Instance();
+    auto suc = server.RegisterPort(SilServerPort_Usbxch);
     if(!suc)
     {
         std::cerr << "[SIL Server] USBXCH PORT init fail" << std::endl;
@@ -28,23 +27,23 @@ void FdUsbxch_{{inst.name}}_Init(FdUsbxchHandle *h)
 
 uint32_t FdUsbxch_{{inst.name}}_Write(FdUsbxchHandle *h, const uint8_t *data, uint32_t length)
 {
-    SILServer &server = SILServer::Instance();
+    SilServer &server = SilServer::Instance();
     size_t written = 0;
-    server.Write(SILSERVER_PORT_USBXCH, data, length, written);
+    server.Write(SilServerPort_Usbxch, data, length, written);
     return written;
 }
 
 uint32_t FdUsbxch_{{inst.name}}_Read(FdUsbxchHandle *h, uint8_t *data, uint32_t length)
 {
-    SILServer &server = SILServer::Instance();
+    SilServer &server = SilServer::Instance();
     asio::error_code ec;
-    return server.Read(SILSERVER_PORT_USBXCH, data, length, ec);
+    return server.Read(SilServerPort_Usbxch, data, length, ec);
 }
 
 bool FdUsbxch_{{inst.name}}_Connected(FdUsbxchHandle *h)
 {
-    SILServer &server = SILServer::Instance();
-    return server.Connected(SILSERVER_PORT_USBXCH);
+    SilServer &server = SilServer::Instance();
+    return server.Connected(SilServerPort_Usbxch);
 }
 
 void FdUsbxch_{{inst.name}}_Update(FdUsbxchHandle *h)
@@ -64,8 +63,8 @@ uint32_t FdUsbxch_{{inst.name}}_Flush(FdUsbxchHandle *h)
 }
 uint32_t FdUsbxch_{{inst.name}}_ReadAvailable(FdUsbxchHandle *h)
 {
-    SILServer &server = SILServer::Instance();
-    return server.ReadAvailable(SILSERVER_PORT_USBXCH);
+    SilServer &server = SilServer::Instance();
+    return server.ReadAvailable(SilServerPort_Usbxch);
 }
 
 uint32_t FdUsbxch_{{inst.name}}_Clear(FdUsbxchHandle *h)
@@ -81,13 +80,13 @@ bool FdUsbxch_{{inst.name}}_ReadReserve(FdUsbxchHandle *h,
                                          uint16_t* cont2)
 {
     (void)h;
-    SILServer &server = SILServer::Instance();
-    size_t available = server.ReadAvailable(SILSERVER_PORT_USBXCH);
+    SilServer &server = SilServer::Instance();
+    size_t available = server.ReadAvailable(SilServerPort_Usbxch);
     if (!available)
         return false;
     std::vector<uint8_t> incoming(available);
     asio::error_code ec;
-    size_t received = server.Read(SILSERVER_PORT_USBXCH, incoming.data(), available, ec);
+    size_t received = server.Read(SilServerPort_Usbxch, incoming.data(), available, ec);
     if (ec || !received)
         return false;
     auto split1 = std::rand() % (received + 1);

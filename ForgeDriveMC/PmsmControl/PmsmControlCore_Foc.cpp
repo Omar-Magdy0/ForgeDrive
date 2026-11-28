@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdint>
 // Fixed-point filter coefficients for current magnitude estimation (max_a_min_b approximation)
-constexpr int32_t POS_MAX_ERR_STEP = INT32_MAX / 3600;
+constexpr int32_t PosErrStep = INT32_MAX / 3600;
 // Speed scaling: convert from Q32.31 delta-angle to Q7.24 angular velocity
 void PmsmControlCore::Foc_init() {}
 void PmsmControlCore::Foc_onEnter(McMode prev_mct) {
@@ -22,7 +22,7 @@ void PmsmControlCore::Foc_xmcLoop() {
   if (control.posLoopCnt == 0) {
     if (control.mechMode == MechMode_Position) {
       int64_t e_temp      = state.thetaSp_Q31 - state.theta_Q31;
-      int32_t e_theta_q31 = (e_temp > POS_MAX_ERR_STEP) ? POS_MAX_ERR_STEP : (e_temp < -POS_MAX_ERR_STEP) ? -POS_MAX_ERR_STEP : e_temp;
+      int32_t e_theta_q31 = (e_temp > PosErrStep) ? PosErrStep : (e_temp < -PosErrStep) ? -PosErrStep : e_temp;
       int32_t diff_Omega  = control.pidPosition.Step(e_theta_q31);
       state.omegaSp_Q15   = Fd::SatAdd(state.omegaSp_Q15, diff_Omega);
     } else {

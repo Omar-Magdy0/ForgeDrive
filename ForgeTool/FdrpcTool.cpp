@@ -1,35 +1,35 @@
 #include "FdrpcTool.h"
 #include <algorithm>
 #include <format>
-const FdrpcTool::Method* FdrpcTool::methodSelection() {
+const FdrpcTool::Method* FdrpcTool::MethodSelection() {
   if (fdesc->service_count() == 0) return nullptr;
-  const auto* service = fdesc->service(selected_service_);
+  const auto* service = fdesc->service(selectedService_);
   if (ImGui::BeginCombo("SERVICE", service->name().c_str())) {
     for (int i = 0; i < fdesc->service_count(); ++i) {
       const auto* item = fdesc->service(i);
-      if (ImGui::Selectable(item->name().c_str(), selected_service_ == i)) {
-        selected_service_ = i;
-        selected_method_  = 0;
+      if (ImGui::Selectable(item->name().c_str(), selectedService_ == i)) {
+        selectedService_ = i;
+        selectedMethod_  = 0;
       }
-      if (selected_service_ == i) ImGui::SetItemDefaultFocus();
+      if (selectedService_ == i) ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();
   }
-  service = fdesc->service(selected_service_);
+  service = fdesc->service(selectedService_);
   if (service->method_count() == 0) return nullptr;
-  if (selected_method_ >= service->method_count()) selected_method_ = 0;
-  const auto* method      = service->method(selected_method_);
-  auto        methodLabel = [&](const auto* method) { return method->name() + " (ID: " + std::to_string(getRpcId(method)) + ")"; };
+  if (selectedMethod_ >= service->method_count()) selectedMethod_ = 0;
+  const auto* method      = service->method(selectedMethod_);
+  auto        methodLabel = [&](const auto* method) { return method->name() + " (ID: " + std::to_string(GetRpcId(method)) + ")"; };
   // RPC selection
   if (ImGui::BeginCombo("RPC", methodLabel(method).c_str())) {
     for (int i = 0; i < service->method_count(); ++i) {
       const auto* item = service->method(i);
-      if (ImGui::Selectable(methodLabel(item).c_str(), selected_method_ == i)) selected_method_ = i;
-      if (selected_method_ == i) ImGui::SetItemDefaultFocus();
+      if (ImGui::Selectable(methodLabel(item).c_str(), selectedMethod_ == i)) selectedMethod_ = i;
+      if (selectedMethod_ == i) ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();
   }
-  return service->method(selected_method_);
+  return service->method(selectedMethod_);
 }
 void FdrpcTool::DrawFieldInputRepeated(Message* msg, const Field* field) {
   const auto* refl  = msg->GetReflection();
@@ -250,7 +250,7 @@ void FdrpcTool::DrawMessageOutput(Message* msg, const std::string& name) {
   DrawMessageInput(msg, name);
   ImGui::EndDisabled();
 }
-bool FdrpcTool::renderRpcEx(ImVec2 dim) {
+bool FdrpcTool::RenderRpcEx(ImVec2 dim) {
   if (!ImGui::BeginChild("RpcEx", dim)) {
     ImGui::EndChild();
     return false;
@@ -261,67 +261,67 @@ bool FdrpcTool::renderRpcEx(ImVec2 dim) {
     return false;
   }
   bool send = false;
-  ImGui::BeginDisabled(!call_handle.complete);
-  if (auto* desc = methodSelection()) {
+  ImGui::BeginDisabled(!callHdl.complete);
+  if (auto* desc = MethodSelection()) {
     send = ImGui::Button("Send");
     ImGui::SameLine();
-    ImGui::Text("REQ:%u", call_handle.rid);
+    ImGui::Text("REQ:%u", callHdl.rid);
     ImGui::Separator();
-    if (desc != call_handle.desc) {
-      const bool chain = call_handle.desc && call_handle.ret && (call_handle.desc->output_type() == desc->input_type());
-      call_handle.desc = desc;
-      if (chain) call_handle.arg.reset(call_handle.ret.release());
-      else call_handle.arg.reset(factory.GetPrototype(call_handle.desc->input_type())->New());
-      call_handle.ret.reset(factory.GetPrototype(call_handle.desc->output_type())->New());
-      call_handle.desc = desc;
+    if (desc != callHdl.desc) {
+      const bool chain = callHdl.desc && callHdl.ret && (callHdl.desc->output_type() == desc->input_type());
+      callHdl.desc     = desc;
+      if (chain) callHdl.arg.reset(callHdl.ret.release());
+      else callHdl.arg.reset(factory.GetPrototype(callHdl.desc->input_type())->New());
+      callHdl.ret.reset(factory.GetPrototype(callHdl.desc->output_type())->New());
+      callHdl.desc = desc;
     }
-    DrawMessageInput(call_handle.arg.get());
+    DrawMessageInput(callHdl.arg.get());
   }
   ImGui::EndDisabled();
   ImGui::EndChild();
   return send;
 }
-bool FdrpcTool::renderRpcRet(ImVec2 dim) {
+bool FdrpcTool::RenderRpcRet(ImVec2 dim) {
   ImGui::BeginGroup();
   const float errorHeight  = 80.0f;
   const float outputHeight = ImGui::GetContentRegionAvail().y - errorHeight - ImGui::GetStyle().ItemSpacing.y;
   ImGui::BeginChild("RpcRetOutput", ImVec2(0, outputHeight), ImGuiChildFlags_None);
-  if (fdesc) { DrawMessageOutput(call_handle.ret.get()); }
+  if (fdesc) { DrawMessageOutput(callHdl.ret.get()); }
   ImGui::EndChild();
   ImGui::PushFont(fg.Style().fonts.S);
-  if (ImGui::SmallButton("Clear")) dispatch_err.clear();
+  if (ImGui::SmallButton("Clear")) dispatchErr.clear();
   DrawError(ImVec2(0, 0));
   ImGui::PopFont();
   ImGui::EndGroup();
   return false;
 }
-uint32_t FdrpcTool::getRpcId(const Method* method) { return method->options().GetExtension(fdrpc::id); }
-bool     FdrpcTool::deserialize(Message* msg, const std::vector<uint8_t>& data) {
+uint32_t FdrpcTool::GetRpcId(const Method* method) { return method->options().GetExtension(fdrpc::id); }
+bool     FdrpcTool::Deserialize(Message* msg, const std::vector<uint8_t>& data) {
   if (data.size() > INT_MAX) return false;
   return msg->ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
-void FdrpcTool::update() {
-  if (!call_handle.complete && Clock::now() >= call_handle.deadline) {
-    call_handle.complete = true;
-    dispatch_err.emplace_back(std::format("RPC Timeout |ID:{}|REQ:{}", getRpcId(call_handle.desc), call_handle.rid));
+void FdrpcTool::Update() {
+  if (!callHdl.complete && Clock::now() >= callHdl.deadline) {
+    callHdl.complete = true;
+    dispatchErr.emplace_back(std::format("RPC Timeout |ID:{}|REQ:{}", GetRpcId(callHdl.desc), callHdl.rid));
   }
 }
 bool FdrpcTool::Call(std::vector<uint8_t>& data) {
-  const uint16_t id = getRpcId(call_handle.desc);
-  if (!call_handle.complete) return false;
-  call_handle.rid++;
-  data.resize(4 + call_handle.arg->ByteSizeLong());
+  const uint16_t id = GetRpcId(callHdl.desc);
+  if (!callHdl.complete) return false;
+  callHdl.rid++;
+  data.resize(4 + callHdl.arg->ByteSizeLong());
   data[0] = static_cast<uint8_t>(id);
   data[1] = static_cast<uint8_t>(id >> 8);
-  data[2] = static_cast<uint8_t>(call_handle.rid);
-  data[3] = static_cast<uint8_t>(call_handle.rid >> 8);
-  if (!call_handle.arg->SerializeToArray(data.data() + 4, static_cast<int>(data.size() - 4))) {
+  data[2] = static_cast<uint8_t>(callHdl.rid);
+  data[3] = static_cast<uint8_t>(callHdl.rid >> 8);
+  if (!callHdl.arg->SerializeToArray(data.data() + 4, static_cast<int>(data.size() - 4))) {
     data.clear();
     return false;
   }
-  call_handle.deadline = Clock::now() + timeout;
-  call_handle.desc     = call_handle.desc;
-  call_handle.complete = false;
+  callHdl.deadline = Clock::now() + timeout;
+  callHdl.desc     = callHdl.desc;
+  callHdl.complete = false;
   return true;
 }
 Rpc::RpcType FdrpcTool::Process(std::span<uint8_t> data) {
@@ -331,18 +331,18 @@ Rpc::RpcType FdrpcTool::Process(std::span<uint8_t> data) {
   switch (tp) {
   case Rpc::RpcType::RpcType_Err: {
     if (data.size() < 7) return Rpc::RpcType_None;
-    err_handle.id  = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
-    err_handle.rid = static_cast<uint16_t>(data[4]) | (static_cast<uint16_t>(data[5]) << 8);
-    err_handle.err = static_cast<Rpc::DispatchSts>(data[6]);
-    dispatch_err.emplace_back(std::format("Dispatch Error |ID:{}|REQ:{}|{}", err_handle.id, err_handle.rid, Rpc::DispatchStsToString(err_handle.err)));
+    errHdl.id  = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
+    errHdl.rid = static_cast<uint16_t>(data[4]) | (static_cast<uint16_t>(data[5]) << 8);
+    errHdl.err = static_cast<Rpc::DispatchSts>(data[6]);
+    dispatchErr.emplace_back(std::format("Dispatch Error |ID:{}|REQ:{}|{}", errHdl.id, errHdl.rid, Rpc::DispatchStsToString(errHdl.err)));
     return Rpc::RpcType_Err;
   }
   case Rpc::RpcType::RpcType_Call: {
     const uint16_t rid = static_cast<uint16_t>(data[2]) | (static_cast<uint16_t>(data[3]) << 8);
-    if (id != getRpcId(call_handle.desc) || rid != call_handle.rid) // only one ongoing call and associated return associated
+    if (id != GetRpcId(callHdl.desc) || rid != callHdl.rid) // only one ongoing call and associated return associated
       return Rpc::RpcType_None;
-    if (!call_handle.ret->ParseFromArray(data.data() + 4, static_cast<int>(data.size() - 4))) { return Rpc::RpcType_None; }
-    call_handle.complete = true;
+    if (!callHdl.ret->ParseFromArray(data.data() + 4, static_cast<int>(data.size() - 4))) { return Rpc::RpcType_None; }
+    callHdl.complete = true;
     return Rpc::RpcType_Call;
   }
   }
@@ -351,7 +351,7 @@ Rpc::RpcType FdrpcTool::Process(std::span<uint8_t> data) {
 void FdrpcTool::DrawError(ImVec2 dim) {
   ImGui::BeginChild("DispatchErrors", dim, ImGuiChildFlags_Borders);
   ImGui::PushStyleColor(ImGuiCol_Text, fg.Style().colors.Error);
-  for (const auto& err : dispatch_err) ImGui::TextWrapped("%s", err.c_str());
+  for (const auto& err : dispatchErr) ImGui::TextWrapped("%s", err.c_str());
   ImGui::PopStyleColor();
   ImGui::EndChild();
 }

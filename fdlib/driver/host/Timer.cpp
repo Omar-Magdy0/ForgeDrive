@@ -1,5 +1,5 @@
 #include "Timer.h"
-#include "SILTick.h"
+#include "SilTick.h"
 #include "stdint.h"
 
 
@@ -21,7 +21,7 @@ uint32_t FdTimer_{{inst.name}}_Frequency(FdTimerHandle *h, uint32_t freq)
 uint32_t FdTimer_{{inst.name}}_Enable(FdTimerHandle *h, uint8_t en)
 {
     {{inst.name}}_enabled = en;
-    if(en)SILTick::Instance().RegisterEvent(1'000'000'000/{{inst.name}}_freq, {{inst.name}}_periodCB);
+    if(en)SilTick::Instance().RegisterEvent(1'000'000'000/{{inst.name}}_freq, {{inst.name}}_periodCB);
     return 0;
 }
 
@@ -32,7 +32,7 @@ FdTimerHandle {{inst.name}};
 void {{inst.name}}_periodCB()
 {
     if({{inst.name}}_enabled){
-        SILTick::Instance().RegisterEvent(1'000'000'000/{{inst.name}}_freq, {{inst.name}}_periodCB);
+        SilTick::Instance().RegisterEvent(1'000'000'000/{{inst.name}}_freq, {{inst.name}}_periodCB);
     }
     FdTimer_{{inst.name}}_PeriodCallback();
 }

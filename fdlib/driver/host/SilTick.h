@@ -9,10 +9,10 @@
 #include <queue>
 #include <assert.h>
 
-class SILTick {
+class SilTick {
     public:
     enum class Mode {
-        INTERNAL, // SILTick owns the ticking thread
+        INTERNAL, // SilTick owns the ticking thread
         EXTERNAL  // Caller owns simulation advancement
     };
     private:
@@ -38,7 +38,7 @@ class SILTick {
     std::thread worker_;
     std::mutex mutex_;
     std::atomic<bool> running_{false};
-    inline static SILTick* instance_ = nullptr;
+    inline static SilTick* instance_ = nullptr;
     std::priority_queue<Event, std::vector<Event>, EventCompare> events;
 
     void Advance(uint64_t t)
@@ -78,21 +78,21 @@ class SILTick {
             std::this_thread::sleep_until(next);
         }
     }
-    SILTick(Mode mode) : mode_(mode)
+    SilTick(Mode mode) : mode_(mode)
     {
         if (mode_ == Mode::INTERNAL)
         {
             running_ = true;
-            worker_ = std::thread(&SILTick::Run, this);
+            worker_ = std::thread(&SilTick::Run, this);
         }
     }
     public:
     static void Init(Mode mode)
     {
         if (!instance_)
-            instance_ = new SILTick(mode);
+            instance_ = new SilTick(mode);
     }
-    static SILTick& Instance()
+    static SilTick& Instance()
     {
         assert(instance_);
         return *instance_;
